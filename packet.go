@@ -44,6 +44,7 @@ const (
 	PacketTypeSetClickDistance        = 0x12
 	PacketTypeCustomBlockSupportLevel = 0x13
 	PacketTypeChangeModel             = 0x1d
+	PacketTypeEnvSetMapAppearance2    = 0x1e
 )
 
 type PacketClientIdentification struct {
@@ -176,6 +177,14 @@ type PacketChangeModel struct {
 	PacketID  byte
 	EntityID  byte
 	ModelName [64]byte
+}
+
+type PacketEnvSetMapAppearance2 struct {
+	PacketID              byte
+	TexturePackURL        [64]byte
+	SideBlock, EdgeBlock  byte
+	SideLevel, CloudLevel int16
+	MaxViewDistance       int16
 }
 
 func PadString(str string) [64]byte {

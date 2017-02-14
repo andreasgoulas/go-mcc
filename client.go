@@ -39,6 +39,7 @@ var Extensions = []struct {
 	{"CustomBlocks", 1},
 	{"LongerMessages", 1},
 	{"ChangeModel", 1},
+	{"EnvMapAppearance", 2},
 }
 
 func IsValidName(name string) bool {
@@ -210,6 +211,7 @@ func (client *Client) Login() {
 	client.Entity.Client = client
 	if client.Server.AddEntity(client.Entity) == 0xff {
 		client.Kick("Server full!")
+		atomic.AddInt32(&client.Server.PlayerCount, -1)
 		return
 	}
 
@@ -478,6 +480,14 @@ func (client *Client) SendMessage(message string) {
 	}
 }
 
+func (client *Client) ConvertBlock(block BlockID) byte {
+	if client.CustomBlockSupportLevel < 1 {
+		return byte(FallbackBlock(block))
+	}
+
+	return byte(block)
+}
+
 func (client *Client) SendLevel(level *Level) {
 	if client.LoggedIn == 0 {
 		return
@@ -489,12 +499,7 @@ func (client *Client) SendLevel(level *Level) {
 	GZIPWriter := gzip.NewWriter(&GZIPBuffer)
 	binary.Write(GZIPWriter, binary.BigEndian, int32(level.Volume()))
 	for _, block := range level.Blocks {
-		clientID := byte(block)
-		if client.CustomBlockSupportLevel < 1 {
-			clientID = byte(Convert(block))
-		}
-
-		GZIPWriter.Write([]byte{clientID})
+		GZIPWriter.Write([]byte{client.ConvertBlock(block)})
 	}
 	GZIPWriter.Close()
 
@@ -516,6 +521,18 @@ func (client *Client) SendLevel(level *Level) {
 
 		copy(packet.ChunkData[:], GZIPData[offset:offset+size])
 		client.SendPacket(packet)
+	}
+
+	if client.HasExtension("EnvMapAppearance") {
+		client.SendPacket(&PacketEnvSetMapAppearance2{
+			PacketTypeEnvSetMapAppearance2,
+			PadString(level.Appearance.TexturePackURL),
+			client.ConvertBlock(level.Appearance.SideBlock),
+			client.ConvertBlock(level.Appearance.EdgeBlock),
+			int16(level.Appearance.SideLevel),
+			int16(level.Appearance.CloudLevel),
+			int16(level.Appearance.MaxViewDistance),
+		})
 	}
 
 	client.SendPacket(&PacketLevelFinalize{
@@ -572,15 +589,10 @@ func (client *Client) SendBlockChange(x, y, z uint, block BlockID) {
 		return
 	}
 
-	clientID := byte(block)
-	if client.CustomBlockSupportLevel < 1 {
-		clientID = byte(Convert(block))
-	}
-
 	client.SendPacket(&PacketSetBlock{
 		PacketTypeSetBlock,
 		int16(x), int16(y), int16(z),
-		clientID,
+		client.ConvertBlock(block),
 	})
 }
 

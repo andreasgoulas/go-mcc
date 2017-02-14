@@ -94,7 +94,7 @@ const (
 	BlockCountCPE = BlockMaxCPE + 1
 )
 
-func Convert(block BlockID) BlockID {
+func FallbackBlock(block BlockID) BlockID {
 	switch block {
 	case BlockCobblestoneSlab:
 		return BlockSlab

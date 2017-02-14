@@ -21,11 +21,19 @@ type LevelStorage interface {
 	Save(level *Level) error
 }
 
+type LevelAppearance struct {
+	TexturePackURL        string
+	SideBlock, EdgeBlock  BlockID
+	SideLevel, CloudLevel uint
+	MaxViewDistance       uint
+}
+
 type Level struct {
 	Name                 string
 	Width, Height, Depth uint
 	Blocks               []BlockID
 	Spawn                Location
+	Appearance           LevelAppearance
 }
 
 func NewLevel(name string, width, height, depth uint) *Level {
@@ -34,13 +42,20 @@ func NewLevel(name string, width, height, depth uint) *Level {
 	}
 
 	return &Level{
-		Name:  name,
-		Width: width, Height: height, Depth: depth,
-		Blocks: make([]BlockID, width*height*depth),
-		Spawn: Location{
+		name,
+		width, height, depth,
+		make([]BlockID, width*height*depth),
+		Location{
 			X: float64(width) / 2,
 			Y: float64(height) * 3 / 4,
 			Z: float64(depth) / 2,
+		},
+		LevelAppearance{
+			SideBlock:       BlockBedrock,
+			EdgeBlock:       BlockActiveWater,
+			SideLevel:       height / 2,
+			CloudLevel:      height + 2,
+			MaxViewDistance: 0,
 		},
 	}
 }
