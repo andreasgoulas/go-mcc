@@ -37,7 +37,7 @@ func (generator *FlatGenerator) Generate(level *Level) {
 	for y := uint(0); y < grassHeight; y++ {
 		for z := uint(0); z < level.Depth; z++ {
 			for x := uint(0); x < level.Width; x++ {
-				level.SetBlock(x, y, z, BlockGrass, false)
+				level.SetBlock(x, y, z, BlockGrass, nil)
 			}
 		}
 	}

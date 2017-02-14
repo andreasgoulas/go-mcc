@@ -43,6 +43,7 @@ const (
 	PacketTypeExtEntry                = 0x11
 	PacketTypeSetClickDistance        = 0x12
 	PacketTypeCustomBlockSupportLevel = 0x13
+	PacketTypeChangeModel             = 0x1d
 )
 
 type PacketClientIdentification struct {
@@ -169,6 +170,12 @@ type PacketSetClickDistance struct {
 type PacketCustomBlockSupportLevel struct {
 	PacketID     byte
 	SupportLevel byte
+}
+
+type PacketChangeModel struct {
+	PacketID  byte
+	EntityID  byte
+	ModelName [64]byte
 }
 
 func PadString(str string) [64]byte {

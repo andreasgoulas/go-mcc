@@ -72,6 +72,7 @@ func (storage *LvlStorage) Load(name string) (*Level, error) {
 	level.Spawn.Y = float64(header.SpawnY) / 32
 	level.Spawn.Z = float64(header.SpawnZ) / 32
 	level.Spawn.Yaw = float64(header.SpawnYaw) * 360 / 256
+	level.Spawn.Pitch = float64(header.SpawnPitch) * 360 / 256
 
 	for y := uint(0); y < level.Height; y++ {
 		for z := uint(0); z < level.Depth; z++ {
@@ -82,7 +83,7 @@ func (storage *LvlStorage) Load(name string) (*Level, error) {
 					return nil, err
 				}
 
-				level.SetBlock(x, y, z, BlockID(block[0]), false)
+				level.SetBlock(x, y, z, BlockID(block[0]), nil)
 			}
 		}
 	}

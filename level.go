@@ -16,11 +16,6 @@
 
 package main
 
-import (
-	"sync"
-	"time"
-)
-
 type LevelStorage interface {
 	Load(path string) (*Level, error)
 	Save(level *Level) error
@@ -31,12 +26,6 @@ type Level struct {
 	Width, Height, Depth uint
 	Blocks               []BlockID
 	Spawn                Location
-
-	Entities     []Entity
-	EntitiesLock sync.RWMutex
-
-	Players     []*Player
-	PlayersLock sync.RWMutex
 }
 
 func NewLevel(name string, width, height, depth uint) *Level {
@@ -53,8 +42,6 @@ func NewLevel(name string, width, height, depth uint) *Level {
 			Y: float64(height) * 3 / 4,
 			Z: float64(depth) / 2,
 		},
-		Entities: []Entity{},
-		Players:  []*Player{},
 	}
 }
 
@@ -70,167 +57,17 @@ func (level *Level) GetBlock(x, y, z uint) BlockID {
 	return BlockAir
 }
 
-func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
+func (level *Level) SetBlock(x, y, z uint, block BlockID, server *Server) {
 	if x < level.Width && y < level.Height && z < level.Depth {
 		level.Blocks[x+level.Width*(z+level.Depth*y)] = block
-		if broadcast {
-			level.PlayersLock.RLock()
-			for _, player := range level.Players {
-				player.SendBlockChange(x, y, z, block)
+		if server != nil {
+			server.ClientsLock.RLock()
+			for _, client := range server.Clients {
+				if client.Entity.Level == level {
+					client.SendBlockChange(x, y, z, block)
+				}
 			}
-			level.PlayersLock.RUnlock()
+			server.ClientsLock.RUnlock()
 		}
 	}
-}
-
-func (level *Level) GenerateID() byte {
-	for id := byte(0); id < 0xff; id++ {
-		free := true
-		for _, entity := range level.Entities {
-			if entity.GetID() == id {
-				free = false
-				break
-			}
-		}
-
-		if free {
-			return id
-		}
-	}
-
-	return 0xff
-}
-
-func (level *Level) BroadcastMessage(message string) {
-	level.PlayersLock.RLock()
-	for _, player := range level.Players {
-		player.SendMessage(message)
-	}
-	level.PlayersLock.RUnlock()
-}
-
-func (level *Level) Update(dt time.Duration) {
-	level.EntitiesLock.RLock()
-	for _, entity := range level.Entities {
-		entity.Update(dt)
-	}
-	level.EntitiesLock.RUnlock()
-}
-
-func (level *Level) AddEntity(entity Entity) bool {
-	level.EntitiesLock.Lock()
-	defer level.EntitiesLock.Unlock()
-
-	id := level.GenerateID()
-	if id == 0xff {
-		return false
-	}
-
-	entity.SetID(id)
-	level.Entities = append(level.Entities, entity)
-
-	level.PlayersLock.RLock()
-	for _, player := range level.Players {
-		player.SendSpawn(entity)
-	}
-	level.PlayersLock.RUnlock()
-	return true
-}
-
-func (level *Level) RemoveEntity(entity Entity) {
-	level.EntitiesLock.Lock()
-	defer level.EntitiesLock.Unlock()
-
-	index := -1
-	for i, e := range level.Entities {
-		if e == entity {
-			index = i
-			break
-		}
-	}
-
-	if index == -1 {
-		return
-	}
-
-	level.Entities[index] = level.Entities[len(level.Entities)-1]
-	level.Entities[len(level.Entities)-1] = nil
-	level.Entities = level.Entities[:len(level.Entities)-1]
-
-	level.PlayersLock.RLock()
-	for _, player := range level.Players {
-		player.SendDespawn(entity)
-	}
-	level.PlayersLock.RUnlock()
-}
-
-func (level *Level) AddPlayer(player *Player) bool {
-	level.PlayersLock.Lock()
-	defer level.PlayersLock.Unlock()
-
-	level.EntitiesLock.Lock()
-	defer level.EntitiesLock.Unlock()
-
-	id := level.GenerateID()
-	if id == 0xff {
-		return false
-	}
-
-	player.SetID(id)
-	level.Entities = append(level.Entities, player)
-	for _, p := range level.Players {
-		p.SendSpawn(player)
-	}
-
-	level.Players = append(level.Players, player)
-	player.SendLevel(level)
-
-	for _, entity := range level.Entities {
-		player.SendSpawn(entity)
-	}
-	return true
-}
-
-func (level *Level) RemovePlayer(player *Player) {
-	level.RemoveEntity(player)
-
-	if player.LoggedIn == 1 {
-		level.EntitiesLock.RLock()
-		for _, entity := range level.Entities {
-			player.SendDespawn(entity)
-		}
-		level.EntitiesLock.RUnlock()
-	}
-
-	level.PlayersLock.Lock()
-	defer level.PlayersLock.Unlock()
-
-	index := -1
-	for i, p := range level.Players {
-		if p == player {
-			index = i
-			break
-		}
-	}
-
-	if index == -1 {
-		return
-	}
-
-	level.Players[index] = level.Players[len(level.Players)-1]
-	level.Players[len(level.Players)-1] = nil
-	level.Players = level.Players[:len(level.Players)-1]
-}
-
-func (level *Level) FindPlayer(name string) *Player {
-	level.PlayersLock.RLock()
-	defer level.PlayersLock.RUnlock()
-
-	for _, player := range level.Players {
-		if player.Name == name {
-			return player
-		}
-	}
-
-	return nil
 }

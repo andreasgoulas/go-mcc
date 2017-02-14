@@ -53,6 +53,12 @@ type Server struct {
 	Levels     []*Level
 	LevelsLock sync.RWMutex
 
+	Entities     []*Entity
+	EntitiesLock sync.RWMutex
+
+	Clients     []*Client
+	ClientsLock sync.RWMutex
+
 	URL  string
 	Salt [16]byte
 
@@ -74,6 +80,9 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 	server := &Server{
 		Config:   config,
 		Storage:  storage,
+		Levels:   []*Level{},
+		Entities: []*Entity{},
+		Clients:  []*Client{},
 		Listener: listener,
 		Commands: make(map[string]*Command),
 		StopChan: make(chan bool),
@@ -142,8 +151,8 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 				continue
 			}
 
-			player := NewPlayer(server, conn)
-			go player.Handle()
+			client := NewClient(conn, server)
+			go client.Handle()
 		}
 	}
 }
@@ -160,6 +169,24 @@ func (server *Server) GenerateSalt() {
 	for i := range server.Salt {
 		server.Salt[i] = charset[rand.Intn(len(charset))]
 	}
+}
+
+func (server *Server) GenerateID() byte {
+	for id := byte(0); id < 0xff; id++ {
+		free := true
+		for _, entity := range server.Entities {
+			if entity.NameID == id {
+				free = false
+				break
+			}
+		}
+
+		if free {
+			return id
+		}
+	}
+
+	return 0xff
 }
 
 func (server *Server) SendHeartbeat() {
@@ -229,34 +256,21 @@ func (server *Server) ExecuteCommand(sender CommandSender, message string) {
 }
 
 func (server *Server) Update(dt time.Duration) {
-	server.LevelsLock.RLock()
-	for _, level := range server.Levels {
-		level.Update(dt)
+	server.EntitiesLock.RLock()
+	for _, entity := range server.Entities {
+		entity.Update(dt)
 	}
-	server.LevelsLock.RUnlock()
+	server.EntitiesLock.RUnlock()
 }
 
 func (server *Server) BroadcastMessage(message string) {
 	fmt.Printf("%s\n", message)
-	server.LevelsLock.RLock()
-	for _, level := range server.Levels {
-		level.BroadcastMessage(message)
+
+	server.ClientsLock.RLock()
+	for _, client := range server.Clients {
+		client.SendMessage(message)
 	}
-	server.LevelsLock.RUnlock()
-}
-
-func (server *Server) FindPlayer(name string) *Player {
-	server.LevelsLock.RLock()
-	defer server.LevelsLock.RUnlock()
-
-	for _, level := range server.Levels {
-		player := level.FindPlayer(name)
-		if player != nil {
-			return player
-		}
-	}
-
-	return nil
+	server.ClientsLock.RUnlock()
 }
 
 func (server *Server) AddLevel(level *Level) {
@@ -319,13 +333,13 @@ func (server *Server) LoadLevel(name string) (*Level, error) {
 }
 
 func (server *Server) UnloadLevel(level *Level) {
-	level.PlayersLock.RLock()
-	players := make([]*Player, len(level.Players))
-	copy(players, level.Players)
-	level.PlayersLock.RUnlock()
+	server.ClientsLock.RLock()
+	clients := make([]*Client, len(server.Clients))
+	copy(clients, server.Clients)
+	server.ClientsLock.RUnlock()
 
-	for _, player := range players {
-		player.Kick("Server shutting down!")
+	for _, client := range clients {
+		client.Kick("Server shutting down!")
 	}
 
 	if server.Storage != nil {
@@ -373,4 +387,77 @@ func (server *Server) MainLevel() *Level {
 	}
 
 	return nil
+}
+
+func (server *Server) AddEntity(entity *Entity) byte {
+	server.EntitiesLock.Lock()
+	defer server.EntitiesLock.Unlock()
+
+	entity.NameID = server.GenerateID()
+	if entity.NameID != 0xff {
+		server.Entities = append(server.Entities, entity)
+	}
+
+	return entity.NameID
+}
+
+func (server *Server) RemoveEntity(entity *Entity) {
+	server.EntitiesLock.Lock()
+	defer server.EntitiesLock.Unlock()
+
+	index := -1
+	for i, e := range server.Entities {
+		if e == entity {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		return
+	}
+
+	server.Entities[index] = server.Entities[len(server.Entities)-1]
+	server.Entities[len(server.Entities)-1] = nil
+	server.Entities = server.Entities[:len(server.Entities)-1]
+}
+
+func (server *Server) FindEntity(name string) *Entity {
+	server.EntitiesLock.RLock()
+	defer server.EntitiesLock.RUnlock()
+
+	for _, entity := range server.Entities {
+		if entity.Name == name {
+			return entity
+		}
+	}
+
+	return nil
+}
+
+func (server *Server) AddClient(client *Client) {
+	server.ClientsLock.Lock()
+	server.Clients = append(server.Clients, client)
+	server.ClientsLock.Unlock()
+}
+
+func (server *Server) RemoveClient(client *Client) {
+	server.ClientsLock.Lock()
+	defer server.ClientsLock.Unlock()
+
+	index := -1
+	for i, p := range server.Clients {
+		if p == client {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		return
+	}
+
+	server.Clients[index] = server.Clients[len(server.Clients)-1]
+	server.Clients[len(server.Clients)-1] = nil
+	server.Clients = server.Clients[:len(server.Clients)-1]
 }

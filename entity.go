@@ -17,6 +17,7 @@
 package main
 
 import (
+	"math"
 	"time"
 )
 
@@ -24,13 +25,198 @@ type Location struct {
 	X, Y, Z, Yaw, Pitch float64
 }
 
-type Entity interface {
-	GetName() string
-	GetID() byte
-	SetID(id byte)
-	GetLocation() Location
-	GetLevel() *Level
-	Teleport(location Location)
-	TeleportLevel(level *Level)
-	Update(dt time.Duration)
+const (
+	ModelChicken   = "chicken"
+	ModelCreeper   = "creeper"
+	ModelCrocodile = "croc"
+	ModelHumanoid  = "humanoid"
+	ModelPig       = "pig"
+	ModelPrinter   = "printer"
+	ModelSheep     = "sheep"
+	ModelSkeleton  = "skeleton"
+	ModelSpider    = "spider"
+	ModelZombie    = "zombie"
+)
+
+type Entity struct {
+	Name      string
+	NameID    byte
+	ModelName string
+
+	Client       *Client
+	Server       *Server
+	Level        *Level
+	Location     Location
+	LastLocation Location
+}
+
+func NewEntity(name string, server *Server) *Entity {
+	return &Entity{
+		Name:      name,
+		NameID:    0xff,
+		ModelName: ModelHumanoid,
+		Server:    server,
+	}
+}
+
+func (entity *Entity) Teleport(location Location) {
+	entity.Location = location
+}
+
+func (entity *Entity) TeleportLevel(level *Level) {
+	if entity.Level == level {
+		return
+	}
+
+	if entity.Level != nil {
+		lastLevel := entity.Level
+		entity.Level = nil
+		entity.Despawn(lastLevel)
+	}
+
+	if level != nil {
+		entity.Location = level.Spawn
+		entity.LastLocation = Location{}
+		entity.Spawn(level)
+	}
+
+	entity.Level = level
+}
+
+func (entity *Entity) SetModel(modelName string) {
+	if modelName == entity.ModelName {
+		return
+	}
+
+	entity.ModelName = modelName
+	if entity.Level != nil {
+		entity.Server.ClientsLock.RLock()
+		for _, client := range entity.Server.Clients {
+			if client.Entity.Level == entity.Level {
+				client.SendChangeModel(entity)
+			}
+		}
+		entity.Server.ClientsLock.RUnlock()
+	}
+}
+
+func (entity *Entity) Update(dt time.Duration) {
+	if entity.Level == nil {
+		return
+	}
+
+	positionDirty := false
+	if entity.Location.X != entity.LastLocation.X ||
+		entity.Location.Y != entity.LastLocation.Y ||
+		entity.Location.Z != entity.LastLocation.Z {
+		positionDirty = true
+	}
+
+	rotationDirty := false
+	if entity.Location.Yaw != entity.LastLocation.Yaw ||
+		entity.Location.Pitch != entity.LastLocation.Pitch {
+		rotationDirty = true
+	}
+
+	teleport := false
+	if math.Abs(entity.Location.X-entity.LastLocation.X) > 1.0 ||
+		math.Abs(entity.Location.Y-entity.LastLocation.Y) > 1.0 ||
+		math.Abs(entity.Location.Z-entity.LastLocation.Z) > 1.0 {
+		teleport = true
+	}
+
+	var packet interface{}
+	if teleport {
+		packet = &PacketPlayerTeleport{
+			PacketTypePlayerTeleport,
+			entity.NameID,
+			int16(entity.Location.X * 32),
+			int16(entity.Location.Y * 32),
+			int16(entity.Location.Z * 32),
+			byte(entity.Location.Yaw * 256 / 360),
+			byte(entity.Location.Pitch * 256 / 360),
+		}
+	} else if positionDirty && rotationDirty {
+		packet = &PacketPositionOrientationUpdate{
+			PacketTypePositionOrientationUpdate,
+			entity.NameID,
+			byte((entity.Location.X - entity.LastLocation.X) * 32),
+			byte((entity.Location.Y - entity.LastLocation.Y) * 32),
+			byte((entity.Location.Z - entity.LastLocation.Z) * 32),
+			byte(entity.Location.Yaw * 256 / 360),
+			byte(entity.Location.Pitch * 256 / 360),
+		}
+	} else if positionDirty {
+		packet = &PacketPositionUpdate{
+			PacketTypePositionUpdate,
+			entity.NameID,
+			byte((entity.Location.X - entity.LastLocation.X) * 32),
+			byte((entity.Location.Y - entity.LastLocation.Y) * 32),
+			byte((entity.Location.Z - entity.LastLocation.Z) * 32),
+		}
+	} else if rotationDirty {
+		packet = &PacketOrientationUpdate{
+			PacketTypeOrientationUpdate,
+			entity.NameID,
+			byte(entity.Location.Yaw * 256 / 360),
+			byte(entity.Location.Pitch * 256 / 360),
+		}
+	} else {
+		return
+	}
+
+	entity.Server.ClientsLock.RLock()
+	for _, client := range entity.Server.Clients {
+		if client.Entity.Level == entity.Level && client != entity.Client {
+			client.SendPacket(packet)
+		}
+	}
+	entity.Server.ClientsLock.RUnlock()
+
+	entity.LastLocation = entity.Location
+}
+
+func (entity *Entity) Spawn(level *Level) {
+	entity.Server.ClientsLock.RLock()
+	for _, client := range entity.Server.Clients {
+		if client.Entity.Level == level {
+			client.SendSpawn(entity)
+		}
+	}
+	entity.Server.ClientsLock.RUnlock()
+
+	if entity.Client != nil {
+		entity.Client.SendLevel(level)
+		entity.Client.SendSpawn(entity)
+
+		entity.Server.EntitiesLock.Lock()
+		for _, e := range entity.Server.Entities {
+			if e.Level == level {
+				entity.Client.SendSpawn(e)
+			}
+		}
+		entity.Server.EntitiesLock.Unlock()
+	}
+}
+
+func (entity *Entity) Despawn(level *Level) {
+	entity.Server.ClientsLock.RLock()
+	for _, client := range entity.Server.Clients {
+		if client.Entity.Level == level {
+			client.SendDespawn(entity)
+		}
+	}
+	entity.Server.ClientsLock.RUnlock()
+
+	if entity.Client != nil && entity.Client.LoggedIn == 1 {
+		entity.Client.SendDespawn(entity)
+
+		entity.Server.EntitiesLock.Lock()
+		for _, e := range entity.Server.Entities {
+			if e.Level == level {
+				entity.Client.SendDespawn(e)
+			}
+		}
+		entity.Server.EntitiesLock.Unlock()
+	}
 }
