@@ -47,7 +47,12 @@ type Config struct {
 type Server struct {
 	Config      *Config
 	PlayerCount int32
-	Commands    map[string]*Command
+
+	Commands     map[string]*Command
+	CommandsLock sync.RWMutex
+
+	Handlers     map[EventType][]EventHandler
+	HandlersLock sync.RWMutex
 
 	Storage    LevelStorage
 	Levels     []*Level
@@ -79,12 +84,13 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 
 	server := &Server{
 		Config:   config,
+		Commands: make(map[string]*Command),
+		Handlers: make(map[EventType][]EventHandler),
 		Storage:  storage,
 		Levels:   []*Level{},
 		Entities: []*Entity{},
 		Clients:  []*Client{},
 		Listener: listener,
-		Commands: make(map[string]*Command),
 		StopChan: make(chan bool),
 	}
 
@@ -152,6 +158,14 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 			}
 
 			client := NewClient(conn, server)
+
+			event := EventClientConnect{client, false}
+			server.FireEvent(EventTypeClientConnect, &event)
+			if event.Cancel {
+				client.Disconnect()
+				continue
+			}
+
 			go client.Handle()
 		}
 	}
@@ -240,21 +254,6 @@ func (server *Server) SendHeartbeat() {
 	server.URL = string(body)
 }
 
-func (server *Server) ExecuteCommand(sender CommandSender, message string) {
-	args := strings.Fields(message)
-	if len(args) == 0 {
-		return
-	}
-
-	command := server.Commands[args[0]]
-	if command == nil {
-		sender.SendMessage("Unknown command!")
-		return
-	}
-
-	go command.Handler.HandleCommand(sender, command, args[1:])
-}
-
 func (server *Server) Update(dt time.Duration) {
 	server.EntitiesLock.RLock()
 	for _, entity := range server.Entities {
@@ -277,6 +276,9 @@ func (server *Server) AddLevel(level *Level) {
 	server.LevelsLock.Lock()
 	server.Levels = append(server.Levels, level)
 	server.LevelsLock.Unlock()
+
+	event := EventLevelLoad{level}
+	server.FireEvent(EventTypeLevelLoad, &event)
 }
 
 func (server *Server) RemoveLevel(level *Level) {
@@ -298,6 +300,9 @@ func (server *Server) RemoveLevel(level *Level) {
 	server.Levels[index] = server.Levels[len(server.Levels)-1]
 	server.Levels[len(server.Levels)-1] = nil
 	server.Levels = server.Levels[:len(server.Levels)-1]
+
+	event := EventLevelUnload{level}
+	server.FireEvent(EventTypeLevelUnload, &event)
 }
 
 func (server *Server) FindLevel(name string) *Level {
@@ -343,6 +348,9 @@ func (server *Server) UnloadLevel(level *Level) {
 	}
 
 	if server.Storage != nil {
+		event := EventLevelSave{level}
+		server.FireEvent(EventTypeLevelSave, &event)
+
 		err := server.Storage.Save(level)
 		if err != nil {
 			fmt.Printf("Server Error: %s\n", err.Error())
@@ -370,6 +378,9 @@ func (server *Server) SaveAll() {
 
 	server.LevelsLock.RLock()
 	for _, level := range server.Levels {
+		event := EventLevelSave{level}
+		server.FireEvent(EventTypeLevelSave, &event)
+
 		err := server.Storage.Save(level)
 		if err != nil {
 			fmt.Printf("Server Error: %s\n", err.Error())
@@ -424,15 +435,15 @@ func (server *Server) RemoveEntity(entity *Entity) {
 		return
 	}
 
+	server.Entities[index] = server.Entities[len(server.Entities)-1]
+	server.Entities[len(server.Entities)-1] = nil
+	server.Entities = server.Entities[:len(server.Entities)-1]
+
 	server.ClientsLock.RLock()
 	for _, client := range server.Clients {
 		client.SendRemovePlayerList(entity)
 	}
 	server.ClientsLock.RUnlock()
-
-	server.Entities[index] = server.Entities[len(server.Entities)-1]
-	server.Entities[len(server.Entities)-1] = nil
-	server.Entities = server.Entities[:len(server.Entities)-1]
 }
 
 func (server *Server) FindEntity(name string) *Entity {
@@ -473,4 +484,42 @@ func (server *Server) RemoveClient(client *Client) {
 	server.Clients[index] = server.Clients[len(server.Clients)-1]
 	server.Clients[len(server.Clients)-1] = nil
 	server.Clients = server.Clients[:len(server.Clients)-1]
+}
+
+func (server *Server) RegisterCommand(command *Command) {
+	server.CommandsLock.Lock()
+	server.Commands[command.Name] = command
+	server.CommandsLock.Unlock()
+}
+
+func (server *Server) ExecuteCommand(sender CommandSender, message string) {
+	args := strings.Fields(message)
+	if len(args) == 0 {
+		return
+	}
+
+	server.CommandsLock.RLock()
+	command := server.Commands[args[0]]
+	server.CommandsLock.RUnlock()
+
+	if command == nil {
+		sender.SendMessage("Unknown command!")
+		return
+	}
+
+	go command.Handler.HandleCommand(sender, command, args[1:])
+}
+
+func (server *Server) RegisterHandler(eventType EventType, handler EventHandler) {
+	server.HandlersLock.Lock()
+	server.Handlers[eventType] = append(server.Handlers[eventType], handler)
+	server.HandlersLock.Unlock()
+}
+
+func (server *Server) FireEvent(eventType EventType, event interface{}) {
+	server.HandlersLock.RLock()
+	for _, handler := range server.Handlers[eventType] {
+		handler.Handle(eventType, event)
+	}
+	server.HandlersLock.RUnlock()
 }

@@ -36,11 +36,11 @@ func NewConsole(server *Server, wg *sync.WaitGroup) *Console {
 		make(chan os.Signal),
 	}
 
-	server.Commands["stop"] = &Command{
+	server.RegisterCommand(&Command{
 		"stop",
 		"Stop the server.",
 		console,
-	}
+	})
 
 	signal.Notify(console.Signal, os.Interrupt)
 	go func() {

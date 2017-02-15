@@ -71,6 +71,16 @@ func NewEntity(name string, server *Server) *Entity {
 }
 
 func (entity *Entity) Teleport(location Location) {
+	if location == entity.Location {
+		return
+	}
+
+	event := &EventEntityMove{entity, entity.Location, location, false}
+	entity.Server.FireEvent(EventTypeEntityMove, &event)
+	if event.Cancel {
+		return
+	}
+
 	entity.Location = location
 }
 
@@ -79,8 +89,8 @@ func (entity *Entity) TeleportLevel(level *Level) {
 		return
 	}
 
+	lastLevel := entity.Level
 	if entity.Level != nil {
-		lastLevel := entity.Level
 		entity.Level = nil
 		entity.Despawn(lastLevel)
 	}
@@ -92,6 +102,9 @@ func (entity *Entity) TeleportLevel(level *Level) {
 	}
 
 	entity.Level = level
+
+	event := EventEntityLevelChange{entity, lastLevel, level}
+	entity.Server.FireEvent(EventTypeEntityLevelChange, &event)
 }
 
 func (entity *Entity) SetModel(modelName string) {

@@ -228,14 +228,19 @@ func (client *Client) Login() {
 		userType,
 	})
 
-	atomic.StoreUint32(&client.LoggedIn, 1)
-
 	client.Entity = NewEntity(client.Name, client.Server)
 	client.Entity.Client = client
+
+	event := EventPlayerJoin{client.Entity, false, ""}
+	client.Server.FireEvent(EventTypePlayerJoin, &event)
+	if event.Cancel {
+		client.Kick(event.CancelReason)
+		return
+	}
+
+	atomic.StoreUint32(&client.LoggedIn, 1)
 	client.Server.AddClient(client)
-
 	client.Server.BroadcastMessage(ColorYellow + client.Entity.Name + " has joined the game!")
-
 	if client.Server.AddEntity(client.Entity) == 0xff {
 		client.Kick("Server full!")
 		return
@@ -249,7 +254,7 @@ func (client *Client) Login() {
 	client.PingTicker = time.NewTicker(2 * time.Second)
 	go func() {
 		for range client.PingTicker.C {
-			client.SendPing()
+			client.SendPacket(&PacketPing{PacketTypePing})
 		}
 	}()
 }
@@ -319,12 +324,36 @@ func (client *Client) HandleSetBlock(reader io.Reader) {
 
 	switch packet.Mode {
 	case 0x00:
+		event := &EventBlockBreak{
+			client.Entity,
+			client.Entity.Level,
+			client.Entity.Level.GetBlock(x, y, z),
+			x, y, z,
+			false,
+		}
+		client.Server.FireEvent(EventTypeBlockBreak, &event)
+		if event.Cancel {
+			return
+		}
+
 		client.Entity.Level.SetBlock(x, y, z, BlockAir, client.Server)
 
 	case 0x01:
 		if block > BlockMaxCPE || (client.CustomBlockSupportLevel < 1 && block > BlockMax) {
 			client.SendMessage("Invalid block!")
 			client.RevertBlock(x, y, z)
+			return
+		}
+
+		event := &EventBlockPlace{
+			client.Entity,
+			client.Entity.Level,
+			block,
+			x, y, z,
+			false,
+		}
+		client.Server.FireEvent(EventTypeBlockPlace, &event)
+		if event.Cancel {
 			return
 		}
 
@@ -437,12 +466,19 @@ func (client *Client) Disconnect() {
 
 	if client.LoggedIn == 1 {
 		atomic.StoreUint32(&client.LoggedIn, 0)
+
+		event := EventPlayerQuit{client.Entity}
+		client.Server.FireEvent(EventTypePlayerQuit, &event)
+
 		client.Entity.TeleportLevel(nil)
 		client.Server.BroadcastMessage(ColorYellow + client.Entity.Name + " has left the game!")
 		client.Server.RemoveClient(client)
 		client.Server.RemoveEntity(client.Entity)
 		atomic.AddInt32(&client.Server.PlayerCount, -1)
 	}
+
+	event := EventClientDisconnect{client}
+	client.Server.FireEvent(EventTypeClientDisconnect, &event)
 }
 
 func (client *Client) SendPacket(packet interface{}) {
@@ -464,10 +500,6 @@ func (client *Client) Kick(reason string) {
 		PadString(reason),
 	})
 	client.Disconnect()
-}
-
-func (client *Client) SendPing() {
-	client.SendPacket(&PacketPing{PacketTypePing})
 }
 
 func (client *Client) SendMessage(message string) {
@@ -663,7 +695,7 @@ func (client *Client) SendAddPlayerList(entity *Entity) {
 	if id == client.Entity.NameID {
 		id = 0xff
 	}
-	fmt.Printf("id %d\n", id)
+
 	client.SendPacket(&PacketExtAddPlayerName{
 		PacketTypeExtAddPlayerName,
 		int16(id),
