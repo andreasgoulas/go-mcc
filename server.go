@@ -394,9 +394,16 @@ func (server *Server) AddEntity(entity *Entity) byte {
 	defer server.EntitiesLock.Unlock()
 
 	entity.NameID = server.GenerateID()
-	if entity.NameID != 0xff {
-		server.Entities = append(server.Entities, entity)
+	if entity.NameID == 0xff {
+		return 0xff
 	}
+
+	server.Entities = append(server.Entities, entity)
+	server.ClientsLock.RLock()
+	for _, client := range server.Clients {
+		client.SendAddPlayerList(entity)
+	}
+	server.ClientsLock.RUnlock()
 
 	return entity.NameID
 }
@@ -416,6 +423,12 @@ func (server *Server) RemoveEntity(entity *Entity) {
 	if index == -1 {
 		return
 	}
+
+	server.ClientsLock.RLock()
+	for _, client := range server.Clients {
+		client.SendRemovePlayerList(entity)
+	}
+	server.ClientsLock.RUnlock()
 
 	server.Entities[index] = server.Entities[len(server.Entities)-1]
 	server.Entities[len(server.Entities)-1] = nil

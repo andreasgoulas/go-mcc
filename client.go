@@ -37,6 +37,7 @@ var Extensions = []struct {
 }{
 	{"ClickDistance", 1},
 	{"CustomBlocks", 1},
+	{"ExtPlayerList", 2},
 	{"LongerMessages", 1},
 	{"ChangeModel", 1},
 	{"EnvMapAppearance", 2},
@@ -207,16 +208,6 @@ func (client *Client) Login() {
 		}
 	}
 
-	client.Entity = NewEntity(client.Name, client.Server)
-	client.Entity.Client = client
-	if client.Server.AddEntity(client.Entity) == 0xff {
-		client.Kick("Server full!")
-		atomic.AddInt32(&client.Server.PlayerCount, -1)
-		return
-	}
-
-	client.Server.AddClient(client)
-
 	if client.HasExtension("CustomBlocks") {
 		client.SendPacket(&PacketCustomBlockSupportLevel{
 			PacketTypeCustomBlockSupportLevel,
@@ -238,7 +229,17 @@ func (client *Client) Login() {
 	})
 
 	atomic.StoreUint32(&client.LoggedIn, 1)
+
+	client.Entity = NewEntity(client.Name, client.Server)
+	client.Entity.Client = client
+	client.Server.AddClient(client)
+
 	client.Server.BroadcastMessage(ColorYellow + client.Entity.Name + " has joined the game!")
+
+	if client.Server.AddEntity(client.Entity) == 0xff {
+		client.Kick("Server full!")
+		return
+	}
 
 	level := client.Server.MainLevel()
 	if level != nil {
@@ -552,16 +553,30 @@ func (client *Client) SendSpawn(entity *Entity) {
 	}
 
 	location := entity.Location
-	client.SendPacket(&PacketSpawnPlayer{
-		PacketTypeSpawnPlayer,
-		id,
-		PadString(entity.Name),
-		int16(location.X * 32),
-		int16(location.Y * 32),
-		int16(location.Z * 32),
-		byte(location.Yaw * 256 / 360),
-		byte(location.Pitch * 256 / 360),
-	})
+	if client.HasExtension("ExtPlayerList") {
+		client.SendPacket(&PacketExtAddEntity2{
+			PacketTypeExtAddEntity2,
+			id,
+			PadString(entity.DisplayName),
+			PadString(entity.SkinName),
+			int16(location.X * 32),
+			int16(location.Y * 32),
+			int16(location.Z * 32),
+			byte(location.Yaw * 256 / 360),
+			byte(location.Pitch * 256 / 360),
+		})
+	} else {
+		client.SendPacket(&PacketSpawnPlayer{
+			PacketTypeSpawnPlayer,
+			id,
+			PadString(entity.Name),
+			int16(location.X * 32),
+			int16(location.Y * 32),
+			int16(location.Z * 32),
+			byte(location.Yaw * 256 / 360),
+			byte(location.Pitch * 256 / 360),
+		})
+	}
 
 	if entity.ModelName != ModelHumanoid {
 		client.SendChangeModel(entity)
@@ -637,6 +652,42 @@ func (client *Client) SendCPE() {
 			int32(extension.Version),
 		})
 	}
+}
+
+func (client *Client) SendAddPlayerList(entity *Entity) {
+	if client.LoggedIn == 0 || !client.HasExtension("ExtPlayerList") {
+		return
+	}
+
+	id := entity.NameID
+	if id == client.Entity.NameID {
+		id = 0xff
+	}
+	fmt.Printf("id %d\n", id)
+	client.SendPacket(&PacketExtAddPlayerName{
+		PacketTypeExtAddPlayerName,
+		int16(id),
+		PadString(entity.Name),
+		PadString(entity.ListName),
+		PadString(entity.GroupName),
+		entity.GroupRank,
+	})
+}
+
+func (client *Client) SendRemovePlayerList(entity *Entity) {
+	if client.LoggedIn == 0 || !client.HasExtension("ExtPlayerList") {
+		return
+	}
+
+	id := entity.NameID
+	if id == client.Entity.NameID {
+		id = 0xff
+	}
+
+	client.SendPacket(&PacketExtRemovePlayerName{
+		PacketTypeExtRemovePlayerName,
+		int16(id),
+	})
 }
 
 func (client *Client) SendChangeModel(entity *Entity) {

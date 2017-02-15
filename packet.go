@@ -43,8 +43,11 @@ const (
 	PacketTypeExtEntry                = 0x11
 	PacketTypeSetClickDistance        = 0x12
 	PacketTypeCustomBlockSupportLevel = 0x13
+	PacketTypeExtAddPlayerName        = 0x16
+	PacketTypeExtRemovePlayerName     = 0x18
 	PacketTypeChangeModel             = 0x1d
 	PacketTypeEnvSetMapAppearance2    = 0x1e
+	PacketTypeExtAddEntity2           = 0x21
 )
 
 type PacketClientIdentification struct {
@@ -173,6 +176,20 @@ type PacketCustomBlockSupportLevel struct {
 	SupportLevel byte
 }
 
+type PacketExtAddPlayerName struct {
+	PacketID   byte
+	NameID     int16
+	PlayerName [64]byte
+	ListName   [64]byte
+	GroupName  [64]byte
+	GroupRank  byte
+}
+
+type PacketExtRemovePlayerName struct {
+	PacketID byte
+	NameID   int16
+}
+
 type PacketChangeModel struct {
 	PacketID  byte
 	EntityID  byte
@@ -185,6 +202,15 @@ type PacketEnvSetMapAppearance2 struct {
 	SideBlock, EdgeBlock  byte
 	SideLevel, CloudLevel int16
 	MaxViewDistance       int16
+}
+
+type PacketExtAddEntity2 struct {
+	PacketID    byte
+	EntityID    byte
+	DisplayName [64]byte
+	SkinName    [64]byte
+	X, Y, Z     int16
+	Yaw, Pitch  byte
 }
 
 func PadString(str string) [64]byte {

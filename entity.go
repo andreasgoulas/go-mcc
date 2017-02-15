@@ -39,9 +39,17 @@ const (
 )
 
 type Entity struct {
-	Name      string
-	NameID    byte
+	NameID byte
+
+	Name        string
+	DisplayName string
+	ListName    string
+
 	ModelName string
+	SkinName  string
+
+	GroupName string
+	GroupRank byte
 
 	Client       *Client
 	Server       *Server
@@ -52,10 +60,13 @@ type Entity struct {
 
 func NewEntity(name string, server *Server) *Entity {
 	return &Entity{
-		Name:      name,
-		NameID:    0xff,
-		ModelName: ModelHumanoid,
-		Server:    server,
+		NameID:      0xff,
+		Name:        name,
+		DisplayName: name,
+		ListName:    name,
+		ModelName:   ModelHumanoid,
+		SkinName:    name,
+		Server:      server,
 	}
 }
 
