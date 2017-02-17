@@ -47,6 +47,7 @@ const (
 	PacketTypeExtRemovePlayerName     = 0x18
 	PacketTypeChangeModel             = 0x1d
 	PacketTypeEnvSetMapAppearance2    = 0x1e
+	PacketTypeEnvSetWeatherType       = 0x1f
 	PacketTypeExtAddEntity2           = 0x21
 )
 
@@ -202,6 +203,11 @@ type PacketEnvSetMapAppearance2 struct {
 	SideBlock, EdgeBlock  byte
 	SideLevel, CloudLevel int16
 	MaxViewDistance       int16
+}
+
+type PacketEnvSetWeatherType struct {
+	PacketID    byte
+	WeatherType byte
 }
 
 type PacketExtAddEntity2 struct {

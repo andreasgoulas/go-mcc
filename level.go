@@ -21,6 +21,14 @@ type LevelStorage interface {
 	Save(level *Level) error
 }
 
+type WeatherType byte
+
+const (
+	WeatherSunny   = 0
+	WeatherRaining = 1
+	WeatherSnowing = 2
+)
+
 type LevelAppearance struct {
 	TexturePackURL        string
 	SideBlock, EdgeBlock  BlockID
@@ -29,11 +37,14 @@ type LevelAppearance struct {
 }
 
 type Level struct {
+	Server *Server
+
 	Name                 string
 	Width, Height, Depth uint
 	Blocks               []BlockID
 	Spawn                Location
 	Appearance           LevelAppearance
+	Weather              WeatherType
 }
 
 func NewLevel(name string, width, height, depth uint) *Level {
@@ -42,6 +53,7 @@ func NewLevel(name string, width, height, depth uint) *Level {
 	}
 
 	return &Level{
+		nil,
 		name,
 		width, height, depth,
 		make([]BlockID, width*height*depth),
@@ -57,6 +69,7 @@ func NewLevel(name string, width, height, depth uint) *Level {
 			CloudLevel:      height + 2,
 			MaxViewDistance: 0,
 		},
+		WeatherSunny,
 	}
 }
 
@@ -72,17 +85,31 @@ func (level *Level) GetBlock(x, y, z uint) BlockID {
 	return BlockAir
 }
 
-func (level *Level) SetBlock(x, y, z uint, block BlockID, server *Server) {
+func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
 	if x < level.Width && y < level.Height && z < level.Depth {
 		level.Blocks[x+level.Width*(z+level.Depth*y)] = block
-		if server != nil {
-			server.ClientsLock.RLock()
-			for _, client := range server.Clients {
+		if broadcast && level.Server != nil {
+			level.Server.ClientsLock.RLock()
+			for _, client := range level.Server.Clients {
 				if client.Entity.Level == level {
 					client.SendBlockChange(x, y, z, block)
 				}
 			}
-			server.ClientsLock.RUnlock()
+			level.Server.ClientsLock.RUnlock()
 		}
 	}
+}
+
+func (level *Level) SetWeather(weather WeatherType) {
+	if level.Server != nil && weather != level.Weather {
+		level.Server.ClientsLock.RLock()
+		for _, client := range level.Server.Clients {
+			if client.Entity.Level == level {
+				client.SendWeather(weather)
+			}
+		}
+		level.Server.ClientsLock.RUnlock()
+	}
+
+	level.Weather = weather
 }

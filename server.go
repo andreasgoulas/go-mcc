@@ -273,15 +273,25 @@ func (server *Server) BroadcastMessage(message string) {
 }
 
 func (server *Server) AddLevel(level *Level) {
+	if level.Server != nil {
+		return
+	}
+
 	server.LevelsLock.Lock()
 	server.Levels = append(server.Levels, level)
 	server.LevelsLock.Unlock()
+
+	level.Server = server
 
 	event := EventLevelLoad{level}
 	server.FireEvent(EventTypeLevelLoad, &event)
 }
 
 func (server *Server) RemoveLevel(level *Level) {
+	if level.Server != server {
+		return
+	}
+
 	server.LevelsLock.Lock()
 	defer server.LevelsLock.Unlock()
 
@@ -296,6 +306,8 @@ func (server *Server) RemoveLevel(level *Level) {
 	if index == -1 {
 		return
 	}
+
+	level.Server = server
 
 	server.Levels[index] = server.Levels[len(server.Levels)-1]
 	server.Levels[len(server.Levels)-1] = nil

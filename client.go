@@ -41,6 +41,7 @@ var Extensions = []struct {
 	{"LongerMessages", 1},
 	{"ChangeModel", 1},
 	{"EnvMapAppearance", 2},
+	{"EnvWeatherType", 1},
 }
 
 func IsValidName(name string) bool {
@@ -336,7 +337,7 @@ func (client *Client) HandleSetBlock(reader io.Reader) {
 			return
 		}
 
-		client.Entity.Level.SetBlock(x, y, z, BlockAir, client.Server)
+		client.Entity.Level.SetBlock(x, y, z, BlockAir, true)
 
 	case 0x01:
 		if block > BlockMaxCPE || (client.CustomBlockSupportLevel < 1 && block > BlockMax) {
@@ -357,7 +358,7 @@ func (client *Client) HandleSetBlock(reader io.Reader) {
 			return
 		}
 
-		client.Entity.Level.SetBlock(x, y, z, block, client.Server)
+		client.Entity.Level.SetBlock(x, y, z, block, true)
 	}
 }
 
@@ -568,6 +569,7 @@ func (client *Client) SendLevel(level *Level) {
 		})
 	}
 
+	client.SendWeather(level.Weather)
 	client.SendPacket(&PacketLevelFinalize{
 		PacketTypeLevelFinalize,
 		int16(level.Width), int16(level.Height), int16(level.Depth),
@@ -736,5 +738,16 @@ func (client *Client) SendChangeModel(entity *Entity) {
 		PacketTypeChangeModel,
 		id,
 		PadString(entity.ModelName),
+	})
+}
+
+func (client *Client) SendWeather(weather WeatherType) {
+	if client.LoggedIn == 0 || !client.HasExtension("EnvWeatherType") {
+		return
+	}
+
+	client.SendPacket(&PacketEnvSetWeatherType{
+		PacketTypeEnvSetWeatherType,
+		byte(weather),
 	})
 }

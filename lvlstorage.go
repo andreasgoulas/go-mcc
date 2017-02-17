@@ -83,7 +83,7 @@ func (storage *LvlStorage) Load(name string) (*Level, error) {
 					return nil, err
 				}
 
-				level.SetBlock(x, y, z, BlockID(block[0]), nil)
+				level.SetBlock(x, y, z, BlockID(block[0]), false)
 			}
 		}
 	}
