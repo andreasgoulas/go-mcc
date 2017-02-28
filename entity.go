@@ -114,13 +114,9 @@ func (entity *Entity) SetModel(modelName string) {
 
 	entity.ModelName = modelName
 	if entity.Level != nil {
-		entity.Server.ClientsLock.RLock()
-		for _, client := range entity.Server.Clients {
-			if client.Entity.Level == entity.Level {
-				client.SendChangeModel(entity)
-			}
-		}
-		entity.Server.ClientsLock.RUnlock()
+		entity.Level.ForEachClient(func(client *Client) {
+			client.SendChangeModel(entity)
+		})
 	}
 }
 
@@ -189,58 +185,37 @@ func (entity *Entity) Update(dt time.Duration) {
 		return
 	}
 
-	entity.Server.ClientsLock.RLock()
-	for _, client := range entity.Server.Clients {
-		if client.Entity.Level == entity.Level && client != entity.Client {
+	entity.LastLocation = entity.Location
+	entity.Level.ForEachClient(func(client *Client) {
+		if client != entity.Client {
 			client.SendPacket(packet)
 		}
-	}
-	entity.Server.ClientsLock.RUnlock()
-
-	entity.LastLocation = entity.Location
+	})
 }
 
 func (entity *Entity) Spawn(level *Level) {
-	entity.Server.ClientsLock.RLock()
-	for _, client := range entity.Server.Clients {
-		if client.Entity.Level == level {
-			client.SendSpawn(entity)
-		}
-	}
-	entity.Server.ClientsLock.RUnlock()
+	level.ForEachClient(func(client *Client) {
+		client.SendSpawn(entity)
+	})
 
 	if entity.Client != nil {
 		entity.Client.SendLevel(level)
 		entity.Client.SendSpawn(entity)
-
-		entity.Server.EntitiesLock.Lock()
-		for _, e := range entity.Server.Entities {
-			if e.Level == level {
-				entity.Client.SendSpawn(e)
-			}
-		}
-		entity.Server.EntitiesLock.Unlock()
+		level.ForEachEntity(func(other *Entity) {
+			entity.Client.SendSpawn(other)
+		})
 	}
 }
 
 func (entity *Entity) Despawn(level *Level) {
-	entity.Server.ClientsLock.RLock()
-	for _, client := range entity.Server.Clients {
-		if client.Entity.Level == level {
-			client.SendDespawn(entity)
-		}
-	}
-	entity.Server.ClientsLock.RUnlock()
+	level.ForEachClient(func(client *Client) {
+		client.SendDespawn(entity)
+	})
 
 	if entity.Client != nil && entity.Client.LoggedIn == 1 {
 		entity.Client.SendDespawn(entity)
-
-		entity.Server.EntitiesLock.Lock()
-		for _, e := range entity.Server.Entities {
-			if e.Level == level {
-				entity.Client.SendDespawn(e)
-			}
-		}
-		entity.Server.EntitiesLock.Unlock()
+		level.ForEachEntity(func(other *Entity) {
+			entity.Client.SendDespawn(other)
+		})
 	}
 }

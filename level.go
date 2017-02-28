@@ -89,31 +89,51 @@ func (level *Level) GetBlock(x, y, z uint) BlockID {
 	return BlockAir
 }
 
+func (level *Level) ForEachEntity(fn func(*Entity)) {
+	if level.Server == nil {
+		return
+	}
+
+	level.Server.EntitiesLock.RLock()
+	for _, entity := range level.Server.Entities {
+		if entity.Level == level {
+			fn(entity)
+		}
+	}
+	level.Server.EntitiesLock.RUnlock()
+}
+
+func (level *Level) ForEachClient(fn func(*Client)) {
+	if level.Server == nil {
+		return
+	}
+
+	level.Server.ClientsLock.RLock()
+	for _, client := range level.Server.Clients {
+		if client.Entity.Level == level {
+			fn(client)
+		}
+	}
+	level.Server.ClientsLock.RUnlock()
+}
+
 func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
 	if x < level.Width && y < level.Height && z < level.Depth {
 		level.Blocks[level.Index(x, y, z)] = block
-		if broadcast && level.Server != nil {
-			level.Server.ClientsLock.RLock()
-			for _, client := range level.Server.Clients {
-				if client.Entity.Level == level {
-					client.SendBlockChange(x, y, z, block)
-				}
-			}
-			level.Server.ClientsLock.RUnlock()
+		if broadcast {
+			level.ForEachClient(func(client *Client) {
+				client.SendBlockChange(x, y, z, block)
+			})
 		}
 	}
 }
 
 func (level *Level) SetWeather(weather WeatherType) {
-	if level.Server != nil && weather != level.Weather {
-		level.Server.ClientsLock.RLock()
-		for _, client := range level.Server.Clients {
-			if client.Entity.Level == level {
-				client.SendWeather(weather)
-			}
-		}
-		level.Server.ClientsLock.RUnlock()
-	}
+	if weather != level.Weather {
+		level.ForEachClient(func(client *Client) {
+			client.SendWeather(weather)
+		})
 
-	level.Weather = weather
+		level.Weather = weather
+	}
 }
