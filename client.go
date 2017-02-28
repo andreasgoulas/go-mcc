@@ -373,13 +373,13 @@ func (client *Client) HandlePlayerTeleport(reader io.Reader) {
 		return
 	}
 
-	client.Entity.Location = Location{
+	client.Entity.Teleport(Location{
 		float64(packet.X) / 32,
 		float64(packet.Y) / 32,
 		float64(packet.Z) / 32,
 		float64(packet.Yaw) * 360 / 256,
 		float64(packet.Pitch) * 360 / 256,
-	}
+	})
 }
 
 func (client *Client) HandleMessage(reader io.Reader) {
@@ -557,19 +557,9 @@ func (client *Client) SendLevel(level *Level) {
 		client.SendPacket(packet)
 	}
 
-	if client.HasExtension("EnvMapAppearance") {
-		client.SendPacket(&PacketEnvSetMapAppearance2{
-			PacketTypeEnvSetMapAppearance2,
-			PadString(level.Appearance.TexturePackURL),
-			client.ConvertBlock(level.Appearance.SideBlock),
-			client.ConvertBlock(level.Appearance.EdgeBlock),
-			int16(level.Appearance.SideLevel),
-			int16(level.Appearance.CloudLevel),
-			int16(level.Appearance.MaxViewDistance),
-		})
-	}
-
+	client.SendLevelAppearance(level.Appearance)
 	client.SendWeather(level.Weather)
+
 	client.SendPacket(&PacketLevelFinalize{
 		PacketTypeLevelFinalize,
 		int16(level.Width), int16(level.Height), int16(level.Depth),
@@ -738,6 +728,22 @@ func (client *Client) SendChangeModel(entity *Entity) {
 		PacketTypeChangeModel,
 		id,
 		PadString(entity.ModelName),
+	})
+}
+
+func (client *Client) SendLevelAppearance(appearance LevelAppearance) {
+	if client.LoggedIn == 0 || !client.HasExtension("EnvMapAppearance") {
+		return
+	}
+
+	client.SendPacket(&PacketEnvSetMapAppearance2{
+		PacketTypeEnvSetMapAppearance2,
+		PadString(appearance.TexturePackURL),
+		client.ConvertBlock(appearance.SideBlock),
+		client.ConvertBlock(appearance.EdgeBlock),
+		int16(appearance.SideLevel),
+		int16(appearance.CloudLevel),
+		int16(appearance.MaxViewDistance),
 	})
 }
 

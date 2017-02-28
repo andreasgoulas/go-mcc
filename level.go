@@ -77,9 +77,13 @@ func (level *Level) Volume() uint {
 	return level.Width * level.Height * level.Depth
 }
 
+func (level *Level) Index(x, y, z uint) uint {
+	return x + level.Width*(z+level.Depth*y)
+}
+
 func (level *Level) GetBlock(x, y, z uint) BlockID {
 	if x < level.Width && y < level.Height && z < level.Depth {
-		return level.Blocks[x+level.Width*(z+level.Depth*y)]
+		return level.Blocks[level.Index(x, y, z)]
 	}
 
 	return BlockAir
@@ -87,7 +91,7 @@ func (level *Level) GetBlock(x, y, z uint) BlockID {
 
 func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
 	if x < level.Width && y < level.Height && z < level.Depth {
-		level.Blocks[x+level.Width*(z+level.Depth*y)] = block
+		level.Blocks[level.Index(x, y, z)] = block
 		if broadcast && level.Server != nil {
 			level.Server.ClientsLock.RLock()
 			for _, client := range level.Server.Clients {
