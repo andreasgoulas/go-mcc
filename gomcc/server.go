@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package gomcc
 
 import (
 	"encoding/json"
@@ -32,6 +32,12 @@ import (
 )
 
 const ServerSoftware = "Go-MCC"
+
+const (
+	UpdateInterval    = 100 * time.Millisecond
+	HeartbeatInterval = 45 * time.Second
+	SaveInterval      = 5 * time.Minute
+)
 
 type Config struct {
 	Port       int    `json:"server-port"`
@@ -76,7 +82,7 @@ type Server struct {
 }
 
 func NewServer(config *Config, storage LevelStorage) *Server {
-	listener, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: config.Port})
+	listener, err := net.ListenTCP("tcp", &net.TCPAddr{Port: config.Port})
 	if err != nil {
 		fmt.Printf("Server Error: %s\n", err.Error())
 		return nil
@@ -114,24 +120,26 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 func (server *Server) Run(wg *sync.WaitGroup) {
 	wg.Add(1)
 
-	server.UpdateTicker = time.NewTicker(100 * time.Millisecond)
+	server.UpdateTicker = time.NewTicker(UpdateInterval)
 	go func() {
 		for range server.UpdateTicker.C {
 			server.ForEachEntity(func(entity *Entity) {
-				entity.Update(100 * time.Millisecond)
+				entity.Update(UpdateInterval)
 			})
 		}
 	}()
 
-	server.SaveTicker = time.NewTicker(5 * time.Minute)
-	go func() {
-		for range server.SaveTicker.C {
-			server.SaveAll()
-		}
-	}()
+	if SaveInterval > 0 {
+		server.SaveTicker = time.NewTicker(SaveInterval)
+		go func() {
+			for range server.SaveTicker.C {
+				server.SaveAll()
+			}
+		}()
+	}
 
-	if len(server.Config.Heartbeat) > 0 {
-		server.HeartbeatTicker = time.NewTicker(45 * time.Second)
+	if HeartbeatInterval > 0 && len(server.Config.Heartbeat) > 0 {
+		server.HeartbeatTicker = time.NewTicker(HeartbeatInterval)
 		go func() {
 			server.SendHeartbeat()
 			for range server.HeartbeatTicker.C {
@@ -513,8 +521,16 @@ func (server *Server) RegisterCommand(command *Command) {
 	server.CommandsLock.Unlock()
 }
 
+func (server *Server) ForEachCommand(fn func(*Command)) {
+	server.CommandsLock.RLock()
+	for _, command := range server.Commands {
+		fn(command)
+	}
+	server.CommandsLock.RUnlock()
+}
+
 func (server *Server) ExecuteCommand(sender CommandSender, message string) {
-	args := strings.Fields(message)
+	args := strings.SplitN(message, " ", 2)
 	if len(args) == 0 {
 		return
 	}
@@ -528,7 +544,18 @@ func (server *Server) ExecuteCommand(sender CommandSender, message string) {
 		return
 	}
 
-	go command.Handler.HandleCommand(sender, command, args[1:])
+	if !sender.HasPermission(command.Permission) {
+		sender.SendMessage("You do not have permission to execute this command!")
+		return
+	}
+
+	if len(args) == 2 {
+		message = args[1]
+	} else {
+		message = ""
+	}
+
+	go command.Handler(sender, command, message)
 }
 
 func (server *Server) RegisterHandler(eventType EventType, handler EventHandler) {

@@ -21,9 +21,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"sync"
+
+	"Go-MCC/core"
+	"Go-MCC/gomcc"
 )
 
-var DefaultConfig = &Config{
+var DefaultConfig = &gomcc.Config{
 	Port:       25565,
 	Name:       "Go-MCC",
 	MOTD:       "Welcome!",
@@ -34,7 +37,7 @@ var DefaultConfig = &Config{
 	MainLevel:  "main",
 }
 
-func ReadConfig(path string) *Config {
+func ReadConfig(path string) *gomcc.Config {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
 		file, err = json.MarshalIndent(DefaultConfig, "", "\t")
@@ -50,7 +53,7 @@ func ReadConfig(path string) *Config {
 
 		return DefaultConfig
 	} else {
-		config := &Config{}
+		config := &gomcc.Config{}
 		err = json.Unmarshal(file, config)
 		if err != nil {
 			fmt.Printf("Config Error: %s\n", err.Error())
@@ -63,11 +66,13 @@ func ReadConfig(path string) *Config {
 
 func main() {
 	config := ReadConfig("server.properties")
-	storage := NewLvlStorage("levels/")
-	server := NewServer(config, storage)
+	storage := gomcc.NewLvlStorage("levels/")
+	server := gomcc.NewServer(config, storage)
 	if server == nil {
 		return
 	}
+
+	core.Initialize(server)
 
 	wg := &sync.WaitGroup{}
 	go server.Run(wg)

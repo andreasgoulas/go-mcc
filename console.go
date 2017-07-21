@@ -22,24 +22,27 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+
+	"Go-MCC/gomcc"
 )
 
 type Console struct {
-	Server    *Server
+	Server    *gomcc.Server
 	WaitGroup *sync.WaitGroup
 	Signal    chan os.Signal
 }
 
-func NewConsole(server *Server, wg *sync.WaitGroup) *Console {
+func NewConsole(server *gomcc.Server, wg *sync.WaitGroup) *Console {
 	console := &Console{
 		server, wg,
 		make(chan os.Signal),
 	}
 
-	server.RegisterCommand(&Command{
+	server.RegisterCommand(&gomcc.Command{
 		"stop",
 		"Stop the server.",
-		console,
+		"stop",
+		console.HandleStop,
 	})
 
 	signal.Notify(console.Signal, os.Interrupt)
@@ -66,6 +69,10 @@ func (console *Console) Stop() {
 	os.Exit(0)
 }
 
+func (console *Console) Name() string {
+	return "Console"
+}
+
 func (console *Console) SendMessage(message string) {
 	fmt.Println(message)
 }
@@ -74,14 +81,15 @@ func (console *Console) IsOperator() bool {
 	return true
 }
 
-func (console *Console) HandleCommand(sender CommandSender, command *Command, args []string) {
-	switch command.Name {
-	case "stop":
-		if !sender.IsOperator() {
-			sender.SendMessage("You are not an operator!")
-			return
-		}
+func (console *Console) HasPermission(permission string) bool {
+	return true
+}
 
-		console.Stop()
+func (console *Console) HandleStop(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	if !sender.IsOperator() {
+		sender.SendMessage("You are not an operator!")
+		return
 	}
+
+	console.Stop()
 }

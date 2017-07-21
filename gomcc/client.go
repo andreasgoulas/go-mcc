@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package gomcc
 
 import (
 	"bytes"
@@ -68,32 +68,14 @@ func IsValidMessage(message string) bool {
 	return true
 }
 
-func EscapeColors(message string) string {
-	result := make([]byte, len(message))
-	for i := range message {
-		result[i] = message[i]
-		if message[i] == '%' && i < len(message)-1 {
-			color := message[i+1]
-			if (color >= 'a' && color <= 'f') ||
-				(color >= 'A' && color <= 'A') ||
-				(color >= '0' && color <= '9') {
-				result[i] = '&'
-			}
-		}
-	}
-
-	return string(result)
-}
-
 type Client struct {
-	Entity    *Entity
-	Server    *Server
-	Conn      net.Conn
-	Connected uint32
-	LoggedIn  uint32
-	Name      string
-
-	Operator bool
+	Entity     *Entity
+	Server     *Server
+	Conn       net.Conn
+	Connected  uint32
+	LoggedIn   uint32
+	ClientName string
+	Operator   bool
 
 	HasCPE                  bool
 	RemainingExtensions     uint
@@ -114,8 +96,21 @@ func NewClient(conn net.Conn, server *Server) *Client {
 	}
 }
 
+func (client *Client) Name() string {
+	if client.Entity != nil {
+		return client.Entity.DisplayName
+	}
+
+	return client.ClientName
+}
+
 func (client *Client) IsOperator() bool {
 	return client.Operator
+}
+
+func (client *Client) HasPermission(permission string) bool {
+	// TODO
+	return true
 }
 
 func (client *Client) Verify(key []byte) bool {
@@ -125,7 +120,7 @@ func (client *Client) Verify(key []byte) bool {
 
 	data := make([]byte, len(client.Server.Salt))
 	copy(data, client.Server.Salt[:])
-	data = append(data, []byte(client.Name)...)
+	data = append(data, []byte(client.ClientName)...)
 
 	digest := md5.Sum(data)
 	return bytes.Equal(digest[:], key)
@@ -229,7 +224,7 @@ func (client *Client) Login() {
 		userType,
 	})
 
-	client.Entity = NewEntity(client.Name, client.Server)
+	client.Entity = NewEntity(client.ClientName, client.Server)
 	client.Entity.Client = client
 
 	event := EventPlayerJoin{client.Entity, false, ""}
@@ -273,8 +268,8 @@ func (client *Client) HandleIdentification(reader io.Reader) {
 		return
 	}
 
-	client.Name = TrimString(packet.Name)
-	if !IsValidName(client.Name) {
+	client.ClientName = TrimString(packet.Name)
+	if !IsValidName(client.ClientName) {
 		client.Kick("Invalid name!")
 		return
 	}
@@ -287,7 +282,7 @@ func (client *Client) HandleIdentification(reader io.Reader) {
 		}
 	}
 
-	if client.Server.FindEntity(client.Name) != nil {
+	if client.Server.FindEntity(client.ClientName) != nil {
 		client.Kick("Already logged in!")
 		return
 	}
@@ -406,7 +401,7 @@ func (client *Client) HandleMessage(reader io.Reader) {
 	if message[0] == '/' {
 		client.Server.ExecuteCommand(client, message[1:])
 	} else {
-		client.Server.BroadcastMessage(ColorDefault + "<" + client.Entity.Name + "> " + EscapeColors(message))
+		client.Server.BroadcastMessage(ColorDefault + "<" + client.Entity.Name + "> " + ConvertColors(message))
 	}
 }
 

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package gomcc
 
 const (
 	ColorBlack       = "&0"
@@ -37,17 +37,39 @@ const (
 	ColorDefault = ColorWhite
 )
 
+// ConvertColors returns the given string with each occurence of a %-prefixed
+// color code replaced by a client-compatible one.
+func ConvertColors(message string) string {
+	result := make([]byte, len(message))
+	for i := range message {
+		result[i] = message[i]
+		if message[i] == '%' && i < len(message)-1 {
+			color := message[i+1]
+			if (color >= 'a' && color <= 'f') ||
+				(color >= 'A' && color <= 'A') ||
+				(color >= '0' && color <= '9') {
+				result[i] = '&'
+			}
+		}
+	}
+
+	return string(result)
+}
+
+// A CommandSender is a generic entity that can execute commands and receive
+// messages.
 type CommandSender interface {
+	Name() string
 	SendMessage(message string)
 	IsOperator() bool
+	HasPermission(permission string) bool
 }
+
+type CommandHandler func(sender CommandSender, command *Command, message string)
 
 type Command struct {
 	Name        string
 	Description string
+	Permission  string
 	Handler     CommandHandler
-}
-
-type CommandHandler interface {
-	HandleCommand(sender CommandSender, command *Command, args []string)
 }

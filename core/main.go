@@ -14,31 +14,35 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package core
 
-type LevelGenerator interface {
-	Generate(level *Level)
-}
+import (
+	"Go-MCC/gomcc"
+)
 
-var Generators = map[string]LevelGenerator{
-	"flat": &FlatGenerator{},
-}
+var Server *gomcc.Server
 
-type FlatGenerator struct {
-	GrassHeight uint
-}
+func Initialize(server *gomcc.Server) {
+	Server = server
 
-func (generator *FlatGenerator) Generate(level *Level) {
-	grassHeight := generator.GrassHeight
-	if generator.GrassHeight == 0 {
-		grassHeight = level.Height / 2
-	}
+	Server.RegisterCommand(&gomcc.Command{
+		"me",
+		"Broadcast an action.",
+		"core.me",
+		HandleMe,
+	})
 
-	for y := uint(0); y < grassHeight; y++ {
-		for z := uint(0); z < level.Depth; z++ {
-			for x := uint(0); x < level.Width; x++ {
-				level.SetBlock(x, y, z, BlockGrass, false)
-			}
-		}
-	}
+	Server.RegisterCommand(&gomcc.Command{
+		"say",
+		"Broadcast a message.",
+		"core.say",
+		HandleSay,
+	})
+
+	Server.RegisterCommand(&gomcc.Command{
+		"tell",
+		"Send a private message to a player.",
+		"core.tell",
+		HandleTell,
+	})
 }
