@@ -17,34 +17,20 @@
 package core
 
 import (
-	"strings"
-
 	"Go-MCC/gomcc"
 )
 
-func HandleGoto(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func HandleSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	client, ok := sender.(*gomcc.Client)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
 	}
 
-	args := strings.Split(message, " ")
-	if len(args) != 1 || len(args[0]) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <map>")
+	if len(message) > 0 {
+		sender.SendMessage("Usage: " + command.Name)
 		return
 	}
 
-	level := sender.Server().FindLevel(args[0])
-	if level == nil {
-		sender.SendMessage("Map " + args[0] + " not found")
-		return
-	}
-
-	if level == client.Entity.Level {
-		sender.SendMessage("You are already in " + level.Name)
-		return
-	}
-
-	client.Entity.TeleportLevel(level)
+	client.Entity.Teleport(client.Entity.Level.Spawn)
 }

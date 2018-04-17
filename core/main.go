@@ -23,7 +23,7 @@ import (
 func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		"goto",
-		"Move to another world.",
+		"Move to another level.",
 		"core.goto",
 		HandleGoto,
 	})
@@ -40,6 +40,13 @@ func Initialize(server *gomcc.Server) {
 		"Broadcast a message.",
 		"core.say",
 		HandleSay,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		"spawn",
+		"Teleport to the spawn location of the level.",
+		"core.spawn",
+		HandleSpawn,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
