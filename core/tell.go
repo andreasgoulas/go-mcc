@@ -29,17 +29,13 @@ func HandleTell(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	found := sender.Server().FindEntity(args[0], func(entity *gomcc.Entity) {
-		if entity.Client == nil {
-			return
-		}
-
-		message = gomcc.ConvertColors(args[1])
-		sender.SendMessage("[me -> " + entity.Client.Name() + "] " + message)
-		entity.Client.SendMessage("[" + sender.Name() + " -> me] " + message)
-	})
-
-	if !found {
+	player := sender.Server().FindEntity(args[0])
+	if player == nil || player.Client == nil {
 		sender.SendMessage("Player " + args[0] + " not found")
+		return
 	}
+
+	message = gomcc.ConvertColors(args[1])
+	sender.SendMessage("[me -> " + player.Client.Name() + "] " + message)
+	player.Client.SendMessage("[" + sender.Name() + " -> me] " + message)
 }

@@ -43,18 +43,18 @@ func HandleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 	player := client.Entity
 	args := strings.Split(message, " ")
 	if len(args) == 1 && len(args[0]) > 0 {
-		found := sender.Server().FindEntity(args[0], func(entity *gomcc.Entity) {
-			if entity.Level != player.Level {
-				player.TeleportLevel(entity.Level)
-			}
-
-			player.Teleport(entity.Location)
-			player.Update()
-		})
-
-		if !found {
+		entity := sender.Server().FindEntity(args[0])
+		if entity == nil {
 			sender.SendMessage("Player " + args[0] + " not found")
+			return
 		}
+
+		if entity.Level != player.Level {
+			player.TeleportLevel(entity.Level)
+		}
+
+		player.Teleport(entity.Location)
+		player.Update()
 	} else if len(args) == 3 {
 		var err error
 		location := player.Location

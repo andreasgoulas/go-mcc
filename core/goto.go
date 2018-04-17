@@ -20,39 +20,28 @@ import (
 	"Go-MCC/gomcc"
 )
 
-func Initialize(server *gomcc.Server) {
-	server.RegisterCommand(&gomcc.Command{
-		"goto",
-		"Move to another world.",
-		"core.goto",
-		HandleGoto,
-	})
+func HandleGoto(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	client, ok := sender.(*gomcc.Client)
+	if !ok {
+		sender.SendMessage("You are not a player")
+		return
+	}
 
-	server.RegisterCommand(&gomcc.Command{
-		"me",
-		"Broadcast an action.",
-		"core.me",
-		HandleMe,
-	})
+	if len(message) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <map>")
+		return
+	}
 
-	server.RegisterCommand(&gomcc.Command{
-		"say",
-		"Broadcast a message.",
-		"core.say",
-		HandleSay,
-	})
+	level := sender.Server().FindLevel(message)
+	if level == nil {
+		sender.SendMessage("Map " + message + " not found")
+		return
+	}
 
-	server.RegisterCommand(&gomcc.Command{
-		"tell",
-		"Send a private message to a player.",
-		"core.tell",
-		HandleTell,
-	})
+	if level == client.Entity.Level {
+		sender.SendMessage("You are already in " + level.Name)
+		return
+	}
 
-	server.RegisterCommand(&gomcc.Command{
-		"tp",
-		"Teleport to another player.",
-		"core.tp",
-		HandleTp,
-	})
+	client.Entity.TeleportLevel(level)
 }

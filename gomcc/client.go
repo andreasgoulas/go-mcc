@@ -282,7 +282,7 @@ func (client *Client) HandleIdentification(reader io.Reader) {
 		}
 	}
 
-	if client.server.FindEntity(client.ClientName, func(entity *Entity) {}) {
+	if client.server.FindEntity(client.ClientName) != nil {
 		client.Kick("Already logged in!")
 		return
 	}

@@ -105,15 +105,16 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 	mainLevel, err := server.LoadLevel(config.MainLevel)
 	if err != nil {
 		fmt.Printf("Server Error: Main level not found.\n")
+
 		mainLevel = NewLevel(config.MainLevel, 128, 64, 128)
 		if mainLevel == nil {
 			return nil
 		}
 
 		Generators["flat"].Generate(mainLevel)
+		server.AddLevel(mainLevel)
 	}
 
-	server.AddLevel(mainLevel)
 	return server
 }
 
@@ -151,6 +152,15 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-server.StopChan:
+			server.ClientsLock.RLock()
+			clients := make([]*Client, len(server.Clients))
+			copy(clients, server.Clients)
+			server.ClientsLock.RUnlock()
+
+			for _, client := range clients {
+				client.Kick("Server shutting down!")
+			}
+
 			server.UpdateTicker.Stop()
 			server.SaveTicker.Stop()
 			if server.HeartbeatTicker != nil {
@@ -357,14 +367,14 @@ func (server *Server) LoadLevel(name string) (*Level, error) {
 }
 
 func (server *Server) UnloadLevel(level *Level) {
-	server.ClientsLock.RLock()
-	clients := make([]*Client, len(server.Clients))
-	copy(clients, server.Clients)
-	server.ClientsLock.RUnlock()
-
-	for _, client := range clients {
-		client.Kick("Server shutting down!")
+	mainLevel := server.MainLevel()
+	if mainLevel == level {
+		mainLevel = nil
 	}
+
+	level.ForEachClient(func(client *Client) {
+		client.Entity.TeleportLevel(mainLevel)
+	})
 
 	if server.Storage != nil {
 		event := EventLevelSave{level}
@@ -459,18 +469,17 @@ func (server *Server) RemoveEntity(entity *Entity) {
 	})
 }
 
-func (server *Server) FindEntity(name string, fn func(*Entity)) bool {
+func (server *Server) FindEntity(name string) *Entity {
 	server.EntitiesLock.RLock()
 	defer server.EntitiesLock.RUnlock()
 
 	for _, entity := range server.Entities {
 		if entity.Name == name {
-			fn(entity)
-			return true
+			return entity
 		}
 	}
 
-	return false
+	return nil
 }
 
 func (server *Server) ForEachEntity(fn func(*Entity)) {
