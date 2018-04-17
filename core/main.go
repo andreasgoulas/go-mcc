@@ -29,6 +29,13 @@ func Initialize(server *gomcc.Server) {
 	})
 
 	server.RegisterCommand(&gomcc.Command{
+		"kick",
+		"Kick a player from the server.",
+		"core.kick",
+		HandleKick,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
 		"me",
 		"Broadcast an action.",
 		"core.me",
