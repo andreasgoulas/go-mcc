@@ -20,32 +20,11 @@ import (
 	"Go-MCC/gomcc"
 )
 
-func Initialize(server *gomcc.Server) {
-	server.RegisterCommand(&gomcc.Command{
-		"me",
-		"Broadcast an action.",
-		"core.me",
-		HandleMe,
-	})
+func HandleSay(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	if len(message) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <message>")
+		return
+	}
 
-	server.RegisterCommand(&gomcc.Command{
-		"say",
-		"Broadcast a message.",
-		"core.say",
-		HandleSay,
-	})
-
-	server.RegisterCommand(&gomcc.Command{
-		"tell",
-		"Send a private message to a player.",
-		"core.tell",
-		HandleTell,
-	})
-
-	server.RegisterCommand(&gomcc.Command{
-		"tp",
-		"Teleport to another player.",
-		"core.tp",
-		HandleTp,
-	})
+	sender.Server().BroadcastMessage(gomcc.ConvertColors(message))
 }

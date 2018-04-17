@@ -282,7 +282,7 @@ func (client *Client) HandleIdentification(reader io.Reader) {
 		}
 	}
 
-	if client.server.FindEntity(client.ClientName) != nil {
+	if client.server.FindEntity(client.ClientName, func(entity *Entity) {}) {
 		client.Kick("Already logged in!")
 		return
 	}
@@ -329,6 +329,7 @@ func (client *Client) HandleSetBlock(reader io.Reader) {
 		}
 		client.server.FireEvent(EventTypeBlockBreak, &event)
 		if event.Cancel {
+			client.RevertBlock(x, y, z)
 			return
 		}
 
@@ -350,6 +351,7 @@ func (client *Client) HandleSetBlock(reader io.Reader) {
 		}
 		client.server.FireEvent(EventTypeBlockPlace, &event)
 		if event.Cancel {
+			client.RevertBlock(x, y, z)
 			return
 		}
 
@@ -368,13 +370,26 @@ func (client *Client) HandlePlayerTeleport(reader io.Reader) {
 		return
 	}
 
-	client.Entity.Teleport(Location{
+	location := Location{
 		float64(packet.X) / 32,
 		float64(packet.Y) / 32,
 		float64(packet.Z) / 32,
 		float64(packet.Yaw) * 360 / 256,
 		float64(packet.Pitch) * 360 / 256,
-	})
+	}
+
+	if location == client.Entity.Location {
+		return
+	}
+
+	event := &EventEntityMove{client.Entity, client.Entity.Location, location, false}
+	client.server.FireEvent(EventTypeEntityMove, &event)
+	if event.Cancel {
+		client.SendTeleport(client.Entity)
+		return
+	}
+
+	client.Entity.Location = location
 }
 
 func (client *Client) HandleMessage(reader io.Reader) {
@@ -615,6 +630,27 @@ func (client *Client) SendDespawn(entity *Entity) {
 	client.SendPacket(&PacketDespawnPlayer{
 		PacketTypeDespawnPlayer,
 		id,
+	})
+}
+
+func (client *Client) SendTeleport(entity *Entity) {
+	if client.LoggedIn == 0 {
+		return
+	}
+
+	id := entity.NameID
+	if id == client.Entity.NameID {
+		id = 0xff
+	}
+
+	client.SendPacket(&PacketPlayerTeleport{
+		PacketTypePlayerTeleport,
+		id,
+		int16(entity.Location.X * 32),
+		int16(entity.Location.Y * 32),
+		int16(entity.Location.Z * 32),
+		byte(entity.Location.Yaw * 256 / 360),
+		byte(entity.Location.Pitch * 256 / 360),
 	})
 }
 

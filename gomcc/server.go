@@ -124,7 +124,7 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 	go func() {
 		for range server.UpdateTicker.C {
 			server.ForEachEntity(func(entity *Entity) {
-				entity.Update(UpdateInterval)
+				entity.Update()
 			})
 		}
 	}()
@@ -459,17 +459,18 @@ func (server *Server) RemoveEntity(entity *Entity) {
 	})
 }
 
-func (server *Server) FindEntity(name string) *Entity {
+func (server *Server) FindEntity(name string, fn func(*Entity)) bool {
 	server.EntitiesLock.RLock()
 	defer server.EntitiesLock.RUnlock()
 
 	for _, entity := range server.Entities {
 		if entity.Name == name {
-			return entity
+			fn(entity)
+			return true
 		}
 	}
 
-	return nil
+	return false
 }
 
 func (server *Server) ForEachEntity(fn func(*Entity)) {

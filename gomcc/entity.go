@@ -18,7 +18,6 @@ package gomcc
 
 import (
 	"math"
-	"time"
 )
 
 // A Location represents the location of an entity in a world.
@@ -84,6 +83,9 @@ func (entity *Entity) Teleport(location Location) {
 	}
 
 	entity.Location = location
+	if entity.Client != nil {
+		entity.Client.SendTeleport(entity)
+	}
 }
 
 func (entity *Entity) TeleportLevel(level *Level) {
@@ -122,7 +124,7 @@ func (entity *Entity) SetModel(modelName string) {
 	}
 }
 
-func (entity *Entity) Update(dt time.Duration) {
+func (entity *Entity) Update() {
 	if entity.Level == nil {
 		return
 	}

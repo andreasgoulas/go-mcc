@@ -22,24 +22,6 @@ import (
 	"Go-MCC/gomcc"
 )
 
-func HandleMe(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <action>")
-		return
-	}
-
-	sender.Server().BroadcastMessage("* " + sender.Name() + " " + gomcc.ConvertColors(message))
-}
-
-func HandleSay(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <message>")
-		return
-	}
-
-	sender.Server().BroadcastMessage(gomcc.ConvertColors(message))
-}
-
 func HandleTell(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.SplitN(message, " ", 2)
 	if len(args) < 2 {
@@ -47,13 +29,17 @@ func HandleTell(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	player := sender.Server().FindEntity(args[0])
-	if player == nil || player.Client == nil {
-		sender.SendMessage("Player " + args[0] + " not found")
-		return
-	}
+	found := sender.Server().FindEntity(args[0], func(entity *gomcc.Entity) {
+		if entity.Client == nil {
+			return
+		}
 
-	message = gomcc.ConvertColors(args[1])
-	sender.SendMessage("[me -> " + player.Client.Name() + "] " + message)
-	player.Client.SendMessage("[" + sender.Name() + " -> me] " + message)
+		message = gomcc.ConvertColors(args[1])
+		sender.SendMessage("[me -> " + entity.Client.Name() + "] " + message)
+		entity.Client.SendMessage("[" + sender.Name() + " -> me] " + message)
+	})
+
+	if !found {
+		sender.SendMessage("Player " + args[0] + " not found")
+	}
 }
