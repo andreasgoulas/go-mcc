@@ -1,4 +1,4 @@
-// Copyright 2017 Andrew Goulas
+// Copyright 2017-2018 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -69,8 +69,8 @@ func IsValidMessage(message string) bool {
 }
 
 type Client struct {
+	server     *Server
 	Entity     *Entity
-	Server     *Server
 	Conn       net.Conn
 	Connected  uint32
 	LoggedIn   uint32
@@ -89,11 +89,15 @@ type Client struct {
 
 func NewClient(conn net.Conn, server *Server) *Client {
 	return &Client{
-		Server:        server,
+		server:        server,
 		Conn:          conn,
 		Extensions:    make(map[string]int),
 		ClickDistance: 5.0,
 	}
+}
+
+func (client *Client) Server() *Server {
+	return client.server
 }
 
 func (client *Client) Name() string {
@@ -102,10 +106,6 @@ func (client *Client) Name() string {
 	}
 
 	return client.ClientName
-}
-
-func (client *Client) IsOperator() bool {
-	return client.Operator
 }
 
 func (client *Client) HasPermission(permission string) bool {
@@ -118,8 +118,8 @@ func (client *Client) Verify(key []byte) bool {
 		return false
 	}
 
-	data := make([]byte, len(client.Server.Salt))
-	copy(data, client.Server.Salt[:])
+	data := make([]byte, len(client.server.Salt))
+	copy(data, client.server.Salt[:])
 	data = append(data, []byte(client.ClientName)...)
 
 	digest := md5.Sum(data)
@@ -193,13 +193,13 @@ func (client *Client) Login() {
 	}
 
 	for {
-		count := client.Server.PlayerCount
-		if int(count) >= client.Server.Config.MaxPlayers {
+		count := client.server.PlayerCount
+		if int(count) >= client.server.Config.MaxPlayers {
 			client.Kick("Server full!")
 			return
 		}
 
-		if atomic.CompareAndSwapInt32(&client.Server.PlayerCount, count, count+1) {
+		if atomic.CompareAndSwapInt32(&client.server.PlayerCount, count, count+1) {
 			break
 		}
 	}
@@ -219,30 +219,30 @@ func (client *Client) Login() {
 	client.SendPacket(&PacketServerIdentification{
 		PacketTypeIdentification,
 		0x07,
-		PadString(client.Server.Config.Name),
-		PadString(client.Server.Config.MOTD),
+		PadString(client.server.Config.Name),
+		PadString(client.server.Config.MOTD),
 		userType,
 	})
 
-	client.Entity = NewEntity(client.ClientName, client.Server)
+	client.Entity = NewEntity(client.ClientName, client.server)
 	client.Entity.Client = client
 
 	event := EventPlayerJoin{client.Entity, false, ""}
-	client.Server.FireEvent(EventTypePlayerJoin, &event)
+	client.server.FireEvent(EventTypePlayerJoin, &event)
 	if event.Cancel {
 		client.Kick(event.CancelReason)
 		return
 	}
 
 	atomic.StoreUint32(&client.LoggedIn, 1)
-	client.Server.AddClient(client)
-	client.Server.BroadcastMessage(ColorYellow + client.Entity.Name + " has joined the game!")
-	if client.Server.AddEntity(client.Entity) == 0xff {
+	client.server.AddClient(client)
+	client.server.BroadcastMessage(ColorYellow + client.Entity.Name + " has joined the game!")
+	if client.server.AddEntity(client.Entity) == 0xff {
 		client.Kick("Server full!")
 		return
 	}
 
-	level := client.Server.MainLevel()
+	level := client.server.MainLevel()
 	if level != nil {
 		client.Entity.TeleportLevel(level)
 	}
@@ -275,14 +275,14 @@ func (client *Client) HandleIdentification(reader io.Reader) {
 	}
 
 	key := TrimString(packet.VerificationKey)
-	if client.Server.Config.Verify {
+	if client.server.Config.Verify {
 		if !client.Verify([]byte(key)) {
 			client.Kick("Login failed!")
 			return
 		}
 	}
 
-	if client.Server.FindEntity(client.ClientName) != nil {
+	if client.server.FindEntity(client.ClientName) != nil {
 		client.Kick("Already logged in!")
 		return
 	}
@@ -327,7 +327,7 @@ func (client *Client) HandleSetBlock(reader io.Reader) {
 			x, y, z,
 			false,
 		}
-		client.Server.FireEvent(EventTypeBlockBreak, &event)
+		client.server.FireEvent(EventTypeBlockBreak, &event)
 		if event.Cancel {
 			return
 		}
@@ -348,7 +348,7 @@ func (client *Client) HandleSetBlock(reader io.Reader) {
 			x, y, z,
 			false,
 		}
-		client.Server.FireEvent(EventTypeBlockPlace, &event)
+		client.server.FireEvent(EventTypeBlockPlace, &event)
 		if event.Cancel {
 			return
 		}
@@ -399,9 +399,9 @@ func (client *Client) HandleMessage(reader io.Reader) {
 	}
 
 	if message[0] == '/' {
-		client.Server.ExecuteCommand(client, message[1:])
+		client.server.ExecuteCommand(client, message[1:])
 	} else {
-		client.Server.BroadcastMessage(ColorDefault + "<" + client.Entity.Name + "> " + ConvertColors(message))
+		client.server.BroadcastMessage(ColorDefault + "<" + client.Entity.Name + "> " + ConvertColors(message))
 	}
 }
 
@@ -464,17 +464,17 @@ func (client *Client) Disconnect() {
 		atomic.StoreUint32(&client.LoggedIn, 0)
 
 		event := EventPlayerQuit{client.Entity}
-		client.Server.FireEvent(EventTypePlayerQuit, &event)
+		client.server.FireEvent(EventTypePlayerQuit, &event)
 
 		client.Entity.TeleportLevel(nil)
-		client.Server.BroadcastMessage(ColorYellow + client.Entity.Name + " has left the game!")
-		client.Server.RemoveClient(client)
-		client.Server.RemoveEntity(client.Entity)
-		atomic.AddInt32(&client.Server.PlayerCount, -1)
+		client.server.BroadcastMessage(ColorYellow + client.Entity.Name + " has left the game!")
+		client.server.RemoveClient(client)
+		client.server.RemoveEntity(client.Entity)
+		atomic.AddInt32(&client.server.PlayerCount, -1)
 	}
 
 	event := EventClientDisconnect{client}
-	client.Server.FireEvent(EventTypeClientDisconnect, &event)
+	client.server.FireEvent(EventTypeClientDisconnect, &event)
 }
 
 func (client *Client) SendPacket(packet interface{}) {

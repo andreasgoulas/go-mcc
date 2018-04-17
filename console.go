@@ -27,14 +27,15 @@ import (
 )
 
 type Console struct {
-	Server    *gomcc.Server
-	WaitGroup *sync.WaitGroup
-	Signal    chan os.Signal
+	server    *gomcc.Server
+	waitGroup *sync.WaitGroup
+	signal    chan os.Signal
 }
 
-func NewConsole(server *gomcc.Server, wg *sync.WaitGroup) *Console {
+func NewConsole(server *gomcc.Server, waitGroup *sync.WaitGroup) *Console {
 	console := &Console{
-		server, wg,
+		server,
+		waitGroup,
 		make(chan os.Signal),
 	}
 
@@ -45,9 +46,9 @@ func NewConsole(server *gomcc.Server, wg *sync.WaitGroup) *Console {
 		console.HandleStop,
 	})
 
-	signal.Notify(console.Signal, os.Interrupt)
+	signal.Notify(console.signal, os.Interrupt)
 	go func() {
-		signal := <-console.Signal
+		signal := <-console.signal
 		if signal == os.Interrupt {
 			console.Stop()
 		}
@@ -59,14 +60,18 @@ func NewConsole(server *gomcc.Server, wg *sync.WaitGroup) *Console {
 func (console *Console) Run() {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		console.Server.ExecuteCommand(console, scanner.Text())
+		console.server.ExecuteCommand(console, scanner.Text())
 	}
 }
 
 func (console *Console) Stop() {
-	console.Server.Stop()
-	console.WaitGroup.Wait()
+	console.server.Stop()
+	console.waitGroup.Wait()
 	os.Exit(0)
+}
+
+func (console *Console) Server() *gomcc.Server {
+	return console.server
 }
 
 func (console *Console) Name() string {
@@ -77,19 +82,10 @@ func (console *Console) SendMessage(message string) {
 	fmt.Println(message)
 }
 
-func (console *Console) IsOperator() bool {
-	return true
-}
-
 func (console *Console) HasPermission(permission string) bool {
 	return true
 }
 
 func (console *Console) HandleStop(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	if !sender.IsOperator() {
-		sender.SendMessage("You are not an operator!")
-		return
-	}
-
 	console.Stop()
 }

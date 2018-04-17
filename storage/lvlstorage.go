@@ -14,13 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package gomcc
+package storage
 
 import (
 	"compress/gzip"
 	"encoding/binary"
 	"errors"
 	"os"
+
+	"Go-MCC/gomcc"
 )
 
 type LvlHeader struct {
@@ -32,7 +34,7 @@ type LvlHeader struct {
 }
 
 type LvlStorage struct {
-	DirectoryPath string
+	directoryPath string
 }
 
 func NewLvlStorage(directoryPath string) *LvlStorage {
@@ -41,10 +43,10 @@ func NewLvlStorage(directoryPath string) *LvlStorage {
 }
 
 func (storage *LvlStorage) GetPath(name string) string {
-	return storage.DirectoryPath + name + ".lvl"
+	return storage.directoryPath + name + ".lvl"
 }
 
-func (storage *LvlStorage) Load(name string) (*Level, error) {
+func (storage *LvlStorage) Load(name string) (*gomcc.Level, error) {
 	file, err := os.Open(storage.GetPath(name))
 	if err != nil {
 		return nil, err
@@ -67,7 +69,7 @@ func (storage *LvlStorage) Load(name string) (*Level, error) {
 		return nil, errors.New("lvlstorage: invalid format")
 	}
 
-	level := NewLevel(name, uint(header.Width), uint(header.Height), uint(header.Depth))
+	level := gomcc.NewLevel(name, uint(header.Width), uint(header.Height), uint(header.Depth))
 	level.Spawn.X = float64(header.SpawnX) / 32
 	level.Spawn.Y = float64(header.SpawnY) / 32
 	level.Spawn.Z = float64(header.SpawnZ) / 32
@@ -83,7 +85,7 @@ func (storage *LvlStorage) Load(name string) (*Level, error) {
 					return nil, err
 				}
 
-				level.SetBlock(x, y, z, BlockID(block[0]), false)
+				level.SetBlock(x, y, z, gomcc.BlockID(block[0]), false)
 			}
 		}
 	}
@@ -91,7 +93,7 @@ func (storage *LvlStorage) Load(name string) (*Level, error) {
 	return level, nil
 }
 
-func (storage *LvlStorage) Save(level *Level) error {
+func (storage *LvlStorage) Save(level *gomcc.Level) error {
 	file, err := os.Create(storage.GetPath(level.Name))
 	if err != nil {
 		return err

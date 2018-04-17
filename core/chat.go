@@ -1,4 +1,4 @@
-// Copyright 2017 Andrew Goulas
+// Copyright 2017-2018 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ func HandleMe(sender gomcc.CommandSender, command *gomcc.Command, message string
 		return
 	}
 
-	Server.BroadcastMessage("* " + sender.Name() + " " + gomcc.ConvertColors(message))
+	sender.Server().BroadcastMessage("* " + sender.Name() + " " + gomcc.ConvertColors(message))
 }
 
 func HandleSay(sender gomcc.CommandSender, command *gomcc.Command, message string) {
@@ -37,7 +37,7 @@ func HandleSay(sender gomcc.CommandSender, command *gomcc.Command, message strin
 		return
 	}
 
-	Server.BroadcastMessage(gomcc.ConvertColors(message))
+	sender.Server().BroadcastMessage(gomcc.ConvertColors(message))
 }
 
 func HandleTell(sender gomcc.CommandSender, command *gomcc.Command, message string) {
@@ -47,7 +47,7 @@ func HandleTell(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	player := Server.FindEntity(args[0])
+	player := sender.Server().FindEntity(args[0])
 	if player == nil || player.Client == nil {
 		sender.SendMessage("Player " + args[0] + " not found")
 		return

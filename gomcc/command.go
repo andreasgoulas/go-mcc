@@ -1,4 +1,4 @@
-// Copyright 2017 Andrew Goulas
+// Copyright 2017-2018 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -59,14 +59,18 @@ func ConvertColors(message string) string {
 // A CommandSender is a generic entity that can execute commands and receive
 // messages.
 type CommandSender interface {
+	Server() *Server
 	Name() string
 	SendMessage(message string)
-	IsOperator() bool
 	HasPermission(permission string) bool
 }
 
+// CommandHandler is the type of the function called to execute a command. The
+// sender argument is the entity that invoked the command. The message argument
+// contains the arguments of the command.
 type CommandHandler func(sender CommandSender, command *Command, message string)
 
+// A Command describes a command.
 type Command struct {
 	Name        string
 	Description string

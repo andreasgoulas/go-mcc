@@ -1,4 +1,4 @@
-// Copyright 2017 Andrew Goulas
+// Copyright 2017-2018 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -16,6 +16,7 @@
 
 package gomcc
 
+// A BlockID specifies the type of a block.
 type BlockID byte
 
 const (
@@ -94,6 +95,7 @@ const (
 	BlockCountCPE = BlockMaxCPE + 1
 )
 
+// FallbackBlock converts a CPE BlockID to a similar vanilla-compatible one.
 func FallbackBlock(block BlockID) BlockID {
 	switch block {
 	case BlockCobblestoneSlab:

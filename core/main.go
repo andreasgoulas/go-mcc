@@ -1,4 +1,4 @@
-// Copyright 2017 Andrew Goulas
+// Copyright 2017-2018 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -20,26 +20,22 @@ import (
 	"Go-MCC/gomcc"
 )
 
-var Server *gomcc.Server
-
 func Initialize(server *gomcc.Server) {
-	Server = server
-
-	Server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&gomcc.Command{
 		"me",
 		"Broadcast an action.",
 		"core.me",
 		HandleMe,
 	})
 
-	Server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&gomcc.Command{
 		"say",
 		"Broadcast a message.",
 		"core.say",
 		HandleSay,
 	})
 
-	Server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&gomcc.Command{
 		"tell",
 		"Send a private message to a player.",
 		"core.tell",

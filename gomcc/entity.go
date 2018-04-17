@@ -1,4 +1,4 @@
-// Copyright 2017 Andrew Goulas
+// Copyright 2017-2018 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -21,6 +21,8 @@ import (
 	"time"
 )
 
+// A Location represents the location of an entity in a world.
+// Yaw and Pitch are specified in degrees.
 type Location struct {
 	X, Y, Z, Yaw, Pitch float64
 }

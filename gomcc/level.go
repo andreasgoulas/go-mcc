@@ -1,4 +1,4 @@
-// Copyright 2017 Andrew Goulas
+// Copyright 2017-2018 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -94,13 +94,11 @@ func (level *Level) ForEachEntity(fn func(*Entity)) {
 		return
 	}
 
-	level.Server.EntitiesLock.RLock()
-	for _, entity := range level.Server.Entities {
+	level.Server.ForEachEntity(func(entity *Entity) {
 		if entity.Level == level {
 			fn(entity)
 		}
-	}
-	level.Server.EntitiesLock.RUnlock()
+	})
 }
 
 func (level *Level) ForEachClient(fn func(*Client)) {
@@ -108,13 +106,11 @@ func (level *Level) ForEachClient(fn func(*Client)) {
 		return
 	}
 
-	level.Server.ClientsLock.RLock()
-	for _, client := range level.Server.Clients {
+	level.Server.ForEachClient(func(client *Client) {
 		if client.Entity.Level == level {
 			fn(client)
 		}
-	}
-	level.Server.ClientsLock.RUnlock()
+	})
 }
 
 func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {

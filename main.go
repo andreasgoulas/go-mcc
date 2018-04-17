@@ -24,6 +24,7 @@ import (
 
 	"Go-MCC/core"
 	"Go-MCC/gomcc"
+	"Go-MCC/storage"
 )
 
 var DefaultConfig = &gomcc.Config{
@@ -66,8 +67,8 @@ func ReadConfig(path string) *gomcc.Config {
 
 func main() {
 	config := ReadConfig("server.properties")
-	storage := gomcc.NewLvlStorage("levels/")
-	server := gomcc.NewServer(config, storage)
+	lvlstorage := storage.NewLvlStorage("levels/")
+	server := gomcc.NewServer(config, lvlstorage)
 	if server == nil {
 		return
 	}
