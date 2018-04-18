@@ -63,6 +63,7 @@ type Server struct {
 	Storage    LevelStorage
 	Levels     []*Level
 	LevelsLock sync.RWMutex
+	MainLevel  *Level
 
 	Entities     []*Entity
 	EntitiesLock sync.RWMutex
@@ -115,6 +116,7 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 		server.AddLevel(mainLevel)
 	}
 
+	server.MainLevel = mainLevel
 	return server
 }
 
@@ -316,7 +318,15 @@ func (server *Server) RemoveLevel(level *Level) {
 		return
 	}
 
-	level.Server = server
+	if server.MainLevel == level {
+		server.MainLevel = nil
+	}
+
+	level.ForEachClient(func(client *Client) {
+		client.Entity.TeleportLevel(server.MainLevel)
+	})
+
+	level.Server = nil
 
 	server.Levels[index] = server.Levels[len(server.Levels)-1]
 	server.Levels[len(server.Levels)-1] = nil
@@ -367,15 +377,6 @@ func (server *Server) LoadLevel(name string) (*Level, error) {
 }
 
 func (server *Server) UnloadLevel(level *Level) {
-	mainLevel := server.MainLevel()
-	if mainLevel == level {
-		mainLevel = nil
-	}
-
-	level.ForEachClient(func(client *Client) {
-		client.Entity.TeleportLevel(mainLevel)
-	})
-
 	if server.Storage != nil {
 		event := EventLevelSave{level}
 		server.FireEvent(EventTypeLevelSave, &event)
@@ -414,17 +415,6 @@ func (server *Server) SaveAll() {
 			fmt.Printf("Server Error: %s\n", err.Error())
 		}
 	})
-}
-
-func (server *Server) MainLevel() *Level {
-	server.LevelsLock.RLock()
-	defer server.LevelsLock.RUnlock()
-
-	if len(server.Levels) > 0 {
-		return server.Levels[0]
-	}
-
-	return nil
 }
 
 func (server *Server) AddEntity(entity *Entity) byte {
@@ -515,6 +505,19 @@ func (server *Server) RemoveClient(client *Client) {
 	server.Clients[index] = server.Clients[len(server.Clients)-1]
 	server.Clients[len(server.Clients)-1] = nil
 	server.Clients = server.Clients[:len(server.Clients)-1]
+}
+
+func (server *Server) FindClient(name string) *Client {
+	server.ClientsLock.RLock()
+	defer server.ClientsLock.RUnlock()
+
+	for _, client := range server.Clients {
+		if client.Entity != nil && client.Entity.Name == name {
+			return client
+		}
+	}
+
+	return nil
 }
 
 func (server *Server) ForEachClient(fn func(*Client)) {

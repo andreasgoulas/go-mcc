@@ -21,52 +21,12 @@ import (
 )
 
 func Initialize(server *gomcc.Server) {
-	server.RegisterCommand(&gomcc.Command{
-		"goto",
-		"Move to another level.",
-		"core.goto",
-		HandleGoto,
-	})
-
-	server.RegisterCommand(&gomcc.Command{
-		"kick",
-		"Kick a player from the server.",
-		"core.kick",
-		HandleKick,
-	})
-
-	server.RegisterCommand(&gomcc.Command{
-		"me",
-		"Broadcast an action.",
-		"core.me",
-		HandleMe,
-	})
-
-	server.RegisterCommand(&gomcc.Command{
-		"say",
-		"Broadcast a message.",
-		"core.say",
-		HandleSay,
-	})
-
-	server.RegisterCommand(&gomcc.Command{
-		"spawn",
-		"Teleport to the spawn location of the level.",
-		"core.spawn",
-		HandleSpawn,
-	})
-
-	server.RegisterCommand(&gomcc.Command{
-		"tell",
-		"Send a private message to a player.",
-		"core.tell",
-		HandleTell,
-	})
-
-	server.RegisterCommand(&gomcc.Command{
-		"tp",
-		"Teleport to another player.",
-		"core.tp",
-		HandleTp,
-	})
+	server.RegisterCommand(&CommandGoto)
+	server.RegisterCommand(&CommandKick)
+	server.RegisterCommand(&CommandMain)
+	server.RegisterCommand(&CommandMe)
+	server.RegisterCommand(&CommandSay)
+	server.RegisterCommand(&CommandSpawn)
+	server.RegisterCommand(&CommandTell)
+	server.RegisterCommand(&CommandTp)
 }

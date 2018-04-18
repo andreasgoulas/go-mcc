@@ -23,6 +23,41 @@ import (
 	"Go-MCC/gomcc"
 )
 
+var CommandKick = gomcc.Command{
+	Name:        "kick",
+	Description: "Kick a player from the server.",
+	Permission:  "core.kick",
+	Handler:     HandleKick,
+}
+
+func HandleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	if len(message) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <player> <reason>")
+		return
+	}
+
+	args := strings.SplitN(message, " ", 2)
+	player := sender.Server().FindClient(args[0])
+	if player == nil {
+		sender.SendMessage("Player " + args[0] + " not found")
+		return
+	}
+
+	reason := "Kicked by " + sender.Name()
+	if len(args) > 1 {
+		reason = args[1]
+	}
+
+	player.Kick(reason)
+}
+
+var CommandTp = gomcc.Command{
+	Name:        "tp",
+	Description: "Teleport to another player.",
+	Permission:  "core.tp",
+	Handler:     HandleTp,
+}
+
 func ParseCoord(arg string, curr float64) (float64, error) {
 	if strings.HasPrefix(arg, "~") {
 		value, err := strconv.Atoi(arg[1:])

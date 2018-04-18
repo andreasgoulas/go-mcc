@@ -242,9 +242,8 @@ func (client *Client) Login() {
 		return
 	}
 
-	level := client.server.MainLevel()
-	if level != nil {
-		client.Entity.TeleportLevel(level)
+	if client.server.MainLevel != nil {
+		client.Entity.TeleportLevel(client.server.MainLevel)
 	}
 
 	client.PingTicker = time.NewTicker(2 * time.Second)
