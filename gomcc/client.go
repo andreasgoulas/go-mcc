@@ -44,6 +44,13 @@ var Extensions = []struct {
 	{"EnvWeatherType", 1},
 }
 
+func Min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+
 func IsValidName(name string) bool {
 	if len(name) < 3 || len(name) > 16 {
 		return false
@@ -75,7 +82,9 @@ type Client struct {
 	Connected  uint32
 	LoggedIn   uint32
 	ClientName string
-	Operator   bool
+
+	Operator    bool
+	Permissions [][]string
 
 	HasCPE                  bool
 	RemainingExtensions     uint
@@ -108,9 +117,33 @@ func (client *Client) Name() string {
 	return client.ClientName
 }
 
+func (client *Client) CheckPermission(permission []string, template []string) bool {
+	lenP := len(permission)
+	lenT := len(template)
+	for i := 0; i < Min(lenP, lenT); i++ {
+		if template[i] == "*" {
+			return true
+		} else if permission[i] != template[i] {
+			return false
+		}
+	}
+
+	return lenP == lenT
+}
+
 func (client *Client) HasPermission(permission string) bool {
-	// TODO
-	return true
+	if len(permission) == 0 {
+		return true
+	}
+
+	split := strings.Split(permission, ".")
+	for _, template := range client.Permissions {
+		if client.CheckPermission(split, template) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (client *Client) Verify(key []byte) bool {
