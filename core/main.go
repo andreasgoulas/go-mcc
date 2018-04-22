@@ -23,8 +23,10 @@ import (
 func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&CommandGoto)
 	server.RegisterCommand(&CommandKick)
+	server.RegisterCommand(&CommandLoad)
 	server.RegisterCommand(&CommandMain)
 	server.RegisterCommand(&CommandMe)
+	server.RegisterCommand(&CommandSave)
 	server.RegisterCommand(&CommandSay)
 	server.RegisterCommand(&CommandSpawn)
 	server.RegisterCommand(&CommandTell)

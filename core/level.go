@@ -38,13 +38,13 @@ func HandleGoto(sender gomcc.CommandSender, command *gomcc.Command, message stri
 
 	args := strings.Split(message, " ")
 	if len(args) != 1 || len(args[0]) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <map>")
+		sender.SendMessage("Usage: " + command.Name + " <level>")
 		return
 	}
 
 	level := sender.Server().FindLevel(args[0])
 	if level == nil {
-		sender.SendMessage("Map " + args[0] + " not found")
+		sender.SendMessage("Level " + args[0] + " not found")
 		return
 	}
 
@@ -66,17 +66,17 @@ var CommandLoad = gomcc.Command{
 func HandleLoad(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Split(message, " ")
 	if len(args) != 1 || len(args[0]) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <map>")
+		sender.SendMessage("Usage: " + command.Name + " <level>")
 		return
 	}
 
 	_, err := sender.Server().LoadLevel(args[0])
 	if err != nil {
-		sender.SendMessage("Could not load map " + args[0])
+		sender.SendMessage("Could not load level " + args[0])
 		return
 	}
 
-	sender.SendMessage("Map " + args[0] + " loaded")
+	sender.SendMessage("Level " + args[0] + " loaded")
 }
 
 var CommandMain = gomcc.Command{
@@ -94,18 +94,50 @@ func HandleMain(sender gomcc.CommandSender, command *gomcc.Command, message stri
 
 	args := strings.Split(message, " ")
 	if len(args) != 1 || len(args[0]) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <map>")
+		sender.SendMessage("Usage: " + command.Name + " <level>")
 		return
 	}
 
 	level := sender.Server().FindLevel(args[0])
 	if level == nil {
-		sender.SendMessage("Map " + args[0] + " not found")
+		sender.SendMessage("Level " + args[0] + " not found")
 		return
 	}
 
 	sender.Server().MainLevel = level
 	sender.SendMessage("Set main level to " + level.Name)
+}
+
+var CommandSave = gomcc.Command{
+	Name:        "save",
+	Description: "Save a level.",
+	Permission:  "core.save",
+	Handler:     HandleSave,
+}
+
+func HandleSave(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	args := strings.Split(message, " ")
+	if len(args) != 1 || len(args[0]) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <level>")
+		return
+	}
+
+	if args[0] == "all" {
+		sender.Server().ForEachLevel(func(level *gomcc.Level) {
+			sender.Server().SaveLevel(level)
+		})
+		sender.SendMessage("All levels have been saved")
+		return
+	}
+
+	level := sender.Server().FindLevel(args[0])
+	if level == nil {
+		sender.SendMessage("Level " + args[0] + " not found")
+		return
+	}
+
+	sender.Server().SaveLevel(level)
+	sender.SendMessage("Level " + level.Name + " saved")
 }
 
 var CommandSpawn = gomcc.Command{
@@ -140,21 +172,21 @@ var CommandUnload = gomcc.Command{
 func HandleUnload(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Split(message, " ")
 	if len(args) != 1 || len(args[0]) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <map>")
+		sender.SendMessage("Usage: " + command.Name + " <level>")
 		return
 	}
 
 	level := sender.Server().FindLevel(args[0])
 	if level == nil {
-		sender.SendMessage("Map " + args[0] + " not found")
+		sender.SendMessage("Level " + args[0] + " not found")
 		return
 	}
 
 	if level == sender.Server().MainLevel {
-		sender.SendMessage("Map " + args[0] + " is the main level")
+		sender.SendMessage("Level " + args[0] + " is the main level")
 		return
 	}
 
 	sender.Server().UnloadLevel(level)
-	sender.SendMessage("Map " + args[0] + " unloaded")
+	sender.SendMessage("Level " + args[0] + " unloaded")
 }

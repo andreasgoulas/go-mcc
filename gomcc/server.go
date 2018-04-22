@@ -136,7 +136,9 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 		server.SaveTicker = time.NewTicker(SaveInterval)
 		go func() {
 			for range server.SaveTicker.C {
-				server.SaveAll()
+				server.ForEachLevel(func(level *Level) {
+					server.SaveLevel(level)
+				})
 			}
 		}()
 	}
@@ -376,17 +378,22 @@ func (server *Server) LoadLevel(name string) (*Level, error) {
 	return level, nil
 }
 
-func (server *Server) UnloadLevel(level *Level) {
-	if server.Storage != nil {
-		event := EventLevelSave{level}
-		server.FireEvent(EventTypeLevelSave, &event)
-
-		err := server.Storage.Save(level)
-		if err != nil {
-			fmt.Printf("Server Error: %s\n", err.Error())
-		}
+func (server *Server) SaveLevel(level *Level) {
+	if server.Storage == nil {
+		return
 	}
 
+	event := EventLevelSave{level}
+	server.FireEvent(EventTypeLevelSave, &event)
+
+	err := server.Storage.Save(level)
+	if err != nil {
+		fmt.Printf("Server Error: %s\n", err.Error())
+	}
+}
+
+func (server *Server) UnloadLevel(level *Level) {
+	server.SaveLevel(level)
 	server.RemoveLevel(level)
 }
 
@@ -399,22 +406,6 @@ func (server *Server) UnloadAll() {
 	for _, level := range levels {
 		server.UnloadLevel(level)
 	}
-}
-
-func (server *Server) SaveAll() {
-	if server.Storage == nil {
-		return
-	}
-
-	server.ForEachLevel(func(level *Level) {
-		event := EventLevelSave{level}
-		server.FireEvent(EventTypeLevelSave, &event)
-
-		err := server.Storage.Save(level)
-		if err != nil {
-			fmt.Printf("Server Error: %s\n", err.Error())
-		}
-	})
 }
 
 func (server *Server) AddEntity(entity *Entity) byte {
