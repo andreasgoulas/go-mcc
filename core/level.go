@@ -56,6 +56,29 @@ func HandleGoto(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	client.Entity.TeleportLevel(level)
 }
 
+var CommandLoad = gomcc.Command{
+	Name:        "load",
+	Description: "Load a level.",
+	Permission:  "core.load",
+	Handler:     HandleLoad,
+}
+
+func HandleLoad(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	args := strings.Split(message, " ")
+	if len(args) != 1 || len(args[0]) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <map>")
+		return
+	}
+
+	_, err := sender.Server().LoadLevel(args[0])
+	if err != nil {
+		sender.SendMessage("Could not load map " + args[0])
+		return
+	}
+
+	sender.SendMessage("Map " + args[0] + " loaded")
+}
+
 var CommandMain = gomcc.Command{
 	Name:        "main",
 	Description: "Set the main level.",
@@ -109,7 +132,7 @@ func HandleSpawn(sender gomcc.CommandSender, command *gomcc.Command, message str
 
 var CommandUnload = gomcc.Command{
 	Name:        "unload",
-	Description: "Unload the level.",
+	Description: "Unload a level.",
 	Permission:  "core.unload",
 	Handler:     HandleUnload,
 }
@@ -133,4 +156,5 @@ func HandleUnload(sender gomcc.CommandSender, command *gomcc.Command, message st
 	}
 
 	sender.Server().UnloadLevel(level)
+	sender.SendMessage("Map " + args[0] + " unloaded")
 }
