@@ -17,6 +17,7 @@
 package core
 
 import (
+	"strconv"
 	"strings"
 
 	"Go-MCC/gomcc"
@@ -106,6 +107,62 @@ func HandleMain(sender gomcc.CommandSender, command *gomcc.Command, message stri
 
 	sender.Server().MainLevel = level
 	sender.SendMessage("Set main level to " + level.Name)
+}
+
+var CommandNewLvl = gomcc.Command{
+	Name:        "newlvl",
+	Description: "Create a new level.",
+	Permission:  "core.newlvl",
+	Handler:     HandleNewLvl,
+}
+
+func HandleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	args := strings.Split(message, " ")
+	if len(args) != 5 {
+		sender.SendMessage("Usage: " + command.Name + " <name> <width> <height> <length> <theme>")
+		return
+	}
+
+	width, err := strconv.ParseUint(args[1], 10, 0)
+	if err != nil {
+		sender.SendMessage(args[1] + " is not a valid number")
+		return
+	}
+
+	height, err := strconv.ParseUint(args[2], 10, 0)
+	if err != nil {
+		sender.SendMessage(args[2] + " is not a valid number")
+		return
+	}
+
+	length, err := strconv.ParseUint(args[3], 10, 0)
+	if err != nil {
+		sender.SendMessage(args[3] + " is not a valid number")
+		return
+	}
+
+	generator, ok := gomcc.Generators[args[4]]
+	if !ok {
+		sender.SendMessage("Generator " + args[4] + " not found")
+		return
+	}
+
+	level := sender.Server().FindLevel(args[0])
+	if level != nil {
+		sender.SendMessage("Level " + args[0] + " already exists")
+		return
+	}
+
+	level = gomcc.NewLevel(args[0], uint(width), uint(height), uint(length))
+	if level == nil {
+		sender.SendMessage("Could not create level")
+		return
+	}
+
+	generator.Generate(level)
+
+	sender.Server().AddLevel(level)
+	sender.SendMessage("Level " + level.Name + " created")
 }
 
 var CommandSave = gomcc.Command{

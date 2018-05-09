@@ -27,7 +27,7 @@ import (
 
 type LvlHeader struct {
 	Version                          uint16
-	Width, Height, Depth             uint16
+	Width, Height, Length            uint16
 	SpawnX, SpawnY, SpawnZ           uint16
 	SpawnYaw, SpawnPitch             byte
 	PermissionVisit, PermissionBuild byte
@@ -69,7 +69,7 @@ func (storage *LvlStorage) Load(name string) (*gomcc.Level, error) {
 		return nil, errors.New("lvlstorage: invalid format")
 	}
 
-	level := gomcc.NewLevel(name, uint(header.Width), uint(header.Height), uint(header.Depth))
+	level := gomcc.NewLevel(name, uint(header.Width), uint(header.Height), uint(header.Length))
 	level.Spawn.X = float64(header.SpawnX) / 32
 	level.Spawn.Y = float64(header.SpawnY) / 32
 	level.Spawn.Z = float64(header.SpawnZ) / 32
@@ -77,7 +77,7 @@ func (storage *LvlStorage) Load(name string) (*gomcc.Level, error) {
 	level.Spawn.Pitch = float64(header.SpawnPitch) * 360 / 256
 
 	for y := uint(0); y < level.Height; y++ {
-		for z := uint(0); z < level.Depth; z++ {
+		for z := uint(0); z < level.Length; z++ {
 			for x := uint(0); x < level.Width; x++ {
 				block := make([]byte, 1)
 				n, err := reader.Read(block)
@@ -107,7 +107,7 @@ func (storage *LvlStorage) Save(level *gomcc.Level) error {
 		1874,
 		uint16(level.Width),
 		uint16(level.Height),
-		uint16(level.Depth),
+		uint16(level.Length),
 		uint16(level.Spawn.X * 32),
 		uint16(level.Spawn.Y * 32),
 		uint16(level.Spawn.Z * 32),
@@ -121,7 +121,7 @@ func (storage *LvlStorage) Save(level *gomcc.Level) error {
 	}
 
 	for y := uint(0); y < level.Height; y++ {
-		for z := uint(0); z < level.Depth; z++ {
+		for z := uint(0); z < level.Length; z++ {
 			for x := uint(0); x < level.Width; x++ {
 				block := make([]byte, 1)
 				block[0] = byte(level.GetBlock(x, y, z))

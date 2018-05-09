@@ -604,7 +604,7 @@ func (client *Client) SendLevel(level *Level) {
 
 	client.SendPacket(&PacketLevelFinalize{
 		PacketTypeLevelFinalize,
-		int16(level.Width), int16(level.Height), int16(level.Depth),
+		int16(level.Width), int16(level.Height), int16(level.Length),
 	})
 }
 

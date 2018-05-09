@@ -97,16 +97,19 @@ func HandleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 		location.X, err = ParseCoord(args[0], player.Location.X)
 		if err != nil {
 			sender.SendMessage(args[0] + " is not a valid number")
+			return
 		}
 
 		location.Y, err = ParseCoord(args[1], player.Location.Y)
 		if err != nil {
 			sender.SendMessage(args[1] + " is not a valid number")
+			return
 		}
 
 		location.Z, err = ParseCoord(args[2], player.Location.Z)
 		if err != nil {
 			sender.SendMessage(args[2] + " is not a valid number")
+			return
 		}
 
 		player.Teleport(location)

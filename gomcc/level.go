@@ -39,15 +39,15 @@ type LevelAppearance struct {
 type Level struct {
 	Server *Server
 
-	Name                 string
-	Width, Height, Depth uint
-	Blocks               []BlockID
-	Spawn                Location
-	Appearance           LevelAppearance
-	Weather              WeatherType
+	Name                  string
+	Width, Height, Length uint
+	Blocks                []BlockID
+	Spawn                 Location
+	Appearance            LevelAppearance
+	Weather               WeatherType
 }
 
-func NewLevel(name string, width, height, depth uint) *Level {
+func NewLevel(name string, width, height, length uint) *Level {
 	if len(name) == 0 {
 		return nil
 	}
@@ -55,12 +55,12 @@ func NewLevel(name string, width, height, depth uint) *Level {
 	return &Level{
 		nil,
 		name,
-		width, height, depth,
-		make([]BlockID, width*height*depth),
+		width, height, length,
+		make([]BlockID, width*height*length),
 		Location{
 			X: float64(width) / 2,
 			Y: float64(height) * 3 / 4,
-			Z: float64(depth) / 2,
+			Z: float64(length) / 2,
 		},
 		LevelAppearance{
 			SideBlock:       BlockBedrock,
@@ -74,15 +74,15 @@ func NewLevel(name string, width, height, depth uint) *Level {
 }
 
 func (level *Level) Volume() uint {
-	return level.Width * level.Height * level.Depth
+	return level.Width * level.Height * level.Length
 }
 
 func (level *Level) Index(x, y, z uint) uint {
-	return x + level.Width*(z+level.Depth*y)
+	return x + level.Width*(z+level.Length*y)
 }
 
 func (level *Level) GetBlock(x, y, z uint) BlockID {
-	if x < level.Width && y < level.Height && z < level.Depth {
+	if x < level.Width && y < level.Height && z < level.Length {
 		return level.Blocks[level.Index(x, y, z)]
 	}
 
@@ -114,7 +114,7 @@ func (level *Level) ForEachClient(fn func(*Client)) {
 }
 
 func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
-	if x < level.Width && y < level.Height && z < level.Depth {
+	if x < level.Width && y < level.Height && z < level.Length {
 		level.Blocks[level.Index(x, y, z)] = block
 		if broadcast {
 			level.ForEachClient(func(client *Client) {
