@@ -234,6 +234,10 @@ func (client *Client) SendMessage(message string) {
 	}
 }
 
+func (client *Client) SetSpawn() {
+	client.sendSpawn(client.Entity)
+}
+
 func (client *Client) sendPacket(packet interface{}) {
 	if client.connected == 0 {
 		return

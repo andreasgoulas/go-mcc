@@ -197,6 +197,49 @@ func handleSave(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	sender.SendMessage("Level " + level.Name + " saved")
 }
 
+var commandSetSpawn = gomcc.Command{
+	Name:        "setspawn",
+	Description: "Set the spawn location of the level to your location.",
+	Permission:  "core.setspawn",
+	Handler:     handleSetSpawn,
+}
+
+func handleSetSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	client, ok := sender.(*gomcc.Client)
+	if !ok {
+		sender.SendMessage("You are not a player")
+		return
+	}
+
+	if len(message) == 0 {
+		client.Entity.Level().Spawn = client.Entity.Location()
+		client.SetSpawn()
+		sender.SendMessage("Spawn location set to your current location")
+		return
+	}
+
+	args := strings.Split(message, " ")
+	if len(args) != 1 {
+		sender.SendMessage("Usage: " + command.Name + " <player>")
+		return
+	}
+
+	player := sender.Server().FindClient(args[0])
+	if player == nil {
+		sender.SendMessage("Player " + args[0] + " not found")
+		return
+	}
+
+	if player.Entity.Level() != client.Entity.Level() {
+		sender.SendMessage(player.Name() + " is on a different level")
+		return
+	}
+
+	player.Entity.Teleport(client.Entity.Location())
+	player.SetSpawn()
+	sender.SendMessage("Spawn location of " + player.Name() + " set to your current location")
+}
+
 var commandSpawn = gomcc.Command{
 	Name:        "spawn",
 	Description: "Teleport to the spawn location of the level.",
