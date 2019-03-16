@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Andrew Goulas
+// Copyright 2017-2019 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,14 +22,14 @@ import (
 	"Go-MCC/gomcc"
 )
 
-var CommandMe = gomcc.Command{
+var commandMe = gomcc.Command{
 	Name:        "me",
 	Description: "Broadcast an action.",
 	Permission:  "core.me",
-	Handler:     HandleMe,
+	Handler:     handleMe,
 }
 
-func HandleMe(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <action>")
 		return
@@ -38,14 +38,14 @@ func HandleMe(sender gomcc.CommandSender, command *gomcc.Command, message string
 	sender.Server().BroadcastMessage("* " + sender.Name() + " " + gomcc.ConvertColors(message))
 }
 
-var CommandSay = gomcc.Command{
+var commandSay = gomcc.Command{
 	Name:        "say",
 	Description: "Broadcast a message.",
 	Permission:  "core.say",
-	Handler:     HandleSay,
+	Handler:     handleSay,
 }
 
-func HandleSay(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleSay(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <message>")
 		return
@@ -54,14 +54,14 @@ func HandleSay(sender gomcc.CommandSender, command *gomcc.Command, message strin
 	sender.Server().BroadcastMessage(gomcc.ConvertColors(message))
 }
 
-var CommandTell = gomcc.Command{
+var commandTell = gomcc.Command{
 	Name:        "tell",
 	Description: "Send a private message to a player.",
 	Permission:  "core.tell",
-	Handler:     HandleTell,
+	Handler:     handleTell,
 }
 
-func HandleTell(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleTell(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.SplitN(message, " ", 2)
 	if len(args) < 2 {
 		sender.SendMessage("Usage: " + command.Name + " <player> <message>")

@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Andrew Goulas
+// Copyright 2017-2019 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -95,7 +95,7 @@ func (level *Level) ForEachEntity(fn func(*Entity)) {
 	}
 
 	level.Server.ForEachEntity(func(entity *Entity) {
-		if entity.Level == level {
+		if entity.level == level {
 			fn(entity)
 		}
 	})
@@ -107,7 +107,7 @@ func (level *Level) ForEachClient(fn func(*Client)) {
 	}
 
 	level.Server.ForEachClient(func(client *Client) {
-		if client.Entity.Level == level {
+		if client.Entity.level == level {
 			fn(client)
 		}
 	})
@@ -118,7 +118,7 @@ func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
 		level.Blocks[level.Index(x, y, z)] = block
 		if broadcast {
 			level.ForEachClient(func(client *Client) {
-				client.SendBlockChange(x, y, z, block)
+				client.sendBlockChange(x, y, z, block)
 			})
 		}
 	}
@@ -127,7 +127,7 @@ func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
 func (level *Level) SetWeather(weather WeatherType) {
 	if weather != level.Weather {
 		level.ForEachClient(func(client *Client) {
-			client.SendWeather(weather)
+			client.sendWeather(weather)
 		})
 
 		level.Weather = weather

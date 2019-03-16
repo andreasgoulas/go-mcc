@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Andrew Goulas
+// Copyright 2017-2019 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -21,16 +21,16 @@ import (
 )
 
 func Initialize(server *gomcc.Server) {
-	server.RegisterCommand(&CommandGoto)
-	server.RegisterCommand(&CommandKick)
-	server.RegisterCommand(&CommandLoad)
-	server.RegisterCommand(&CommandMain)
-	server.RegisterCommand(&CommandMe)
-	server.RegisterCommand(&CommandNewLvl)
-	server.RegisterCommand(&CommandSave)
-	server.RegisterCommand(&CommandSay)
-	server.RegisterCommand(&CommandSpawn)
-	server.RegisterCommand(&CommandTell)
-	server.RegisterCommand(&CommandTp)
-	server.RegisterCommand(&CommandUnload)
+	server.RegisterCommand(&commandGoto)
+	server.RegisterCommand(&commandKick)
+	server.RegisterCommand(&commandLoad)
+	server.RegisterCommand(&commandMain)
+	server.RegisterCommand(&commandMe)
+	server.RegisterCommand(&commandNewLvl)
+	server.RegisterCommand(&commandSave)
+	server.RegisterCommand(&commandSay)
+	server.RegisterCommand(&commandSpawn)
+	server.RegisterCommand(&commandTell)
+	server.RegisterCommand(&commandTp)
+	server.RegisterCommand(&commandUnload)
 }

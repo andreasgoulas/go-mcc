@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Andrew Goulas
+// Copyright 2017-2019 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -40,186 +40,216 @@ const (
 )
 
 type Entity struct {
+	Client *Client
+	Server *Server
+
 	NameID byte
 
 	Name        string
 	DisplayName string
 	ListName    string
 
-	ModelName string
-	SkinName  string
-
 	GroupName string
 	GroupRank byte
 
-	Client       *Client
-	Server       *Server
-	Level        *Level
-	Location     Location
-	LastLocation Location
+	modelName string
+	skinName  string
+
+	level        *Level
+	location     Location
+	lastLocation Location
 }
 
 func NewEntity(name string, server *Server) *Entity {
 	return &Entity{
+		Server:      server,
 		NameID:      0xff,
 		Name:        name,
 		DisplayName: name,
 		ListName:    name,
-		ModelName:   ModelHumanoid,
-		SkinName:    name,
-		Server:      server,
+		modelName:   ModelHumanoid,
+		skinName:    name,
 	}
 }
 
+func (entity *Entity) Location() Location {
+	return entity.location
+}
+
 func (entity *Entity) Teleport(location Location) {
-	if location == entity.Location {
+	if location == entity.location {
 		return
 	}
 
-	event := &EventEntityMove{entity, entity.Location, location, false}
+	event := &EventEntityMove{entity, entity.location, location, false}
 	entity.Server.FireEvent(EventTypeEntityMove, &event)
 	if event.Cancel {
 		return
 	}
 
-	entity.Location = location
+	entity.location = location
 	if entity.Client != nil {
-		entity.Client.SendTeleport(entity)
+		entity.Client.sendTeleport(entity)
 	}
 }
 
+func (entity *Entity) Level() *Level {
+	return entity.level
+}
+
 func (entity *Entity) TeleportLevel(level *Level) {
-	if entity.Level == level {
+	if entity.level == level {
 		return
 	}
 
-	lastLevel := entity.Level
-	if entity.Level != nil {
-		entity.Level = nil
-		entity.Despawn(lastLevel)
+	lastLevel := entity.level
+	if entity.level != nil {
+		entity.level = nil
+		entity.despawn(lastLevel)
 	}
 
 	if level != nil {
-		entity.Location = level.Spawn
-		entity.LastLocation = Location{}
-		entity.Spawn(level)
+		entity.location = level.Spawn
+		entity.lastLocation = Location{}
+		entity.spawn(level)
 	}
 
-	entity.Level = level
+	entity.level = level
 
 	event := EventEntityLevelChange{entity, lastLevel, level}
 	entity.Server.FireEvent(EventTypeEntityLevelChange, &event)
 }
 
+func (entity *Entity) Model() string {
+	return entity.modelName
+}
+
 func (entity *Entity) SetModel(modelName string) {
-	if modelName == entity.ModelName {
+	if modelName == entity.modelName {
 		return
 	}
 
-	entity.ModelName = modelName
-	if entity.Level != nil {
-		entity.Level.ForEachClient(func(client *Client) {
-			client.SendChangeModel(entity)
+	entity.modelName = modelName
+	if entity.level != nil {
+		entity.level.ForEachClient(func(client *Client) {
+			client.sendChangeModel(entity)
 		})
 	}
 }
 
-func (entity *Entity) Update() {
-	if entity.Level == nil {
+func (entity *Entity) Skin() string {
+	return entity.skinName
+}
+
+func (entity *Entity) SetSkin(skinName string) {
+	if skinName == entity.skinName {
+		return
+	}
+
+	entity.skinName = skinName
+	if entity.level != nil {
+		entity.level.ForEachClient(func(client *Client) {
+			client.sendSpawn(entity)
+		})
+	}
+}
+
+func (entity *Entity) update() {
+	if entity.level == nil {
 		return
 	}
 
 	positionDirty := false
-	if entity.Location.X != entity.LastLocation.X ||
-		entity.Location.Y != entity.LastLocation.Y ||
-		entity.Location.Z != entity.LastLocation.Z {
+	if entity.location.X != entity.lastLocation.X ||
+		entity.location.Y != entity.lastLocation.Y ||
+		entity.location.Z != entity.lastLocation.Z {
 		positionDirty = true
 	}
 
 	rotationDirty := false
-	if entity.Location.Yaw != entity.LastLocation.Yaw ||
-		entity.Location.Pitch != entity.LastLocation.Pitch {
+	if entity.location.Yaw != entity.lastLocation.Yaw ||
+		entity.location.Pitch != entity.lastLocation.Pitch {
 		rotationDirty = true
 	}
 
 	teleport := false
-	if math.Abs(entity.Location.X-entity.LastLocation.X) > 1.0 ||
-		math.Abs(entity.Location.Y-entity.LastLocation.Y) > 1.0 ||
-		math.Abs(entity.Location.Z-entity.LastLocation.Z) > 1.0 {
+	if math.Abs(entity.location.X-entity.lastLocation.X) > 1.0 ||
+		math.Abs(entity.location.Y-entity.lastLocation.Y) > 1.0 ||
+		math.Abs(entity.location.Z-entity.lastLocation.Z) > 1.0 {
 		teleport = true
 	}
 
 	var packet interface{}
 	if teleport {
-		packet = &PacketPlayerTeleport{
-			PacketTypePlayerTeleport,
+		packet = &packetPlayerTeleport{
+			packetTypePlayerTeleport,
 			entity.NameID,
-			int16(entity.Location.X * 32),
-			int16(entity.Location.Y * 32),
-			int16(entity.Location.Z * 32),
-			byte(entity.Location.Yaw * 256 / 360),
-			byte(entity.Location.Pitch * 256 / 360),
+			int16(entity.location.X * 32),
+			int16(entity.location.Y * 32),
+			int16(entity.location.Z * 32),
+			byte(entity.location.Yaw * 256 / 360),
+			byte(entity.location.Pitch * 256 / 360),
 		}
 	} else if positionDirty && rotationDirty {
-		packet = &PacketPositionOrientationUpdate{
-			PacketTypePositionOrientationUpdate,
+		packet = &packetPositionOrientationUpdate{
+			packetTypePositionOrientationUpdate,
 			entity.NameID,
-			byte((entity.Location.X - entity.LastLocation.X) * 32),
-			byte((entity.Location.Y - entity.LastLocation.Y) * 32),
-			byte((entity.Location.Z - entity.LastLocation.Z) * 32),
-			byte(entity.Location.Yaw * 256 / 360),
-			byte(entity.Location.Pitch * 256 / 360),
+			byte((entity.location.X - entity.lastLocation.X) * 32),
+			byte((entity.location.Y - entity.lastLocation.Y) * 32),
+			byte((entity.location.Z - entity.lastLocation.Z) * 32),
+			byte(entity.location.Yaw * 256 / 360),
+			byte(entity.location.Pitch * 256 / 360),
 		}
 	} else if positionDirty {
-		packet = &PacketPositionUpdate{
-			PacketTypePositionUpdate,
+		packet = &packetPositionUpdate{
+			packetTypePositionUpdate,
 			entity.NameID,
-			byte((entity.Location.X - entity.LastLocation.X) * 32),
-			byte((entity.Location.Y - entity.LastLocation.Y) * 32),
-			byte((entity.Location.Z - entity.LastLocation.Z) * 32),
+			byte((entity.location.X - entity.lastLocation.X) * 32),
+			byte((entity.location.Y - entity.lastLocation.Y) * 32),
+			byte((entity.location.Z - entity.lastLocation.Z) * 32),
 		}
 	} else if rotationDirty {
-		packet = &PacketOrientationUpdate{
-			PacketTypeOrientationUpdate,
+		packet = &packetOrientationUpdate{
+			packetTypeOrientationUpdate,
 			entity.NameID,
-			byte(entity.Location.Yaw * 256 / 360),
-			byte(entity.Location.Pitch * 256 / 360),
+			byte(entity.location.Yaw * 256 / 360),
+			byte(entity.location.Pitch * 256 / 360),
 		}
 	} else {
 		return
 	}
 
-	entity.LastLocation = entity.Location
-	entity.Level.ForEachClient(func(client *Client) {
+	entity.lastLocation = entity.location
+	entity.level.ForEachClient(func(client *Client) {
 		if client != entity.Client {
-			client.SendPacket(packet)
+			client.sendPacket(packet)
 		}
 	})
 }
 
-func (entity *Entity) Spawn(level *Level) {
+func (entity *Entity) spawn(level *Level) {
 	level.ForEachClient(func(client *Client) {
-		client.SendSpawn(entity)
+		client.sendSpawn(entity)
 	})
 
 	if entity.Client != nil {
-		entity.Client.SendLevel(level)
-		entity.Client.SendSpawn(entity)
+		entity.Client.sendLevel(level)
+		entity.Client.sendSpawn(entity)
 		level.ForEachEntity(func(other *Entity) {
-			entity.Client.SendSpawn(other)
+			entity.Client.sendSpawn(other)
 		})
 	}
 }
 
-func (entity *Entity) Despawn(level *Level) {
+func (entity *Entity) despawn(level *Level) {
 	level.ForEachClient(func(client *Client) {
-		client.SendDespawn(entity)
+		client.sendDespawn(entity)
 	})
 
-	if entity.Client != nil && entity.Client.LoggedIn == 1 {
-		entity.Client.SendDespawn(entity)
+	if entity.Client != nil && entity.Client.loggedIn == 1 {
+		entity.Client.sendDespawn(entity)
 		level.ForEachEntity(func(other *Entity) {
-			entity.Client.SendDespawn(other)
+			entity.Client.sendDespawn(other)
 		})
 	}
 }

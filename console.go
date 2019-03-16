@@ -1,4 +1,4 @@
-// Copyright 2017 Andrew Goulas
+// Copyright 2017-2019 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -43,7 +43,7 @@ func NewConsole(server *gomcc.Server, waitGroup *sync.WaitGroup) *Console {
 		"stop",
 		"Stop the server.",
 		"stop",
-		console.HandleStop,
+		console.handleStop,
 	})
 
 	signal.Notify(console.signal, os.Interrupt)
@@ -86,6 +86,6 @@ func (console *Console) HasPermission(permission string) bool {
 	return true
 }
 
-func (console *Console) HandleStop(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (console *Console) handleStop(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	console.Stop()
 }

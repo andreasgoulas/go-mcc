@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Andrew Goulas
+// Copyright 2017-2019 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -44,7 +44,7 @@ var Extensions = []struct {
 	{"EnvWeatherType", 1},
 }
 
-func Min(x, y int) int {
+func min(x, y int) int {
 	if x < y {
 		return x
 	}
@@ -76,32 +76,32 @@ func IsValidMessage(message string) bool {
 }
 
 type Client struct {
-	server     *Server
-	Entity     *Entity
-	Conn       net.Conn
-	Connected  uint32
-	LoggedIn   uint32
-	ClientName string
+	Entity *Entity
 
-	Operator    bool
-	Permissions [][]string
+	server    *Server
+	conn      net.Conn
+	connected uint32
+	loggedIn  uint32
+	name      string
 
-	HasCPE                  bool
-	RemainingExtensions     uint
-	Extensions              map[string]int
-	Message                 string
-	CustomBlockSupportLevel byte
-	ClickDistance           float64
+	operator    bool
+	permissions [][]string
 
-	PingTicker *time.Ticker
+	remainingExtensions     uint
+	extensions              map[string]int
+	message                 string
+	customBlockSupportLevel byte
+	clickDistance           float64
+
+	pingTicker *time.Ticker
 }
 
 func NewClient(conn net.Conn, server *Server) *Client {
 	return &Client{
 		server:        server,
-		Conn:          conn,
-		Extensions:    make(map[string]int),
-		ClickDistance: 5.0,
+		conn:          conn,
+		extensions:    make(map[string]int),
+		clickDistance: 5.0,
 	}
 }
 
@@ -114,13 +114,13 @@ func (client *Client) Name() string {
 		return client.Entity.DisplayName
 	}
 
-	return client.ClientName
+	return client.name
 }
 
-func (client *Client) CheckPermission(permission []string, template []string) bool {
+func (client *Client) checkPermission(permission []string, template []string) bool {
 	lenP := len(permission)
 	lenT := len(template)
-	for i := 0; i < Min(lenP, lenT); i++ {
+	for i := 0; i < min(lenP, lenT); i++ {
 		if template[i] == "*" {
 			return true
 		} else if permission[i] != template[i] {
@@ -137,8 +137,8 @@ func (client *Client) HasPermission(permission string) bool {
 	}
 
 	split := strings.Split(permission, ".")
-	for _, template := range client.Permissions {
-		if client.CheckPermission(split, template) {
+	for _, template := range client.permissions {
+		if client.checkPermission(split, template) {
 			return true
 		}
 	}
@@ -146,25 +146,351 @@ func (client *Client) HasPermission(permission string) bool {
 	return false
 }
 
-func (client *Client) Verify(key []byte) bool {
-	if len(key) != md5.Size {
-		return false
-	}
-
-	data := make([]byte, len(client.server.Salt))
-	copy(data, client.server.Salt[:])
-	data = append(data, []byte(client.ClientName)...)
-
-	digest := md5.Sum(data)
-	return bytes.Equal(digest[:], key)
+func (client *Client) HasExtension(extension string) (f bool) {
+	_, f = client.extensions[extension]
+	return
 }
 
-func (client *Client) Handle() {
+func (client *Client) Disconnect() {
+	if client.connected == 0 {
+		return
+	}
+	atomic.StoreUint32(&client.connected, 0)
+
+	if client.pingTicker != nil {
+		client.pingTicker.Stop()
+	}
+
+	client.conn.Close()
+
+	if client.loggedIn == 1 {
+		atomic.StoreUint32(&client.loggedIn, 0)
+
+		event := EventPlayerQuit{client.Entity}
+		client.server.FireEvent(EventTypePlayerQuit, &event)
+
+		client.Entity.TeleportLevel(nil)
+		client.server.BroadcastMessage(ColorYellow + client.Entity.Name + " has left the game!")
+		client.server.RemoveClient(client)
+		client.server.RemoveEntity(client.Entity)
+		atomic.AddInt32(&client.server.playerCount, -1)
+	}
+
+	event := EventClientDisconnect{client}
+	client.server.FireEvent(EventTypeClientDisconnect, &event)
+}
+
+func (client *Client) Kick(reason string) {
+	client.sendPacket(&packetDisconnect{
+		packetTypeDisconnect,
+		padString(reason),
+	})
+	client.Disconnect()
+}
+
+func (client *Client) Operator() bool {
+	return client.operator
+}
+
+func (client *Client) SetOperator(value bool) {
+	if client.loggedIn == 1 && value != client.operator {
+		userType := byte(0x00)
+		if value {
+			userType = 0x64
+		}
+
+		client.sendPacket(&packetUpdateUserType{
+			packetTypeUpdateUserType,
+			userType,
+		})
+	}
+
+	client.operator = value
+}
+
+func (client *Client) ClickDistance() float64 {
+	return client.clickDistance
+}
+
+func (client *Client) SetClickDistance(value float64) {
+	if client.loggedIn == 1 && client.HasExtension("ClickDistance") {
+		client.sendPacket(&packetSetClickDistance{
+			packetTypeSetClickDistance,
+			int16(value * 32),
+		})
+	}
+
+	client.clickDistance = value
+}
+
+func (client *Client) SendMessage(message string) {
+	lines := strings.Split(message, "\n")
+	for _, line := range lines {
+		client.sendPacket(&packetMessage{
+			packetTypeMessage,
+			0x00,
+			padString(line),
+		})
+	}
+}
+
+func (client *Client) sendPacket(packet interface{}) {
+	if client.connected == 0 {
+		return
+	}
+
+	buffer := new(bytes.Buffer)
+	binary.Write(buffer, binary.BigEndian, packet)
+	_, err := buffer.WriteTo(client.conn)
+	if err == io.EOF {
+		client.Disconnect()
+	}
+}
+
+func (client *Client) convertBlock(block BlockID) byte {
+	if client.customBlockSupportLevel < 1 {
+		return byte(FallbackBlock(block))
+	}
+
+	return byte(block)
+}
+
+func (client *Client) sendLevel(level *Level) {
+	if client.loggedIn == 0 {
+		return
+	}
+
+	client.sendPacket(&packetLevelInitialize{packetTypeLevelInitialize})
+
+	var GZIPBuffer bytes.Buffer
+	GZIPWriter := gzip.NewWriter(&GZIPBuffer)
+	binary.Write(GZIPWriter, binary.BigEndian, int32(level.Volume()))
+	for _, block := range level.Blocks {
+		GZIPWriter.Write([]byte{client.convertBlock(block)})
+	}
+	GZIPWriter.Close()
+
+	GZIPData := GZIPBuffer.Bytes()
+	packets := int(math.Ceil(float64(len(GZIPData)) / 1024))
+	for i := 0; i < packets; i++ {
+		offset := 1024 * i
+		size := len(GZIPData) - offset
+		if size > 1024 {
+			size = 1024
+		}
+
+		packet := &packetLevelDataChunk{
+			packetTypeLevelDataChunk,
+			int16(size),
+			[1024]byte{},
+			byte(i * 100 / packets),
+		}
+
+		copy(packet.ChunkData[:], GZIPData[offset:offset+size])
+		client.sendPacket(packet)
+	}
+
+	client.sendLevelAppearance(level.Appearance)
+	client.sendWeather(level.Weather)
+
+	client.sendPacket(&packetLevelFinalize{
+		packetTypeLevelFinalize,
+		int16(level.Width), int16(level.Height), int16(level.Length),
+	})
+}
+
+func (client *Client) sendSpawn(entity *Entity) {
+	if client.loggedIn == 0 {
+		return
+	}
+
+	id := entity.NameID
+	if id == client.Entity.NameID {
+		id = 0xff
+	}
+
+	location := entity.location
+	if client.HasExtension("ExtPlayerList") {
+		client.sendPacket(&packetExtAddEntity2{
+			packetTypeExtAddEntity2,
+			id,
+			padString(entity.DisplayName),
+			padString(entity.skinName),
+			int16(location.X * 32),
+			int16(location.Y * 32),
+			int16(location.Z * 32),
+			byte(location.Yaw * 256 / 360),
+			byte(location.Pitch * 256 / 360),
+		})
+	} else {
+		client.sendPacket(&packetSpawnPlayer{
+			packetTypeSpawnPlayer,
+			id,
+			padString(entity.Name),
+			int16(location.X * 32),
+			int16(location.Y * 32),
+			int16(location.Z * 32),
+			byte(location.Yaw * 256 / 360),
+			byte(location.Pitch * 256 / 360),
+		})
+	}
+
+	if entity.modelName != ModelHumanoid {
+		client.sendChangeModel(entity)
+	}
+}
+
+func (client *Client) sendDespawn(entity *Entity) {
+	if client.loggedIn == 0 {
+		return
+	}
+
+	id := entity.NameID
+	if id == client.Entity.NameID {
+		id = 0xff
+	}
+
+	client.sendPacket(&packetDespawnPlayer{
+		packetTypeDespawnPlayer,
+		id,
+	})
+}
+
+func (client *Client) sendTeleport(entity *Entity) {
+	if client.loggedIn == 0 {
+		return
+	}
+
+	id := entity.NameID
+	if id == client.Entity.NameID {
+		id = 0xff
+	}
+
+	client.sendPacket(&packetPlayerTeleport{
+		packetTypePlayerTeleport,
+		id,
+		int16(entity.location.X * 32),
+		int16(entity.location.Y * 32),
+		int16(entity.location.Z * 32),
+		byte(entity.location.Yaw * 256 / 360),
+		byte(entity.location.Pitch * 256 / 360),
+	})
+}
+
+func (client *Client) sendBlockChange(x, y, z uint, block BlockID) {
+	if client.loggedIn == 0 {
+		return
+	}
+
+	client.sendPacket(&packetSetBlock{
+		packetTypeSetBlock,
+		int16(x), int16(y), int16(z),
+		client.convertBlock(block),
+	})
+}
+
+func (client *Client) sendCPE() {
+	client.sendPacket(&packetExtInfo{
+		packetTypeExtInfo,
+		padString(ServerSoftware),
+		int16(len(Extensions)),
+	})
+
+	for _, extension := range Extensions {
+		client.sendPacket(&packetExtEntry{
+			packetTypeExtEntry,
+			padString(extension.Name),
+			int32(extension.Version),
+		})
+	}
+}
+
+func (client *Client) sendAddPlayerList(entity *Entity) {
+	if client.loggedIn == 0 || !client.HasExtension("ExtPlayerList") {
+		return
+	}
+
+	id := entity.NameID
+	if id == client.Entity.NameID {
+		id = 0xff
+	}
+
+	client.sendPacket(&packetExtAddPlayerName{
+		packetTypeExtAddPlayerName,
+		int16(id),
+		padString(entity.Name),
+		padString(entity.ListName),
+		padString(entity.GroupName),
+		entity.GroupRank,
+	})
+}
+
+func (client *Client) sendRemovePlayerList(entity *Entity) {
+	if client.loggedIn == 0 || !client.HasExtension("ExtPlayerList") {
+		return
+	}
+
+	id := entity.NameID
+	if id == client.Entity.NameID {
+		id = 0xff
+	}
+
+	client.sendPacket(&packetExtRemovePlayerName{
+		packetTypeExtRemovePlayerName,
+		int16(id),
+	})
+}
+
+func (client *Client) sendChangeModel(entity *Entity) {
+	if client.loggedIn == 0 || !client.HasExtension("ChangeModel") {
+		return
+	}
+
+	id := entity.NameID
+	if id == client.Entity.NameID {
+		id = 0xff
+	}
+
+	client.sendPacket(&packetChangeModel{
+		packetTypeChangeModel,
+		id,
+		padString(entity.modelName),
+	})
+}
+
+func (client *Client) sendLevelAppearance(appearance LevelAppearance) {
+	if client.loggedIn == 0 || !client.HasExtension("EnvMapAppearance") {
+		return
+	}
+
+	client.sendPacket(&packetEnvSetMapAppearance2{
+		packetTypeEnvSetMapAppearance2,
+		padString(appearance.TexturePackURL),
+		client.convertBlock(appearance.SideBlock),
+		client.convertBlock(appearance.EdgeBlock),
+		int16(appearance.SideLevel),
+		int16(appearance.CloudLevel),
+		int16(appearance.MaxViewDistance),
+	})
+}
+
+func (client *Client) sendWeather(weather WeatherType) {
+	if client.loggedIn == 0 || !client.HasExtension("EnvWeatherType") {
+		return
+	}
+
+	client.sendPacket(&packetEnvSetWeatherType{
+		packetTypeEnvSetWeatherType,
+		byte(weather),
+	})
+}
+
+func (client *Client) handle() {
 	buffer := make([]byte, 256)
-	atomic.StoreUint32(&client.Connected, 1)
-	for client.Connected == 1 {
+	atomic.StoreUint32(&client.connected, 1)
+	for client.connected == 1 {
 		buffer = buffer[:1]
-		_, err := io.ReadFull(client.Conn, buffer)
+		_, err := io.ReadFull(client.conn, buffer)
 		if err != nil {
 			client.Disconnect()
 			return
@@ -173,19 +499,19 @@ func (client *Client) Handle() {
 		id := buffer[0]
 		var size uint
 		switch id {
-		case PacketTypeIdentification:
+		case packetTypeIdentification:
 			size = 131
-		case PacketTypeSetBlockClient:
+		case packetTypeSetBlockClient:
 			size = 9
-		case PacketTypePlayerTeleport:
+		case packetTypePlayerTeleport:
 			size = 10
-		case PacketTypeMessage:
+		case packetTypeMessage:
 			size = 66
-		case PacketTypeExtInfo:
+		case packetTypeExtInfo:
 			size = 67
-		case PacketTypeExtEntry:
+		case packetTypeExtEntry:
 			size = 69
-		case PacketTypeCustomBlockSupportLevel:
+		case packetTypeCustomBlockSupportLevel:
 			size = 2
 
 		default:
@@ -194,7 +520,7 @@ func (client *Client) Handle() {
 		}
 
 		buffer = buffer[:size]
-		_, err = io.ReadFull(client.Conn, buffer[1:])
+		_, err = io.ReadFull(client.conn, buffer[1:])
 		if err != nil {
 			client.Disconnect()
 			return
@@ -202,62 +528,62 @@ func (client *Client) Handle() {
 
 		reader := bytes.NewReader(buffer)
 		switch id {
-		case PacketTypeIdentification:
-			client.HandleIdentification(reader)
-		case PacketTypeSetBlockClient:
-			client.HandleSetBlock(reader)
-		case PacketTypePlayerTeleport:
-			client.HandlePlayerTeleport(reader)
-		case PacketTypeMessage:
-			client.HandleMessage(reader)
-		case PacketTypeExtInfo:
-			client.HandleExtInfo(reader)
-		case PacketTypeExtEntry:
-			client.HandleExtEntry(reader)
-		case PacketTypeCustomBlockSupportLevel:
-			client.HandleCustomBlockSupportLevel(reader)
+		case packetTypeIdentification:
+			client.handleIdentification(reader)
+		case packetTypeSetBlockClient:
+			client.handleSetBlock(reader)
+		case packetTypePlayerTeleport:
+			client.handlePlayerTeleport(reader)
+		case packetTypeMessage:
+			client.handleMessage(reader)
+		case packetTypeExtInfo:
+			client.handleExtInfo(reader)
+		case packetTypeExtEntry:
+			client.handleExtEntry(reader)
+		case packetTypeCustomBlockSupportLevel:
+			client.handleCustomBlockSupportLevel(reader)
 		}
 	}
 }
 
-func (client *Client) Login() {
-	if client.LoggedIn == 1 {
+func (client *Client) login() {
+	if client.loggedIn == 1 {
 		return
 	}
 
 	for {
-		count := client.server.PlayerCount
+		count := client.server.playerCount
 		if int(count) >= client.server.Config.MaxPlayers {
 			client.Kick("Server full!")
 			return
 		}
 
-		if atomic.CompareAndSwapInt32(&client.server.PlayerCount, count, count+1) {
+		if atomic.CompareAndSwapInt32(&client.server.playerCount, count, count+1) {
 			break
 		}
 	}
 
 	if client.HasExtension("CustomBlocks") {
-		client.SendPacket(&PacketCustomBlockSupportLevel{
-			PacketTypeCustomBlockSupportLevel,
+		client.sendPacket(&packetCustomBlockSupportLevel{
+			packetTypeCustomBlockSupportLevel,
 			1,
 		})
 	}
 
 	userType := byte(0x00)
-	if client.Operator {
+	if client.operator {
 		userType = 0x64
 	}
 
-	client.SendPacket(&PacketServerIdentification{
-		PacketTypeIdentification,
+	client.sendPacket(&packetServerIdentification{
+		packetTypeIdentification,
 		0x07,
-		PadString(client.server.Config.Name),
-		PadString(client.server.Config.MOTD),
+		padString(client.server.Config.Name),
+		padString(client.server.Config.MOTD),
 		userType,
 	})
 
-	client.Entity = NewEntity(client.ClientName, client.server)
+	client.Entity = NewEntity(client.name, client.server)
 	client.Entity.Client = client
 
 	event := EventPlayerJoin{client.Entity, false, ""}
@@ -267,7 +593,7 @@ func (client *Client) Login() {
 		return
 	}
 
-	atomic.StoreUint32(&client.LoggedIn, 1)
+	atomic.StoreUint32(&client.loggedIn, 1)
 	client.server.AddClient(client)
 	client.server.BroadcastMessage(ColorYellow + client.Entity.Name + " has joined the game!")
 	if client.server.AddEntity(client.Entity) == 0xff {
@@ -279,20 +605,33 @@ func (client *Client) Login() {
 		client.Entity.TeleportLevel(client.server.MainLevel)
 	}
 
-	client.PingTicker = time.NewTicker(2 * time.Second)
+	client.pingTicker = time.NewTicker(2 * time.Second)
 	go func() {
-		for range client.PingTicker.C {
-			client.SendPacket(&PacketPing{PacketTypePing})
+		for range client.pingTicker.C {
+			client.sendPacket(&packetPing{packetTypePing})
 		}
 	}()
 }
 
-func (client *Client) HandleIdentification(reader io.Reader) {
-	if client.LoggedIn == 1 {
+func (client *Client) verify(key []byte) bool {
+	if len(key) != md5.Size {
+		return false
+	}
+
+	data := make([]byte, len(client.server.salt))
+	copy(data, client.server.salt[:])
+	data = append(data, []byte(client.name)...)
+
+	digest := md5.Sum(data)
+	return bytes.Equal(digest[:], key)
+}
+
+func (client *Client) handleIdentification(reader io.Reader) {
+	if client.loggedIn == 1 {
 		return
 	}
 
-	packet := PacketClientIdentification{}
+	packet := packetClientIdentification{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
 	if packet.ProtocolVersion != 0x07 {
@@ -300,53 +639,52 @@ func (client *Client) HandleIdentification(reader io.Reader) {
 		return
 	}
 
-	client.ClientName = TrimString(packet.Name)
-	if !IsValidName(client.ClientName) {
+	client.name = trimString(packet.Name)
+	if !IsValidName(client.name) {
 		client.Kick("Invalid name!")
 		return
 	}
 
-	key := TrimString(packet.VerificationKey)
+	key := trimString(packet.VerificationKey)
 	if client.server.Config.Verify {
-		if !client.Verify([]byte(key)) {
+		if !client.verify([]byte(key)) {
 			client.Kick("Login failed!")
 			return
 		}
 	}
 
-	if client.server.FindEntity(client.ClientName) != nil {
+	if client.server.FindEntity(client.name) != nil {
 		client.Kick("Already logged in!")
 		return
 	}
 
 	if packet.Type == 0x42 {
-		client.HasCPE = true
-		client.SendCPE()
+		client.sendCPE()
 	} else {
-		client.Login()
+		client.login()
 	}
 }
 
-func (client *Client) RevertBlock(x, y, z uint) {
-	client.SendBlockChange(x, y, z, client.Entity.Level.GetBlock(x, y, z))
+func (client *Client) revertBlock(x, y, z uint) {
+	client.sendBlockChange(x, y, z, client.Entity.level.GetBlock(x, y, z))
 }
 
-func (client *Client) HandleSetBlock(reader io.Reader) {
-	if client.LoggedIn == 0 {
+func (client *Client) handleSetBlock(reader io.Reader) {
+	if client.loggedIn == 0 {
 		return
 	}
 
-	packet := PacketSetBlockClient{}
+	packet := packetSetBlockClient{}
 	binary.Read(reader, binary.BigEndian, &packet)
 	x, y, z := uint(packet.X), uint(packet.Y), uint(packet.Z)
 	block := BlockID(packet.BlockType)
 
-	dx := uint(client.Entity.Location.X) - x
-	dy := uint(client.Entity.Location.Y) - y
-	dz := uint(client.Entity.Location.Z) - z
-	if math.Sqrt(float64(dx*dx+dy*dy+dz*dz)) > client.ClickDistance {
+	dx := uint(client.Entity.location.X) - x
+	dy := uint(client.Entity.location.Y) - y
+	dz := uint(client.Entity.location.Z) - z
+	if math.Sqrt(float64(dx*dx+dy*dy+dz*dz)) > client.clickDistance {
 		client.SendMessage("You can't build that far away.")
-		client.RevertBlock(x, y, z)
+		client.revertBlock(x, y, z)
 		return
 	}
 
@@ -354,49 +692,49 @@ func (client *Client) HandleSetBlock(reader io.Reader) {
 	case 0x00:
 		event := &EventBlockBreak{
 			client.Entity,
-			client.Entity.Level,
-			client.Entity.Level.GetBlock(x, y, z),
+			client.Entity.level,
+			client.Entity.level.GetBlock(x, y, z),
 			x, y, z,
 			false,
 		}
 		client.server.FireEvent(EventTypeBlockBreak, &event)
 		if event.Cancel {
-			client.RevertBlock(x, y, z)
+			client.revertBlock(x, y, z)
 			return
 		}
 
-		client.Entity.Level.SetBlock(x, y, z, BlockAir, true)
+		client.Entity.level.SetBlock(x, y, z, BlockAir, true)
 
 	case 0x01:
-		if block > BlockMaxCPE || (client.CustomBlockSupportLevel < 1 && block > BlockMax) {
+		if block > BlockMaxCPE || (client.customBlockSupportLevel < 1 && block > BlockMax) {
 			client.SendMessage("Invalid block!")
-			client.RevertBlock(x, y, z)
+			client.revertBlock(x, y, z)
 			return
 		}
 
 		event := &EventBlockPlace{
 			client.Entity,
-			client.Entity.Level,
+			client.Entity.level,
 			block,
 			x, y, z,
 			false,
 		}
 		client.server.FireEvent(EventTypeBlockPlace, &event)
 		if event.Cancel {
-			client.RevertBlock(x, y, z)
+			client.revertBlock(x, y, z)
 			return
 		}
 
-		client.Entity.Level.SetBlock(x, y, z, block, true)
+		client.Entity.level.SetBlock(x, y, z, block, true)
 	}
 }
 
-func (client *Client) HandlePlayerTeleport(reader io.Reader) {
-	if client.LoggedIn == 0 {
+func (client *Client) handlePlayerTeleport(reader io.Reader) {
+	if client.loggedIn == 0 {
 		return
 	}
 
-	packet := PacketPlayerTeleport{}
+	packet := packetPlayerTeleport{}
 	binary.Read(reader, binary.BigEndian, &packet)
 	if packet.PlayerID != 0xff {
 		return
@@ -410,35 +748,35 @@ func (client *Client) HandlePlayerTeleport(reader io.Reader) {
 		float64(packet.Pitch) * 360 / 256,
 	}
 
-	if location == client.Entity.Location {
+	if location == client.Entity.location {
 		return
 	}
 
-	event := &EventEntityMove{client.Entity, client.Entity.Location, location, false}
+	event := &EventEntityMove{client.Entity, client.Entity.location, location, false}
 	client.server.FireEvent(EventTypeEntityMove, &event)
 	if event.Cancel {
-		client.SendTeleport(client.Entity)
+		client.sendTeleport(client.Entity)
 		return
 	}
 
-	client.Entity.Location = location
+	client.Entity.location = location
 }
 
-func (client *Client) HandleMessage(reader io.Reader) {
-	if client.LoggedIn == 0 {
+func (client *Client) handleMessage(reader io.Reader) {
+	if client.loggedIn == 0 {
 		return
 	}
 
-	packet := PacketMessage{}
+	packet := packetMessage{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
-	client.Message += TrimString(packet.Message)
+	client.message += trimString(packet.Message)
 	if packet.PlayerID != 0x00 && client.HasExtension("LongerMessages") {
 		return
 	}
 
-	message := client.Message
-	client.Message = ""
+	message := client.message
+	client.message = ""
 
 	if !IsValidMessage(message) {
 		client.SendMessage("Invalid message!")
@@ -452,371 +790,40 @@ func (client *Client) HandleMessage(reader io.Reader) {
 	}
 }
 
-func (client *Client) HandleExtInfo(reader io.Reader) {
-	packet := PacketExtInfo{}
+func (client *Client) handleExtInfo(reader io.Reader) {
+	packet := packetExtInfo{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
-	client.RemainingExtensions = uint(packet.ExtensionCount)
-	if client.RemainingExtensions == 0 {
-		client.Login()
+	client.remainingExtensions = uint(packet.ExtensionCount)
+	if client.remainingExtensions == 0 {
+		client.login()
 	}
 }
 
-func (client *Client) HandleExtEntry(reader io.Reader) {
-	packet := PacketExtEntry{}
+func (client *Client) handleExtEntry(reader io.Reader) {
+	packet := packetExtEntry{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
 	for _, extension := range Extensions {
-		if extension.Name == TrimString(packet.ExtName) {
+		if extension.Name == trimString(packet.ExtName) {
 			if extension.Version == int(packet.Version) {
-				client.Extensions[extension.Name] = int(packet.Version)
+				client.extensions[extension.Name] = int(packet.Version)
 				break
 			}
 		}
 	}
 
-	client.RemainingExtensions--
-	if client.RemainingExtensions == 0 {
-		client.Login()
+	client.remainingExtensions--
+	if client.remainingExtensions == 0 {
+		client.login()
 	}
 }
 
-func (client *Client) HandleCustomBlockSupportLevel(reader io.Reader) {
-	packet := PacketCustomBlockSupportLevel{}
+func (client *Client) handleCustomBlockSupportLevel(reader io.Reader) {
+	packet := packetCustomBlockSupportLevel{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
 	if packet.SupportLevel <= 1 {
-		client.CustomBlockSupportLevel = packet.SupportLevel
+		client.customBlockSupportLevel = packet.SupportLevel
 	}
-}
-
-func (client *Client) HasExtension(extension string) (f bool) {
-	_, f = client.Extensions[extension]
-	return
-}
-
-func (client *Client) Disconnect() {
-	if client.Connected == 0 {
-		return
-	}
-	atomic.StoreUint32(&client.Connected, 0)
-
-	if client.PingTicker != nil {
-		client.PingTicker.Stop()
-	}
-
-	client.Conn.Close()
-
-	if client.LoggedIn == 1 {
-		atomic.StoreUint32(&client.LoggedIn, 0)
-
-		event := EventPlayerQuit{client.Entity}
-		client.server.FireEvent(EventTypePlayerQuit, &event)
-
-		client.Entity.TeleportLevel(nil)
-		client.server.BroadcastMessage(ColorYellow + client.Entity.Name + " has left the game!")
-		client.server.RemoveClient(client)
-		client.server.RemoveEntity(client.Entity)
-		atomic.AddInt32(&client.server.PlayerCount, -1)
-	}
-
-	event := EventClientDisconnect{client}
-	client.server.FireEvent(EventTypeClientDisconnect, &event)
-}
-
-func (client *Client) SendPacket(packet interface{}) {
-	if client.Connected == 0 {
-		return
-	}
-
-	buffer := new(bytes.Buffer)
-	binary.Write(buffer, binary.BigEndian, packet)
-	_, err := buffer.WriteTo(client.Conn)
-	if err == io.EOF {
-		client.Disconnect()
-	}
-}
-
-func (client *Client) Kick(reason string) {
-	client.SendPacket(&PacketDisconnect{
-		PacketTypeDisconnect,
-		PadString(reason),
-	})
-	client.Disconnect()
-}
-
-func (client *Client) SendMessage(message string) {
-	lines := strings.Split(message, "\n")
-	for _, line := range lines {
-		client.SendPacket(&PacketMessage{
-			PacketTypeMessage,
-			0x00,
-			PadString(line),
-		})
-	}
-}
-
-func (client *Client) ConvertBlock(block BlockID) byte {
-	if client.CustomBlockSupportLevel < 1 {
-		return byte(FallbackBlock(block))
-	}
-
-	return byte(block)
-}
-
-func (client *Client) SendLevel(level *Level) {
-	if client.LoggedIn == 0 {
-		return
-	}
-
-	client.SendPacket(&PacketLevelInitialize{PacketTypeLevelInitialize})
-
-	var GZIPBuffer bytes.Buffer
-	GZIPWriter := gzip.NewWriter(&GZIPBuffer)
-	binary.Write(GZIPWriter, binary.BigEndian, int32(level.Volume()))
-	for _, block := range level.Blocks {
-		GZIPWriter.Write([]byte{client.ConvertBlock(block)})
-	}
-	GZIPWriter.Close()
-
-	GZIPData := GZIPBuffer.Bytes()
-	packets := int(math.Ceil(float64(len(GZIPData)) / 1024))
-	for i := 0; i < packets; i++ {
-		offset := 1024 * i
-		size := len(GZIPData) - offset
-		if size > 1024 {
-			size = 1024
-		}
-
-		packet := &PacketLevelDataChunk{
-			PacketTypeLevelDataChunk,
-			int16(size),
-			[1024]byte{},
-			byte(i * 100 / packets),
-		}
-
-		copy(packet.ChunkData[:], GZIPData[offset:offset+size])
-		client.SendPacket(packet)
-	}
-
-	client.SendLevelAppearance(level.Appearance)
-	client.SendWeather(level.Weather)
-
-	client.SendPacket(&PacketLevelFinalize{
-		PacketTypeLevelFinalize,
-		int16(level.Width), int16(level.Height), int16(level.Length),
-	})
-}
-
-func (client *Client) SendSpawn(entity *Entity) {
-	if client.LoggedIn == 0 {
-		return
-	}
-
-	id := entity.NameID
-	if id == client.Entity.NameID {
-		id = 0xff
-	}
-
-	location := entity.Location
-	if client.HasExtension("ExtPlayerList") {
-		client.SendPacket(&PacketExtAddEntity2{
-			PacketTypeExtAddEntity2,
-			id,
-			PadString(entity.DisplayName),
-			PadString(entity.SkinName),
-			int16(location.X * 32),
-			int16(location.Y * 32),
-			int16(location.Z * 32),
-			byte(location.Yaw * 256 / 360),
-			byte(location.Pitch * 256 / 360),
-		})
-	} else {
-		client.SendPacket(&PacketSpawnPlayer{
-			PacketTypeSpawnPlayer,
-			id,
-			PadString(entity.Name),
-			int16(location.X * 32),
-			int16(location.Y * 32),
-			int16(location.Z * 32),
-			byte(location.Yaw * 256 / 360),
-			byte(location.Pitch * 256 / 360),
-		})
-	}
-
-	if entity.ModelName != ModelHumanoid {
-		client.SendChangeModel(entity)
-	}
-}
-
-func (client *Client) SendDespawn(entity *Entity) {
-	if client.LoggedIn == 0 {
-		return
-	}
-
-	id := entity.NameID
-	if id == client.Entity.NameID {
-		id = 0xff
-	}
-
-	client.SendPacket(&PacketDespawnPlayer{
-		PacketTypeDespawnPlayer,
-		id,
-	})
-}
-
-func (client *Client) SendTeleport(entity *Entity) {
-	if client.LoggedIn == 0 {
-		return
-	}
-
-	id := entity.NameID
-	if id == client.Entity.NameID {
-		id = 0xff
-	}
-
-	client.SendPacket(&PacketPlayerTeleport{
-		PacketTypePlayerTeleport,
-		id,
-		int16(entity.Location.X * 32),
-		int16(entity.Location.Y * 32),
-		int16(entity.Location.Z * 32),
-		byte(entity.Location.Yaw * 256 / 360),
-		byte(entity.Location.Pitch * 256 / 360),
-	})
-}
-
-func (client *Client) SendBlockChange(x, y, z uint, block BlockID) {
-	if client.LoggedIn == 0 {
-		return
-	}
-
-	client.SendPacket(&PacketSetBlock{
-		PacketTypeSetBlock,
-		int16(x), int16(y), int16(z),
-		client.ConvertBlock(block),
-	})
-}
-
-func (client *Client) SetOperator(value bool) {
-	if client.LoggedIn == 1 && value != client.Operator {
-		userType := byte(0x00)
-		if value {
-			userType = 0x64
-		}
-
-		client.SendPacket(&PacketUpdateUserType{
-			PacketTypeUpdateUserType,
-			userType,
-		})
-	}
-
-	client.Operator = value
-}
-
-func (client *Client) SetClickDistance(value float64) {
-	if client.LoggedIn == 1 && client.HasExtension("ClickDistance") {
-		client.SendPacket(&PacketSetClickDistance{
-			PacketTypeSetClickDistance,
-			int16(value * 32),
-		})
-	}
-
-	client.ClickDistance = value
-}
-
-func (client *Client) SendCPE() {
-	client.SendPacket(&PacketExtInfo{
-		PacketTypeExtInfo,
-		PadString(ServerSoftware),
-		int16(len(Extensions)),
-	})
-
-	for _, extension := range Extensions {
-		client.SendPacket(&PacketExtEntry{
-			PacketTypeExtEntry,
-			PadString(extension.Name),
-			int32(extension.Version),
-		})
-	}
-}
-
-func (client *Client) SendAddPlayerList(entity *Entity) {
-	if client.LoggedIn == 0 || !client.HasExtension("ExtPlayerList") {
-		return
-	}
-
-	id := entity.NameID
-	if id == client.Entity.NameID {
-		id = 0xff
-	}
-
-	client.SendPacket(&PacketExtAddPlayerName{
-		PacketTypeExtAddPlayerName,
-		int16(id),
-		PadString(entity.Name),
-		PadString(entity.ListName),
-		PadString(entity.GroupName),
-		entity.GroupRank,
-	})
-}
-
-func (client *Client) SendRemovePlayerList(entity *Entity) {
-	if client.LoggedIn == 0 || !client.HasExtension("ExtPlayerList") {
-		return
-	}
-
-	id := entity.NameID
-	if id == client.Entity.NameID {
-		id = 0xff
-	}
-
-	client.SendPacket(&PacketExtRemovePlayerName{
-		PacketTypeExtRemovePlayerName,
-		int16(id),
-	})
-}
-
-func (client *Client) SendChangeModel(entity *Entity) {
-	if client.LoggedIn == 0 || !client.HasExtension("ChangeModel") {
-		return
-	}
-
-	id := entity.NameID
-	if id == client.Entity.NameID {
-		id = 0xff
-	}
-
-	client.SendPacket(&PacketChangeModel{
-		PacketTypeChangeModel,
-		id,
-		PadString(entity.ModelName),
-	})
-}
-
-func (client *Client) SendLevelAppearance(appearance LevelAppearance) {
-	if client.LoggedIn == 0 || !client.HasExtension("EnvMapAppearance") {
-		return
-	}
-
-	client.SendPacket(&PacketEnvSetMapAppearance2{
-		PacketTypeEnvSetMapAppearance2,
-		PadString(appearance.TexturePackURL),
-		client.ConvertBlock(appearance.SideBlock),
-		client.ConvertBlock(appearance.EdgeBlock),
-		int16(appearance.SideLevel),
-		int16(appearance.CloudLevel),
-		int16(appearance.MaxViewDistance),
-	})
-}
-
-func (client *Client) SendWeather(weather WeatherType) {
-	if client.LoggedIn == 0 || !client.HasExtension("EnvWeatherType") {
-		return
-	}
-
-	client.SendPacket(&PacketEnvSetWeatherType{
-		PacketTypeEnvSetWeatherType,
-		byte(weather),
-	})
 }

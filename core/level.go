@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Andrew Goulas
+// Copyright 2017-2019 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -23,14 +23,14 @@ import (
 	"Go-MCC/gomcc"
 )
 
-var CommandGoto = gomcc.Command{
+var commandGoto = gomcc.Command{
 	Name:        "goto",
 	Description: "Move to another level.",
 	Permission:  "core.goto",
-	Handler:     HandleGoto,
+	Handler:     handleGoto,
 }
 
-func HandleGoto(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleGoto(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	client, ok := sender.(*gomcc.Client)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -49,7 +49,7 @@ func HandleGoto(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	if level == client.Entity.Level {
+	if level == client.Entity.Level() {
 		sender.SendMessage("You are already in " + level.Name)
 		return
 	}
@@ -57,14 +57,14 @@ func HandleGoto(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	client.Entity.TeleportLevel(level)
 }
 
-var CommandLoad = gomcc.Command{
+var commandLoad = gomcc.Command{
 	Name:        "load",
 	Description: "Load a level.",
 	Permission:  "core.load",
-	Handler:     HandleLoad,
+	Handler:     handleLoad,
 }
 
-func HandleLoad(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleLoad(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Split(message, " ")
 	if len(args) != 1 || len(args[0]) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")
@@ -80,14 +80,14 @@ func HandleLoad(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	sender.SendMessage("Level " + args[0] + " loaded")
 }
 
-var CommandMain = gomcc.Command{
+var commandMain = gomcc.Command{
 	Name:        "main",
 	Description: "Set the main level.",
 	Permission:  "core.main",
-	Handler:     HandleMain,
+	Handler:     handleMain,
 }
 
-func HandleMain(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleMain(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Main level is " + sender.Server().MainLevel.Name)
 		return
@@ -109,14 +109,14 @@ func HandleMain(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	sender.SendMessage("Set main level to " + level.Name)
 }
 
-var CommandNewLvl = gomcc.Command{
+var commandNewLvl = gomcc.Command{
 	Name:        "newlvl",
 	Description: "Create a new level.",
 	Permission:  "core.newlvl",
-	Handler:     HandleNewLvl,
+	Handler:     handleNewLvl,
 }
 
-func HandleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Split(message, " ")
 	if len(args) != 5 {
 		sender.SendMessage("Usage: " + command.Name + " <name> <width> <height> <length> <theme>")
@@ -165,14 +165,14 @@ func HandleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message st
 	sender.SendMessage("Level " + level.Name + " created")
 }
 
-var CommandSave = gomcc.Command{
+var commandSave = gomcc.Command{
 	Name:        "save",
 	Description: "Save a level.",
 	Permission:  "core.save",
-	Handler:     HandleSave,
+	Handler:     handleSave,
 }
 
-func HandleSave(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleSave(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Split(message, " ")
 	if len(args) != 1 || len(args[0]) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")
@@ -197,14 +197,14 @@ func HandleSave(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	sender.SendMessage("Level " + level.Name + " saved")
 }
 
-var CommandSpawn = gomcc.Command{
+var commandSpawn = gomcc.Command{
 	Name:        "spawn",
 	Description: "Teleport to the spawn location of the level.",
 	Permission:  "core.spawn",
-	Handler:     HandleSpawn,
+	Handler:     handleSpawn,
 }
 
-func HandleSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	client, ok := sender.(*gomcc.Client)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -216,17 +216,18 @@ func HandleSpawn(sender gomcc.CommandSender, command *gomcc.Command, message str
 		return
 	}
 
-	client.Entity.Teleport(client.Entity.Level.Spawn)
+	level := client.Entity.Level()
+	client.Entity.Teleport(level.Spawn)
 }
 
-var CommandUnload = gomcc.Command{
+var commandUnload = gomcc.Command{
 	Name:        "unload",
 	Description: "Unload a level.",
 	Permission:  "core.unload",
-	Handler:     HandleUnload,
+	Handler:     handleUnload,
 }
 
-func HandleUnload(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleUnload(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Split(message, " ")
 	if len(args) != 1 || len(args[0]) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")

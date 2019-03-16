@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Andrew Goulas
+// Copyright 2017-2019 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -23,14 +23,14 @@ import (
 	"Go-MCC/gomcc"
 )
 
-var CommandKick = gomcc.Command{
+var commandKick = gomcc.Command{
 	Name:        "kick",
 	Description: "Kick a player from the server.",
 	Permission:  "core.kick",
-	Handler:     HandleKick,
+	Handler:     handleKick,
 }
 
-func HandleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <player> <reason>")
 		return
@@ -51,14 +51,14 @@ func HandleKick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	player.Kick(reason)
 }
 
-var CommandTp = gomcc.Command{
+var commandTp = gomcc.Command{
 	Name:        "tp",
 	Description: "Teleport to another player.",
 	Permission:  "core.tp",
-	Handler:     HandleTp,
+	Handler:     handleTp,
 }
 
-func ParseCoord(arg string, curr float64) (float64, error) {
+func parseCoord(arg string, curr float64) (float64, error) {
 	if strings.HasPrefix(arg, "~") {
 		value, err := strconv.Atoi(arg[1:])
 		return curr + float64(value), err
@@ -68,7 +68,7 @@ func ParseCoord(arg string, curr float64) (float64, error) {
 	}
 }
 
-func HandleTp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	client, ok := sender.(*gomcc.Client)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -84,29 +84,29 @@ func HandleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 			return
 		}
 
-		if entity.Level != player.Level {
-			player.TeleportLevel(entity.Level)
+		level := entity.Level()
+		if level != player.Level() {
+			player.TeleportLevel(level)
 		}
 
-		player.Teleport(entity.Location)
-		player.Update()
+		player.Teleport(entity.Location())
 	} else if len(args) == 3 {
 		var err error
-		location := player.Location
+		location := player.Location()
 
-		location.X, err = ParseCoord(args[0], player.Location.X)
+		location.X, err = parseCoord(args[0], location.X)
 		if err != nil {
 			sender.SendMessage(args[0] + " is not a valid number")
 			return
 		}
 
-		location.Y, err = ParseCoord(args[1], player.Location.Y)
+		location.Y, err = parseCoord(args[1], location.Y)
 		if err != nil {
 			sender.SendMessage(args[1] + " is not a valid number")
 			return
 		}
 
-		location.Z, err = ParseCoord(args[2], player.Location.Z)
+		location.Z, err = parseCoord(args[2], location.Z)
 		if err != nil {
 			sender.SendMessage(args[2] + " is not a valid number")
 			return

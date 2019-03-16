@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Andrew Goulas
+// Copyright 2017-2019 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@ import (
 	"Go-MCC/gomcc"
 )
 
-type LvlHeader struct {
+type lvlHeader struct {
 	Version                          uint16
 	Width, Height, Length            uint16
 	SpawnX, SpawnY, SpawnZ           uint16
@@ -42,12 +42,12 @@ func NewLvlStorage(directoryPath string) *LvlStorage {
 	return &LvlStorage{directoryPath}
 }
 
-func (storage *LvlStorage) GetPath(name string) string {
+func (storage *LvlStorage) getPath(name string) string {
 	return storage.directoryPath + name + ".lvl"
 }
 
 func (storage *LvlStorage) Load(name string) (*gomcc.Level, error) {
-	file, err := os.Open(storage.GetPath(name))
+	file, err := os.Open(storage.getPath(name))
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (storage *LvlStorage) Load(name string) (*gomcc.Level, error) {
 	}
 	defer reader.Close()
 
-	header := LvlHeader{}
+	header := lvlHeader{}
 	err = binary.Read(reader, binary.BigEndian, &header)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func (storage *LvlStorage) Load(name string) (*gomcc.Level, error) {
 }
 
 func (storage *LvlStorage) Save(level *gomcc.Level) error {
-	file, err := os.Create(storage.GetPath(level.Name))
+	file, err := os.Create(storage.getPath(level.Name))
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (storage *LvlStorage) Save(level *gomcc.Level) error {
 	defer file.Close()
 	defer writer.Close()
 
-	err = binary.Write(writer, binary.BigEndian, &LvlHeader{
+	err = binary.Write(writer, binary.BigEndian, &lvlHeader{
 		1874,
 		uint16(level.Width),
 		uint16(level.Height),

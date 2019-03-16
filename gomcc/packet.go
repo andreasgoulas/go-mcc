@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Andrew Goulas
+// Copyright 2017-2019 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,36 +22,36 @@ import (
 )
 
 const (
-	PacketTypeIdentification            = 0x00
-	PacketTypePing                      = 0x01
-	PacketTypeLevelInitialize           = 0x02
-	PacketTypeLevelDataChunk            = 0x03
-	PacketTypeLevelFinalize             = 0x04
-	PacketTypeSetBlockClient            = 0x05
-	PacketTypeSetBlock                  = 0x06
-	PacketTypeSpawnPlayer               = 0x07
-	PacketTypePlayerTeleport            = 0x08
-	PacketTypePositionOrientationUpdate = 0x09
-	PacketTypePositionUpdate            = 0x0a
-	PacketTypeOrientationUpdate         = 0x0b
-	PacketTypeDespawnPlayer             = 0x0c
-	PacketTypeMessage                   = 0x0d
-	PacketTypeDisconnect                = 0x0e
-	PacketTypeUpdateUserType            = 0x0f
+	packetTypeIdentification            = 0x00
+	packetTypePing                      = 0x01
+	packetTypeLevelInitialize           = 0x02
+	packetTypeLevelDataChunk            = 0x03
+	packetTypeLevelFinalize             = 0x04
+	packetTypeSetBlockClient            = 0x05
+	packetTypeSetBlock                  = 0x06
+	packetTypeSpawnPlayer               = 0x07
+	packetTypePlayerTeleport            = 0x08
+	packetTypePositionOrientationUpdate = 0x09
+	packetTypePositionUpdate            = 0x0a
+	packetTypeOrientationUpdate         = 0x0b
+	packetTypeDespawnPlayer             = 0x0c
+	packetTypeMessage                   = 0x0d
+	packetTypeDisconnect                = 0x0e
+	packetTypeUpdateUserType            = 0x0f
 
-	PacketTypeExtInfo                 = 0x10
-	PacketTypeExtEntry                = 0x11
-	PacketTypeSetClickDistance        = 0x12
-	PacketTypeCustomBlockSupportLevel = 0x13
-	PacketTypeExtAddPlayerName        = 0x16
-	PacketTypeExtRemovePlayerName     = 0x18
-	PacketTypeChangeModel             = 0x1d
-	PacketTypeEnvSetMapAppearance2    = 0x1e
-	PacketTypeEnvSetWeatherType       = 0x1f
-	PacketTypeExtAddEntity2           = 0x21
+	packetTypeExtInfo                 = 0x10
+	packetTypeExtEntry                = 0x11
+	packetTypeSetClickDistance        = 0x12
+	packetTypeCustomBlockSupportLevel = 0x13
+	packetTypeExtAddPlayerName        = 0x16
+	packetTypeExtRemovePlayerName     = 0x18
+	packetTypeChangeModel             = 0x1d
+	packetTypeEnvSetMapAppearance2    = 0x1e
+	packetTypeEnvSetWeatherType       = 0x1f
+	packetTypeExtAddEntity2           = 0x21
 )
 
-type PacketClientIdentification struct {
+type packetClientIdentification struct {
 	PacketID        byte
 	ProtocolVersion byte
 	Name            [64]byte
@@ -59,7 +59,7 @@ type PacketClientIdentification struct {
 	Type            byte
 }
 
-type PacketServerIdentification struct {
+type packetServerIdentification struct {
 	PacketID        byte
 	ProtocolVersion byte
 	Name            [64]byte
@@ -67,40 +67,40 @@ type PacketServerIdentification struct {
 	UserType        byte
 }
 
-type PacketPing struct {
+type packetPing struct {
 	PacketID byte
 }
 
-type PacketLevelInitialize struct {
+type packetLevelInitialize struct {
 	PacketID byte
 }
 
-type PacketLevelDataChunk struct {
+type packetLevelDataChunk struct {
 	PacketID        byte
 	ChunkLength     int16
 	ChunkData       [1024]byte
 	PercentComplete byte
 }
 
-type PacketLevelFinalize struct {
+type packetLevelFinalize struct {
 	PacketID byte
 	X, Y, Z  int16
 }
 
-type PacketSetBlockClient struct {
+type packetSetBlockClient struct {
 	PacketID  byte
 	X, Y, Z   int16
 	Mode      byte
 	BlockType byte
 }
 
-type PacketSetBlock struct {
+type packetSetBlock struct {
 	PacketID  byte
 	X, Y, Z   int16
 	BlockType byte
 }
 
-type PacketSpawnPlayer struct {
+type packetSpawnPlayer struct {
 	PacketID   byte
 	PlayerID   byte
 	Name       [64]byte
@@ -108,76 +108,76 @@ type PacketSpawnPlayer struct {
 	Yaw, Pitch byte
 }
 
-type PacketPlayerTeleport struct {
+type packetPlayerTeleport struct {
 	PacketID   byte
 	PlayerID   byte
 	X, Y, Z    int16
 	Yaw, Pitch byte
 }
 
-type PacketPositionOrientationUpdate struct {
+type packetPositionOrientationUpdate struct {
 	PacketID   byte
 	PlayerID   byte
 	X, Y, Z    byte
 	Yaw, Pitch byte
 }
 
-type PacketPositionUpdate struct {
+type packetPositionUpdate struct {
 	PacketID byte
 	PlayerID byte
 	X, Y, Z  byte
 }
 
-type PacketOrientationUpdate struct {
+type packetOrientationUpdate struct {
 	PacketID   byte
 	PlayerID   byte
 	Yaw, Pitch byte
 }
 
-type PacketDespawnPlayer struct {
+type packetDespawnPlayer struct {
 	PacketID byte
 	PlayerID byte
 }
 
-type PacketMessage struct {
+type packetMessage struct {
 	PacketID byte
 	PlayerID byte
 	Message  [64]byte
 }
 
-type PacketDisconnect struct {
+type packetDisconnect struct {
 	PacketID byte
 	Reason   [64]byte
 }
 
-type PacketUpdateUserType struct {
+type packetUpdateUserType struct {
 	PacketID byte
 	UserType byte
 }
 
-type PacketExtInfo struct {
+type packetExtInfo struct {
 	PacketID       byte
 	AppName        [64]byte
 	ExtensionCount int16
 }
 
-type PacketExtEntry struct {
+type packetExtEntry struct {
 	PacketID byte
 	ExtName  [64]byte
 	Version  int32
 }
 
-type PacketSetClickDistance struct {
+type packetSetClickDistance struct {
 	PacketID byte
 	Distance int16
 }
 
-type PacketCustomBlockSupportLevel struct {
+type packetCustomBlockSupportLevel struct {
 	PacketID     byte
 	SupportLevel byte
 }
 
-type PacketExtAddPlayerName struct {
+type packetExtAddPlayerName struct {
 	PacketID   byte
 	NameID     int16
 	PlayerName [64]byte
@@ -186,18 +186,18 @@ type PacketExtAddPlayerName struct {
 	GroupRank  byte
 }
 
-type PacketExtRemovePlayerName struct {
+type packetExtRemovePlayerName struct {
 	PacketID byte
 	NameID   int16
 }
 
-type PacketChangeModel struct {
+type packetChangeModel struct {
 	PacketID  byte
 	EntityID  byte
 	ModelName [64]byte
 }
 
-type PacketEnvSetMapAppearance2 struct {
+type packetEnvSetMapAppearance2 struct {
 	PacketID              byte
 	TexturePackURL        [64]byte
 	SideBlock, EdgeBlock  byte
@@ -205,21 +205,21 @@ type PacketEnvSetMapAppearance2 struct {
 	MaxViewDistance       int16
 }
 
-type PacketEnvSetWeatherType struct {
+type packetEnvSetWeatherType struct {
 	PacketID    byte
 	WeatherType byte
 }
 
-type PacketExtAddEntity2 struct {
+type packetExtAddEntity2 struct {
 	PacketID    byte
 	EntityID    byte
 	DisplayName [64]byte
-	SkinName    [64]byte
+	skinName    [64]byte
 	X, Y, Z     int16
 	Yaw, Pitch  byte
 }
 
-func PadString(str string) [64]byte {
+func padString(str string) [64]byte {
 	var result [64]byte
 	copy(result[:], str)
 	if len(str) < 64 {
@@ -229,6 +229,6 @@ func PadString(str string) [64]byte {
 	return result
 }
 
-func TrimString(str [64]byte) string {
+func trimString(str [64]byte) string {
 	return strings.TrimRight(string(str[:]), " ")
 }

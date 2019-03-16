@@ -1,4 +1,4 @@
-// Copyright 2017-2018 Andrew Goulas
+// Copyright 2017-2019 Andrew Goulas
 // https://www.structinf.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -51,35 +51,35 @@ type Config struct {
 }
 
 type Server struct {
-	Config      *Config
-	PlayerCount int32
+	Config    *Config
+	MainLevel *Level
+	URL       string
 
-	Commands     map[string]*Command
-	CommandsLock sync.RWMutex
+	playerCount int32
+	salt        [16]byte
 
-	Handlers     map[EventType][]EventHandler
-	HandlersLock sync.RWMutex
+	commands     map[string]*Command
+	commandsLock sync.RWMutex
 
-	Storage    LevelStorage
-	Levels     []*Level
-	LevelsLock sync.RWMutex
-	MainLevel  *Level
+	handlers     map[EventType][]EventHandler
+	handlersLock sync.RWMutex
 
-	Entities     []*Entity
-	EntitiesLock sync.RWMutex
+	storage    LevelStorage
+	levels     []*Level
+	levelsLock sync.RWMutex
 
-	Clients     []*Client
-	ClientsLock sync.RWMutex
+	entities     []*Entity
+	entitiesLock sync.RWMutex
 
-	URL  string
-	Salt [16]byte
+	clients     []*Client
+	clientsLock sync.RWMutex
 
-	Listener net.Listener
-	StopChan chan bool
+	listener net.Listener
+	stopChan chan bool
 
-	UpdateTicker    *time.Ticker
-	HeartbeatTicker *time.Ticker
-	SaveTicker      *time.Ticker
+	updateTicker    *time.Ticker
+	heartbeatTicker *time.Ticker
+	saveTicker      *time.Ticker
 }
 
 func NewServer(config *Config, storage LevelStorage) *Server {
@@ -91,17 +91,17 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 
 	server := &Server{
 		Config:   config,
-		Commands: make(map[string]*Command),
-		Handlers: make(map[EventType][]EventHandler),
-		Storage:  storage,
-		Levels:   []*Level{},
-		Entities: []*Entity{},
-		Clients:  []*Client{},
-		Listener: listener,
-		StopChan: make(chan bool),
+		commands: make(map[string]*Command),
+		handlers: make(map[EventType][]EventHandler),
+		storage:  storage,
+		levels:   []*Level{},
+		entities: []*Entity{},
+		clients:  []*Client{},
+		listener: listener,
+		stopChan: make(chan bool),
 	}
 
-	server.GenerateSalt()
+	server.generateSalt()
 
 	mainLevel, err := server.LoadLevel(config.MainLevel)
 	if err != nil {
@@ -123,19 +123,19 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 func (server *Server) Run(wg *sync.WaitGroup) {
 	wg.Add(1)
 
-	server.UpdateTicker = time.NewTicker(UpdateInterval)
+	server.updateTicker = time.NewTicker(UpdateInterval)
 	go func() {
-		for range server.UpdateTicker.C {
+		for range server.updateTicker.C {
 			server.ForEachEntity(func(entity *Entity) {
-				entity.Update()
+				entity.update()
 			})
 		}
 	}()
 
 	if SaveInterval > 0 {
-		server.SaveTicker = time.NewTicker(SaveInterval)
+		server.saveTicker = time.NewTicker(SaveInterval)
 		go func() {
-			for range server.SaveTicker.C {
+			for range server.saveTicker.C {
 				server.ForEachLevel(func(level *Level) {
 					server.SaveLevel(level)
 				})
@@ -144,31 +144,31 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 	}
 
 	if HeartbeatInterval > 0 && len(server.Config.Heartbeat) > 0 {
-		server.HeartbeatTicker = time.NewTicker(HeartbeatInterval)
+		server.heartbeatTicker = time.NewTicker(HeartbeatInterval)
 		go func() {
-			server.SendHeartbeat()
-			for range server.HeartbeatTicker.C {
-				server.SendHeartbeat()
+			server.sendHeartbeat()
+			for range server.heartbeatTicker.C {
+				server.sendHeartbeat()
 			}
 		}()
 	}
 
 	for {
 		select {
-		case <-server.StopChan:
-			server.ClientsLock.RLock()
-			clients := make([]*Client, len(server.Clients))
-			copy(clients, server.Clients)
-			server.ClientsLock.RUnlock()
+		case <-server.stopChan:
+			server.clientsLock.RLock()
+			clients := make([]*Client, len(server.clients))
+			copy(clients, server.clients)
+			server.clientsLock.RUnlock()
 
 			for _, client := range clients {
 				client.Kick("Server shutting down!")
 			}
 
-			server.UpdateTicker.Stop()
-			server.SaveTicker.Stop()
-			if server.HeartbeatTicker != nil {
-				server.HeartbeatTicker.Stop()
+			server.updateTicker.Stop()
+			server.saveTicker.Stop()
+			if server.heartbeatTicker != nil {
+				server.heartbeatTicker.Stop()
 			}
 
 			server.UnloadAll()
@@ -176,7 +176,7 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 			return
 
 		default:
-			conn, err := server.Listener.Accept()
+			conn, err := server.listener.Accept()
 			if err != nil {
 				continue
 			}
@@ -190,29 +190,327 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 				continue
 			}
 
-			go client.Handle()
+			go client.handle()
 		}
 	}
 }
 
 func (server *Server) Stop() {
-	server.Listener.Close()
-	server.StopChan <- true
+	server.listener.Close()
+	server.stopChan <- true
 }
 
-func (server *Server) GenerateSalt() {
-	const charset = "abcdefghijklmnopqrstuvwxyz" +
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-		"0123456789"
-	for i := range server.Salt {
-		server.Salt[i] = charset[rand.Intn(len(charset))]
+func (server *Server) BroadcastMessage(message string) {
+	fmt.Printf("%s\n", message)
+	server.ForEachClient(func(client *Client) {
+		client.SendMessage(message)
+	})
+}
+
+func (server *Server) AddLevel(level *Level) {
+	if level.Server != nil {
+		return
+	}
+
+	server.levelsLock.Lock()
+	server.levels = append(server.levels, level)
+	server.levelsLock.Unlock()
+
+	level.Server = server
+
+	event := EventLevelLoad{level}
+	server.FireEvent(EventTypeLevelLoad, &event)
+}
+
+func (server *Server) RemoveLevel(level *Level) {
+	if level.Server != server {
+		return
+	}
+
+	server.levelsLock.Lock()
+	defer server.levelsLock.Unlock()
+
+	index := -1
+	for i, l := range server.levels {
+		if l == level {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		return
+	}
+
+	if server.MainLevel == level {
+		server.MainLevel = nil
+	}
+
+	level.ForEachClient(func(client *Client) {
+		client.Entity.TeleportLevel(server.MainLevel)
+	})
+
+	level.Server = nil
+
+	server.levels[index] = server.levels[len(server.levels)-1]
+	server.levels[len(server.levels)-1] = nil
+	server.levels = server.levels[:len(server.levels)-1]
+
+	event := EventLevelUnload{level}
+	server.FireEvent(EventTypeLevelUnload, &event)
+}
+
+func (server *Server) FindLevel(name string) *Level {
+	server.levelsLock.RLock()
+	defer server.levelsLock.RUnlock()
+
+	for _, level := range server.levels {
+		if level.Name == name {
+			return level
+		}
+	}
+
+	return nil
+}
+
+func (server *Server) ForEachLevel(fn func(*Level)) {
+	server.levelsLock.RLock()
+	for _, level := range server.levels {
+		fn(level)
+	}
+	server.levelsLock.RUnlock()
+}
+
+func (server *Server) LoadLevel(name string) (*Level, error) {
+	level := server.FindLevel(name)
+	if level != nil {
+		return level, nil
+	}
+
+	if server.storage == nil {
+		return nil, errors.New("server: no level storage")
+	}
+
+	level, err := server.storage.Load(name)
+	if err != nil {
+		return nil, err
+	}
+
+	server.AddLevel(level)
+	return level, nil
+}
+
+func (server *Server) SaveLevel(level *Level) {
+	if server.storage == nil {
+		return
+	}
+
+	event := EventLevelSave{level}
+	server.FireEvent(EventTypeLevelSave, &event)
+
+	err := server.storage.Save(level)
+	if err != nil {
+		fmt.Printf("Server Error: %s\n", err.Error())
 	}
 }
 
-func (server *Server) GenerateID() byte {
+func (server *Server) UnloadLevel(level *Level) {
+	server.SaveLevel(level)
+	server.RemoveLevel(level)
+}
+
+func (server *Server) UnloadAll() {
+	server.levelsLock.Lock()
+	levels := make([]*Level, len(server.levels))
+	copy(levels, server.levels)
+	server.levelsLock.Unlock()
+
+	for _, level := range levels {
+		server.UnloadLevel(level)
+	}
+}
+
+func (server *Server) AddEntity(entity *Entity) byte {
+	server.entitiesLock.Lock()
+	defer server.entitiesLock.Unlock()
+
+	entity.NameID = server.generateID()
+	if entity.NameID == 0xff {
+		return 0xff
+	}
+
+	server.entities = append(server.entities, entity)
+	server.ForEachClient(func(client *Client) {
+		client.sendAddPlayerList(entity)
+	})
+
+	return entity.NameID
+}
+
+func (server *Server) RemoveEntity(entity *Entity) {
+	server.entitiesLock.Lock()
+	defer server.entitiesLock.Unlock()
+
+	index := -1
+	for i, e := range server.entities {
+		if e == entity {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		return
+	}
+
+	server.entities[index] = server.entities[len(server.entities)-1]
+	server.entities[len(server.entities)-1] = nil
+	server.entities = server.entities[:len(server.entities)-1]
+
+	server.ForEachClient(func(client *Client) {
+		client.sendRemovePlayerList(entity)
+	})
+}
+
+func (server *Server) FindEntity(name string) *Entity {
+	server.entitiesLock.RLock()
+	defer server.entitiesLock.RUnlock()
+
+	for _, entity := range server.entities {
+		if entity.Name == name {
+			return entity
+		}
+	}
+
+	return nil
+}
+
+func (server *Server) ForEachEntity(fn func(*Entity)) {
+	server.entitiesLock.RLock()
+	for _, entity := range server.entities {
+		fn(entity)
+	}
+	server.entitiesLock.RUnlock()
+}
+
+func (server *Server) AddClient(client *Client) {
+	server.clientsLock.Lock()
+	server.clients = append(server.clients, client)
+	server.clientsLock.Unlock()
+}
+
+func (server *Server) RemoveClient(client *Client) {
+	server.clientsLock.Lock()
+	defer server.clientsLock.Unlock()
+
+	index := -1
+	for i, p := range server.clients {
+		if p == client {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		return
+	}
+
+	server.clients[index] = server.clients[len(server.clients)-1]
+	server.clients[len(server.clients)-1] = nil
+	server.clients = server.clients[:len(server.clients)-1]
+}
+
+func (server *Server) FindClient(name string) *Client {
+	server.clientsLock.RLock()
+	defer server.clientsLock.RUnlock()
+
+	for _, client := range server.clients {
+		if client.Entity != nil && client.Entity.Name == name {
+			return client
+		}
+	}
+
+	return nil
+}
+
+func (server *Server) ForEachClient(fn func(*Client)) {
+	server.clientsLock.RLock()
+	for _, client := range server.clients {
+		fn(client)
+	}
+	server.clientsLock.RUnlock()
+}
+
+func (server *Server) RegisterCommand(command *Command) {
+	server.commandsLock.Lock()
+	server.commands[command.Name] = command
+	server.commandsLock.Unlock()
+}
+
+func (server *Server) ForEachCommand(fn func(*Command)) {
+	server.commandsLock.RLock()
+	for _, command := range server.commands {
+		fn(command)
+	}
+	server.commandsLock.RUnlock()
+}
+
+func (server *Server) ExecuteCommand(sender CommandSender, message string) {
+	args := strings.SplitN(message, " ", 2)
+	if len(args) == 0 {
+		return
+	}
+
+	server.commandsLock.RLock()
+	command := server.commands[args[0]]
+	server.commandsLock.RUnlock()
+
+	if command == nil {
+		sender.SendMessage("Unknown command!")
+		return
+	}
+
+	if !sender.HasPermission(command.Permission) {
+		sender.SendMessage("You do not have permission to execute this command!")
+		return
+	}
+
+	if len(args) == 2 {
+		message = args[1]
+	} else {
+		message = ""
+	}
+
+	go command.Handler(sender, command, message)
+}
+
+func (server *Server) RegisterHandler(eventType EventType, handler EventHandler) {
+	server.handlersLock.Lock()
+	server.handlers[eventType] = append(server.handlers[eventType], handler)
+	server.handlersLock.Unlock()
+}
+
+func (server *Server) FireEvent(eventType EventType, event interface{}) {
+	server.handlersLock.RLock()
+	for _, handler := range server.handlers[eventType] {
+		handler.Handle(eventType, event)
+	}
+	server.handlersLock.RUnlock()
+}
+
+func (server *Server) generateSalt() {
+	const charset = "abcdefghijklmnopqrstuvwxyz" +
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+		"0123456789"
+	for i := range server.salt {
+		server.salt[i] = charset[rand.Intn(len(charset))]
+	}
+}
+
+func (server *Server) generateID() byte {
 	for id := byte(0); id < 0xff; id++ {
 		free := true
-		for _, entity := range server.Entities {
+		for _, entity := range server.entities {
 			if entity.NameID == id {
 				free = false
 				break
@@ -227,13 +525,13 @@ func (server *Server) GenerateID() byte {
 	return 0xff
 }
 
-func (server *Server) SendHeartbeat() {
+func (server *Server) sendHeartbeat() {
 	form := url.Values{}
 	form.Add("name", server.Config.Name)
 	form.Add("port", strconv.Itoa(server.Config.Port))
 	form.Add("max", strconv.Itoa(server.Config.MaxPlayers))
-	form.Add("users", strconv.Itoa(int(server.PlayerCount)))
-	form.Add("salt", string(server.Salt[:]))
+	form.Add("users", strconv.Itoa(int(server.playerCount)))
+	form.Add("salt", string(server.salt[:]))
 	form.Add("version", "7")
 	form.Add("software", ServerSoftware)
 	if server.Config.Public {
@@ -276,302 +574,4 @@ func (server *Server) SendHeartbeat() {
 	}
 
 	server.URL = string(body)
-}
-
-func (server *Server) BroadcastMessage(message string) {
-	fmt.Printf("%s\n", message)
-	server.ForEachClient(func(client *Client) {
-		client.SendMessage(message)
-	})
-}
-
-func (server *Server) AddLevel(level *Level) {
-	if level.Server != nil {
-		return
-	}
-
-	server.LevelsLock.Lock()
-	server.Levels = append(server.Levels, level)
-	server.LevelsLock.Unlock()
-
-	level.Server = server
-
-	event := EventLevelLoad{level}
-	server.FireEvent(EventTypeLevelLoad, &event)
-}
-
-func (server *Server) RemoveLevel(level *Level) {
-	if level.Server != server {
-		return
-	}
-
-	server.LevelsLock.Lock()
-	defer server.LevelsLock.Unlock()
-
-	index := -1
-	for i, l := range server.Levels {
-		if l == level {
-			index = i
-			break
-		}
-	}
-
-	if index == -1 {
-		return
-	}
-
-	if server.MainLevel == level {
-		server.MainLevel = nil
-	}
-
-	level.ForEachClient(func(client *Client) {
-		client.Entity.TeleportLevel(server.MainLevel)
-	})
-
-	level.Server = nil
-
-	server.Levels[index] = server.Levels[len(server.Levels)-1]
-	server.Levels[len(server.Levels)-1] = nil
-	server.Levels = server.Levels[:len(server.Levels)-1]
-
-	event := EventLevelUnload{level}
-	server.FireEvent(EventTypeLevelUnload, &event)
-}
-
-func (server *Server) FindLevel(name string) *Level {
-	server.LevelsLock.RLock()
-	defer server.LevelsLock.RUnlock()
-
-	for _, level := range server.Levels {
-		if level.Name == name {
-			return level
-		}
-	}
-
-	return nil
-}
-
-func (server *Server) ForEachLevel(fn func(*Level)) {
-	server.LevelsLock.RLock()
-	for _, level := range server.Levels {
-		fn(level)
-	}
-	server.LevelsLock.RUnlock()
-}
-
-func (server *Server) LoadLevel(name string) (*Level, error) {
-	level := server.FindLevel(name)
-	if level != nil {
-		return level, nil
-	}
-
-	if server.Storage == nil {
-		return nil, errors.New("server: no level storage")
-	}
-
-	level, err := server.Storage.Load(name)
-	if err != nil {
-		return nil, err
-	}
-
-	server.AddLevel(level)
-	return level, nil
-}
-
-func (server *Server) SaveLevel(level *Level) {
-	if server.Storage == nil {
-		return
-	}
-
-	event := EventLevelSave{level}
-	server.FireEvent(EventTypeLevelSave, &event)
-
-	err := server.Storage.Save(level)
-	if err != nil {
-		fmt.Printf("Server Error: %s\n", err.Error())
-	}
-}
-
-func (server *Server) UnloadLevel(level *Level) {
-	server.SaveLevel(level)
-	server.RemoveLevel(level)
-}
-
-func (server *Server) UnloadAll() {
-	server.LevelsLock.Lock()
-	levels := make([]*Level, len(server.Levels))
-	copy(levels, server.Levels)
-	server.LevelsLock.Unlock()
-
-	for _, level := range levels {
-		server.UnloadLevel(level)
-	}
-}
-
-func (server *Server) AddEntity(entity *Entity) byte {
-	server.EntitiesLock.Lock()
-	defer server.EntitiesLock.Unlock()
-
-	entity.NameID = server.GenerateID()
-	if entity.NameID == 0xff {
-		return 0xff
-	}
-
-	server.Entities = append(server.Entities, entity)
-	server.ForEachClient(func(client *Client) {
-		client.SendAddPlayerList(entity)
-	})
-
-	return entity.NameID
-}
-
-func (server *Server) RemoveEntity(entity *Entity) {
-	server.EntitiesLock.Lock()
-	defer server.EntitiesLock.Unlock()
-
-	index := -1
-	for i, e := range server.Entities {
-		if e == entity {
-			index = i
-			break
-		}
-	}
-
-	if index == -1 {
-		return
-	}
-
-	server.Entities[index] = server.Entities[len(server.Entities)-1]
-	server.Entities[len(server.Entities)-1] = nil
-	server.Entities = server.Entities[:len(server.Entities)-1]
-
-	server.ForEachClient(func(client *Client) {
-		client.SendRemovePlayerList(entity)
-	})
-}
-
-func (server *Server) FindEntity(name string) *Entity {
-	server.EntitiesLock.RLock()
-	defer server.EntitiesLock.RUnlock()
-
-	for _, entity := range server.Entities {
-		if entity.Name == name {
-			return entity
-		}
-	}
-
-	return nil
-}
-
-func (server *Server) ForEachEntity(fn func(*Entity)) {
-	server.EntitiesLock.RLock()
-	for _, entity := range server.Entities {
-		fn(entity)
-	}
-	server.EntitiesLock.RUnlock()
-}
-
-func (server *Server) AddClient(client *Client) {
-	server.ClientsLock.Lock()
-	server.Clients = append(server.Clients, client)
-	server.ClientsLock.Unlock()
-}
-
-func (server *Server) RemoveClient(client *Client) {
-	server.ClientsLock.Lock()
-	defer server.ClientsLock.Unlock()
-
-	index := -1
-	for i, p := range server.Clients {
-		if p == client {
-			index = i
-			break
-		}
-	}
-
-	if index == -1 {
-		return
-	}
-
-	server.Clients[index] = server.Clients[len(server.Clients)-1]
-	server.Clients[len(server.Clients)-1] = nil
-	server.Clients = server.Clients[:len(server.Clients)-1]
-}
-
-func (server *Server) FindClient(name string) *Client {
-	server.ClientsLock.RLock()
-	defer server.ClientsLock.RUnlock()
-
-	for _, client := range server.Clients {
-		if client.Entity != nil && client.Entity.Name == name {
-			return client
-		}
-	}
-
-	return nil
-}
-
-func (server *Server) ForEachClient(fn func(*Client)) {
-	server.ClientsLock.RLock()
-	for _, client := range server.Clients {
-		fn(client)
-	}
-	server.ClientsLock.RUnlock()
-}
-
-func (server *Server) RegisterCommand(command *Command) {
-	server.CommandsLock.Lock()
-	server.Commands[command.Name] = command
-	server.CommandsLock.Unlock()
-}
-
-func (server *Server) ForEachCommand(fn func(*Command)) {
-	server.CommandsLock.RLock()
-	for _, command := range server.Commands {
-		fn(command)
-	}
-	server.CommandsLock.RUnlock()
-}
-
-func (server *Server) ExecuteCommand(sender CommandSender, message string) {
-	args := strings.SplitN(message, " ", 2)
-	if len(args) == 0 {
-		return
-	}
-
-	server.CommandsLock.RLock()
-	command := server.Commands[args[0]]
-	server.CommandsLock.RUnlock()
-
-	if command == nil {
-		sender.SendMessage("Unknown command!")
-		return
-	}
-
-	if !sender.HasPermission(command.Permission) {
-		sender.SendMessage("You do not have permission to execute this command!")
-		return
-	}
-
-	if len(args) == 2 {
-		message = args[1]
-	} else {
-		message = ""
-	}
-
-	go command.Handler(sender, command, message)
-}
-
-func (server *Server) RegisterHandler(eventType EventType, handler EventHandler) {
-	server.HandlersLock.Lock()
-	server.Handlers[eventType] = append(server.Handlers[eventType], handler)
-	server.HandlersLock.Unlock()
-}
-
-func (server *Server) FireEvent(eventType EventType, event interface{}) {
-	server.HandlersLock.RLock()
-	for _, handler := range server.Handlers[eventType] {
-		handler.Handle(eventType, event)
-	}
-	server.HandlersLock.RUnlock()
 }
