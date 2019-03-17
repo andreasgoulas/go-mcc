@@ -100,7 +100,7 @@ func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 		return
 	}
 
-	player := client.Entity
+	player := client.Entity()
 	args := strings.Split(message, " ")
 	if len(args) == 1 && len(args[0]) > 0 {
 		entity := sender.Server().FindEntity(args[0])
@@ -163,7 +163,7 @@ func handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message st
 		return
 	}
 
-	player := client.Entity
+	player := client.Entity()
 	if args[0] == "all" {
 		player.Level().ForEachEntity(func(entity *gomcc.Entity) {
 			entity.Teleport(player.Location())

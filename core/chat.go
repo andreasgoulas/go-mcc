@@ -54,7 +54,7 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 			return
 		}
 
-		client.NickName = client.Entity.Name()
+		client.NickName = client.Entity().Name()
 		sender.SendMessage("Nick of " + args[0] + " reset")
 	} else if len(args) == 2 {
 		if !gomcc.IsValidName(args[1]) {

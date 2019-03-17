@@ -44,10 +44,11 @@ var Extensions = []struct {
 }
 
 type Client struct {
-	Entity   *Entity
 	NickName string
 
-	server    *Server
+	entity *Entity
+	server *Server
+
 	conn      net.Conn
 	connected uint32
 	loggedIn  uint32
@@ -76,6 +77,10 @@ func NewClient(conn net.Conn, server *Server) *Client {
 
 func (client *Client) Server() *Server {
 	return client.server
+}
+
+func (client *Client) Entity() *Entity {
+	return client.entity
 }
 
 func (client *Client) Name() string {
@@ -131,13 +136,13 @@ func (client *Client) Disconnect() {
 	if client.loggedIn == 1 {
 		atomic.StoreUint32(&client.loggedIn, 0)
 
-		event := EventPlayerQuit{client.Entity}
+		event := EventPlayerQuit{client.entity}
 		client.server.FireEvent(EventTypePlayerQuit, &event)
 
-		client.Entity.TeleportLevel(nil)
-		client.server.BroadcastMessage(ColorYellow + client.Entity.name + " has left the game!")
+		client.entity.TeleportLevel(nil)
+		client.server.BroadcastMessage(ColorYellow + client.entity.name + " has left the game!")
 		client.server.RemoveClient(client)
-		client.server.RemoveEntity(client.Entity)
+		client.server.RemoveEntity(client.entity)
 		atomic.AddInt32(&client.server.playerCount, -1)
 	}
 
@@ -200,7 +205,7 @@ func (client *Client) SendMessage(message string) {
 }
 
 func (client *Client) SetSpawn() {
-	client.sendSpawn(client.Entity)
+	client.sendSpawn(client.entity)
 }
 
 func (client *Client) sendPacket(packet interface{}) {
@@ -274,7 +279,7 @@ func (client *Client) sendSpawn(entity *Entity) {
 	}
 
 	id := entity.id
-	if id == client.Entity.id {
+	if id == client.entity.id {
 		id = 0xff
 	}
 
@@ -315,7 +320,7 @@ func (client *Client) sendDespawn(entity *Entity) {
 	}
 
 	id := entity.id
-	if id == client.Entity.id {
+	if id == client.entity.id {
 		id = 0xff
 	}
 
@@ -331,7 +336,7 @@ func (client *Client) sendTeleport(entity *Entity) {
 	}
 
 	id := entity.id
-	if id == client.Entity.id {
+	if id == client.entity.id {
 		id = 0xff
 	}
 
@@ -380,7 +385,7 @@ func (client *Client) sendAddPlayerList(entity *Entity) {
 	}
 
 	id := entity.id
-	if id == client.Entity.id {
+	if id == client.entity.id {
 		id = 0xff
 	}
 
@@ -400,7 +405,7 @@ func (client *Client) sendRemovePlayerList(entity *Entity) {
 	}
 
 	id := entity.id
-	if id == client.Entity.id {
+	if id == client.entity.id {
 		id = 0xff
 	}
 
@@ -416,7 +421,7 @@ func (client *Client) sendChangeModel(entity *Entity) {
 	}
 
 	id := entity.id
-	if id == client.Entity.id {
+	if id == client.entity.id {
 		id = 0xff
 	}
 
@@ -552,10 +557,9 @@ func (client *Client) login() {
 		userType,
 	})
 
-	client.Entity = NewEntity(client.NickName, client.server)
-	client.Entity.Client = client
+	client.entity = NewEntity(client.NickName, client.server, client)
 
-	event := EventPlayerJoin{client.Entity, false, ""}
+	event := EventPlayerJoin{client.entity, false, ""}
 	client.server.FireEvent(EventTypePlayerJoin, &event)
 	if event.Cancel {
 		client.Kick(event.CancelReason)
@@ -564,20 +568,20 @@ func (client *Client) login() {
 
 	atomic.StoreUint32(&client.loggedIn, 1)
 	client.server.AddClient(client)
-	client.server.BroadcastMessage(ColorYellow + client.Entity.name + " has joined the game!")
-	if client.server.AddEntity(client.Entity) == 0xff {
+	client.server.BroadcastMessage(ColorYellow + client.entity.name + " has joined the game!")
+	if client.server.AddEntity(client.entity) == 0xff {
 		client.Kick("Server full!")
 		return
 	}
 
 	client.server.ForEachEntity(func(entity *Entity) {
-		if entity != client.Entity {
+		if entity != client.entity {
 			client.sendAddPlayerList(entity)
 		}
 	})
 
 	if client.server.MainLevel != nil {
-		client.Entity.TeleportLevel(client.server.MainLevel)
+		client.entity.TeleportLevel(client.server.MainLevel)
 	}
 
 	client.pingTicker = time.NewTicker(2 * time.Second)
@@ -641,7 +645,7 @@ func (client *Client) handleIdentification(reader io.Reader) {
 }
 
 func (client *Client) revertBlock(x, y, z uint) {
-	client.sendBlockChange(x, y, z, client.Entity.level.GetBlock(x, y, z))
+	client.sendBlockChange(x, y, z, client.entity.level.GetBlock(x, y, z))
 }
 
 func (client *Client) handleSetBlock(reader io.Reader) {
@@ -654,9 +658,9 @@ func (client *Client) handleSetBlock(reader io.Reader) {
 	x, y, z := uint(packet.X), uint(packet.Y), uint(packet.Z)
 	block := BlockID(packet.BlockType)
 
-	dx := uint(client.Entity.location.X) - x
-	dy := uint(client.Entity.location.Y) - y
-	dz := uint(client.Entity.location.Z) - z
+	dx := uint(client.entity.location.X) - x
+	dy := uint(client.entity.location.Y) - y
+	dz := uint(client.entity.location.Z) - z
 	if math.Sqrt(float64(dx*dx+dy*dy+dz*dz)) > client.clickDistance {
 		client.SendMessage("You can't build that far away.")
 		client.revertBlock(x, y, z)
@@ -666,9 +670,9 @@ func (client *Client) handleSetBlock(reader io.Reader) {
 	switch packet.Mode {
 	case 0x00:
 		event := &EventBlockBreak{
-			client.Entity,
-			client.Entity.level,
-			client.Entity.level.GetBlock(x, y, z),
+			client.entity,
+			client.entity.level,
+			client.entity.level.GetBlock(x, y, z),
 			x, y, z,
 			false,
 		}
@@ -678,7 +682,7 @@ func (client *Client) handleSetBlock(reader io.Reader) {
 			return
 		}
 
-		client.Entity.level.SetBlock(x, y, z, BlockAir, true)
+		client.entity.level.SetBlock(x, y, z, BlockAir, true)
 
 	case 0x01:
 		if block > BlockMaxCPE || (client.customBlockSupportLevel < 1 && block > BlockMax) {
@@ -688,8 +692,8 @@ func (client *Client) handleSetBlock(reader io.Reader) {
 		}
 
 		event := &EventBlockPlace{
-			client.Entity,
-			client.Entity.level,
+			client.entity,
+			client.entity.level,
 			block,
 			x, y, z,
 			false,
@@ -700,7 +704,7 @@ func (client *Client) handleSetBlock(reader io.Reader) {
 			return
 		}
 
-		client.Entity.level.SetBlock(x, y, z, block, true)
+		client.entity.level.SetBlock(x, y, z, block, true)
 	}
 }
 
@@ -723,18 +727,18 @@ func (client *Client) handlePlayerTeleport(reader io.Reader) {
 		float64(packet.Pitch) * 360 / 256,
 	}
 
-	if location == client.Entity.location {
+	if location == client.entity.location {
 		return
 	}
 
-	event := &EventEntityMove{client.Entity, client.Entity.location, location, false}
+	event := &EventEntityMove{client.entity, client.entity.location, location, false}
 	client.server.FireEvent(EventTypeEntityMove, &event)
 	if event.Cancel {
-		client.sendTeleport(client.Entity)
+		client.sendTeleport(client.entity)
 		return
 	}
 
-	client.Entity.location = location
+	client.entity.location = location
 }
 
 func (client *Client) handleMessage(reader io.Reader) {

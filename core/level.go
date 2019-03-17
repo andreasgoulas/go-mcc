@@ -80,12 +80,13 @@ func handleGoto(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	if level == client.Entity.Level() {
+	entity := client.Entity()
+	if level == entity.Level() {
 		sender.SendMessage("You are already in " + level.Name)
 		return
 	}
 
-	client.Entity.TeleportLevel(level)
+	entity.TeleportLevel(level)
 }
 
 var commandLoad = gomcc.Command{
@@ -242,8 +243,9 @@ func handleSetSpawn(sender gomcc.CommandSender, command *gomcc.Command, message 
 		return
 	}
 
+	entity := client.Entity()
 	if len(message) == 0 {
-		client.Entity.Level().Spawn = client.Entity.Location()
+		entity.Level().Spawn = entity.Location()
 		client.SetSpawn()
 		sender.SendMessage("Spawn location set to your current location")
 		return
@@ -261,12 +263,13 @@ func handleSetSpawn(sender gomcc.CommandSender, command *gomcc.Command, message 
 		return
 	}
 
-	if player.Entity.Level() != client.Entity.Level() {
+	other := player.Entity()
+	if other.Level() != entity.Level() {
 		sender.SendMessage(player.Name() + " is on a different level")
 		return
 	}
 
-	player.Entity.Teleport(client.Entity.Location())
+	other.Teleport(entity.Location())
 	player.SetSpawn()
 	sender.SendMessage("Spawn location of " + player.Name() + " set to your current location")
 }
@@ -290,8 +293,8 @@ func handleSpawn(sender gomcc.CommandSender, command *gomcc.Command, message str
 		return
 	}
 
-	level := client.Entity.Level()
-	client.Entity.Teleport(level.Spawn)
+	entity := client.Entity()
+	entity.Teleport(entity.Level().Spawn)
 }
 
 var commandUnload = gomcc.Command{

@@ -126,7 +126,7 @@ func (level *Level) ForEachClient(fn func(*Client)) {
 	}
 
 	level.Server.ForEachClient(func(client *Client) {
-		if client.Entity.level == level {
+		if client.entity.level == level {
 			fn(client)
 		}
 	})

@@ -247,7 +247,7 @@ func (server *Server) RemoveLevel(level *Level) {
 	}
 
 	level.ForEachClient(func(client *Client) {
-		client.Entity.TeleportLevel(server.MainLevel)
+		client.entity.TeleportLevel(server.MainLevel)
 	})
 
 	level.Server = nil
@@ -425,7 +425,7 @@ func (server *Server) FindClient(name string) *Client {
 	defer server.clientsLock.RUnlock()
 
 	for _, client := range server.clients {
-		if client.Entity != nil && client.Entity.name == name {
+		if client.entity != nil && client.entity.name == name {
 			return client
 		}
 	}
