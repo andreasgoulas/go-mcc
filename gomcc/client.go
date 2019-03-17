@@ -308,8 +308,8 @@ func (client *Client) sendSpawn(entity *Entity) {
 		return
 	}
 
-	id := entity.NameID
-	if id == client.Entity.NameID {
+	id := entity.id
+	if id == client.Entity.id {
 		id = 0xff
 	}
 
@@ -349,8 +349,8 @@ func (client *Client) sendDespawn(entity *Entity) {
 		return
 	}
 
-	id := entity.NameID
-	if id == client.Entity.NameID {
+	id := entity.id
+	if id == client.Entity.id {
 		id = 0xff
 	}
 
@@ -365,8 +365,8 @@ func (client *Client) sendTeleport(entity *Entity) {
 		return
 	}
 
-	id := entity.NameID
-	if id == client.Entity.NameID {
+	id := entity.id
+	if id == client.Entity.id {
 		id = 0xff
 	}
 
@@ -414,8 +414,8 @@ func (client *Client) sendAddPlayerList(entity *Entity) {
 		return
 	}
 
-	id := entity.NameID
-	if id == client.Entity.NameID {
+	id := entity.id
+	if id == client.Entity.id {
 		id = 0xff
 	}
 
@@ -424,8 +424,8 @@ func (client *Client) sendAddPlayerList(entity *Entity) {
 		int16(id),
 		padString(entity.Name),
 		padString(entity.ListName),
-		padString(entity.GroupName),
-		entity.GroupRank,
+		padString(entity.groupName),
+		entity.groupRank,
 	})
 }
 
@@ -434,8 +434,8 @@ func (client *Client) sendRemovePlayerList(entity *Entity) {
 		return
 	}
 
-	id := entity.NameID
-	if id == client.Entity.NameID {
+	id := entity.id
+	if id == client.Entity.id {
 		id = 0xff
 	}
 
@@ -450,8 +450,8 @@ func (client *Client) sendChangeModel(entity *Entity) {
 		return
 	}
 
-	id := entity.NameID
-	if id == client.Entity.NameID {
+	id := entity.id
+	if id == client.Entity.id {
 		id = 0xff
 	}
 
@@ -604,6 +604,12 @@ func (client *Client) login() {
 		client.Kick("Server full!")
 		return
 	}
+
+	client.server.ForEachEntity(func(entity *Entity) {
+		if entity != client.Entity {
+			client.sendAddPlayerList(entity)
+		}
+	})
 
 	if client.server.MainLevel != nil {
 		client.Entity.TeleportLevel(client.server.MainLevel)

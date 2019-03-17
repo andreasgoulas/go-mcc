@@ -334,8 +334,8 @@ func (server *Server) AddEntity(entity *Entity) byte {
 	server.entitiesLock.Lock()
 	defer server.entitiesLock.Unlock()
 
-	entity.NameID = server.generateID()
-	if entity.NameID == 0xff {
+	entity.id = server.generateID()
+	if entity.id == 0xff {
 		return 0xff
 	}
 
@@ -344,7 +344,7 @@ func (server *Server) AddEntity(entity *Entity) byte {
 		client.sendAddPlayerList(entity)
 	})
 
-	return entity.NameID
+	return entity.id
 }
 
 func (server *Server) RemoveEntity(entity *Entity) {
@@ -511,7 +511,7 @@ func (server *Server) generateID() byte {
 	for id := byte(0); id < 0xff; id++ {
 		free := true
 		for _, entity := range server.entities {
-			if entity.NameID == id {
+			if entity.id == id {
 				free = false
 				break
 			}

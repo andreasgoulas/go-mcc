@@ -43,14 +43,14 @@ type Entity struct {
 	Client *Client
 	Server *Server
 
-	NameID byte
+	id byte
 
 	Name        string
 	DisplayName string
 	ListName    string
 
-	GroupName string
-	GroupRank byte
+	groupName string
+	groupRank byte
 
 	modelName string
 	skinName  string
@@ -63,7 +63,7 @@ type Entity struct {
 func NewEntity(name string, server *Server) *Entity {
 	return &Entity{
 		Server:      server,
-		NameID:      0xff,
+		id:          0xff,
 		Name:        name,
 		DisplayName: name,
 		ListName:    name,
@@ -120,6 +120,26 @@ func (entity *Entity) TeleportLevel(level *Level) {
 	entity.Server.FireEvent(EventTypeEntityLevelChange, &event)
 }
 
+func (entity *Entity) Group() string {
+	return entity.groupName
+}
+
+func (entity *Entity) GroupRank() byte {
+	return entity.groupRank
+}
+
+func (entity *Entity) SetGroup(groupName string, groupRank byte) {
+	if groupName == entity.groupName && groupRank == entity.groupRank {
+		return
+	}
+
+	entity.groupName = groupName
+	entity.groupRank = groupRank
+	entity.Server.ForEachClient(func(client *Client) {
+		client.sendAddPlayerList(entity)
+	})
+}
+
 func (entity *Entity) Model() string {
 	return entity.modelName
 }
@@ -149,7 +169,9 @@ func (entity *Entity) SetSkin(skinName string) {
 	entity.skinName = skinName
 	if entity.level != nil {
 		entity.level.ForEachClient(func(client *Client) {
-			client.sendSpawn(entity)
+			if client != entity.Client {
+				client.sendSpawn(entity)
+			}
 		})
 	}
 }
@@ -183,7 +205,7 @@ func (entity *Entity) update() {
 	if teleport {
 		packet = &packetPlayerTeleport{
 			packetTypePlayerTeleport,
-			entity.NameID,
+			entity.id,
 			int16(entity.location.X * 32),
 			int16(entity.location.Y * 32),
 			int16(entity.location.Z * 32),
@@ -193,7 +215,7 @@ func (entity *Entity) update() {
 	} else if positionDirty && rotationDirty {
 		packet = &packetPositionOrientationUpdate{
 			packetTypePositionOrientationUpdate,
-			entity.NameID,
+			entity.id,
 			byte((entity.location.X - entity.lastLocation.X) * 32),
 			byte((entity.location.Y - entity.lastLocation.Y) * 32),
 			byte((entity.location.Z - entity.lastLocation.Z) * 32),
@@ -203,7 +225,7 @@ func (entity *Entity) update() {
 	} else if positionDirty {
 		packet = &packetPositionUpdate{
 			packetTypePositionUpdate,
-			entity.NameID,
+			entity.id,
 			byte((entity.location.X - entity.lastLocation.X) * 32),
 			byte((entity.location.Y - entity.lastLocation.Y) * 32),
 			byte((entity.location.Z - entity.lastLocation.Z) * 32),
@@ -211,7 +233,7 @@ func (entity *Entity) update() {
 	} else if rotationDirty {
 		packet = &packetOrientationUpdate{
 			packetTypeOrientationUpdate,
-			entity.NameID,
+			entity.id,
 			byte(entity.location.Yaw * 256 / 360),
 			byte(entity.location.Pitch * 256 / 360),
 		}
