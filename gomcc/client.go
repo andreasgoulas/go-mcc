@@ -36,12 +36,13 @@ var Extensions = []struct {
 }{
 	{"ClickDistance", 1},
 	{"CustomBlocks", 1},
-	{"ExtPlayerList", 2},
 	{"HeldBlock", 1},
+	{"ExtPlayerList", 2},
 	{"LongerMessages", 1},
 	{"ChangeModel", 1},
 	{"EnvMapAppearance", 2},
 	{"EnvWeatherType", 1},
+	{"PlayerClick", 1},
 }
 
 type Client struct {
@@ -157,6 +158,7 @@ func (client *Client) Kick(reason string) {
 		packetTypeDisconnect,
 		padString(reason),
 	})
+
 	client.Disconnect()
 }
 
@@ -508,6 +510,8 @@ func (client *Client) handle() {
 			size = 69
 		case packetTypeCustomBlockSupportLevel:
 			size = 2
+		case packetTypePlayerClicked:
+			size = 15
 
 		default:
 			fmt.Printf("Invalid Packet: %d\n", id)
@@ -537,6 +541,8 @@ func (client *Client) handle() {
 			client.handleExtEntry(reader)
 		case packetTypeCustomBlockSupportLevel:
 			client.handleCustomBlockSupportLevel(reader)
+		case packetTypePlayerClicked:
+			client.handlePlayerClicked(reader)
 		}
 	}
 }
@@ -828,4 +834,25 @@ func (client *Client) handleCustomBlockSupportLevel(reader io.Reader) {
 	if packet.SupportLevel <= 1 {
 		client.customBlockSupportLevel = packet.SupportLevel
 	}
+}
+
+func (client *Client) handlePlayerClicked(reader io.Reader) {
+	packet := packetPlayerClicked{}
+	binary.Read(reader, binary.BigEndian, &packet)
+
+	var target *Entity = nil
+	if packet.TargetID != 0xff {
+		target = client.server.FindEntityByID(packet.TargetID)
+	}
+
+	event := EventClientClick{
+		client,
+		packet.Button, packet.Action,
+		float64(packet.Yaw) * 360 / 65536,
+		float64(packet.Pitch) * 360 / 65536,
+		target,
+		uint(packet.BlockX), uint(packet.BlockY), uint(packet.BlockZ),
+		packet.BlockFace,
+	}
+	client.server.FireEvent(EventTypeClientClick, &event)
 }

@@ -95,6 +95,17 @@ const (
 	BlockCountCPE = BlockMaxCPE + 1
 )
 
+const (
+	BlockFacePosX = 0
+	BlockFaceNegX = 1
+	BlockFacePosY = 2
+	BlockFaceNegY = 3
+	BlockFacePosZ = 4
+	BlockFaceNegZ = 5
+
+	BlockFaceMax = BlockFaceNegZ
+)
+
 // FallbackBlock converts a CPE BlockID to a similar vanilla-compatible one.
 func FallbackBlock(block BlockID) BlockID {
 	switch block {

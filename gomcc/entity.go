@@ -80,6 +80,10 @@ func (entity *Entity) Client() *Client {
 	return entity.client
 }
 
+func (entity *Entity) ID() byte {
+	return entity.id
+}
+
 func (entity *Entity) Name() string {
 	return entity.name
 }

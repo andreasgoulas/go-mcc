@@ -385,6 +385,19 @@ func (server *Server) FindEntity(name string) *Entity {
 	return nil
 }
 
+func (server *Server) FindEntityByID(id byte) *Entity {
+	server.entitiesLock.RLock()
+	defer server.entitiesLock.RUnlock()
+
+	for _, entity := range server.entities {
+		if entity.id == id {
+			return entity
+		}
+	}
+
+	return nil
+}
+
 func (server *Server) ForEachEntity(fn func(*Entity)) {
 	server.entitiesLock.RLock()
 	for _, entity := range server.entities {

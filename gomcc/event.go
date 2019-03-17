@@ -19,11 +19,22 @@ package gomcc
 type EventType uint
 
 const (
+	ButtonLeft   = 0
+	ButtonRight  = 1
+	ButtonMiddle = 2
+)
+
+const (
+	ButtonPress   = 0
+	ButtonRelease = 1
+)
+
+const (
 	EventTypeClientConnect = iota
 	EventTypeClientDisconnect
+	EventTypeClientClick
 	EventTypePlayerJoin
 	EventTypePlayerQuit
-	EventTypePlayerKick
 	EventTypeEntityLevelChange
 	EventTypeEntityMove
 	EventTypeBlockPlace
@@ -47,6 +58,15 @@ type EventClientDisconnect struct {
 	Client *Client
 }
 
+type EventClientClick struct {
+	Client                 *Client
+	Button, Action         byte
+	Yaw, Pitch             float64
+	Target                 *Entity
+	BlockX, BlockY, BlockZ uint
+	BlockFace              byte
+}
+
 type EventPlayerJoin struct {
 	Entity       *Entity
 	Cancel       bool
@@ -58,16 +78,14 @@ type EventPlayerQuit struct {
 }
 
 type EventEntityLevelChange struct {
-	Entity *Entity
-	From   *Level
-	To     *Level
+	Entity   *Entity
+	From, To *Level
 }
 
 type EventEntityMove struct {
-	Entity *Entity
-	From   Location
-	To     Location
-	Cancel bool
+	Entity   *Entity
+	From, To Location
+	Cancel   bool
 }
 
 type EventBlockPlace struct {

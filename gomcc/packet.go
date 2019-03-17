@@ -82,6 +82,7 @@ const (
 	packetTypeEnvSetMapAppearance2    = 0x1e
 	packetTypeEnvSetWeatherType       = 0x1f
 	packetTypeExtAddEntity2           = 0x21
+	packetTypePlayerClicked           = 0x22
 )
 
 type packetClientIdentification struct {
@@ -256,6 +257,15 @@ type packetExtAddEntity2 struct {
 	skinName    [64]byte
 	X, Y, Z     int16
 	Yaw, Pitch  byte
+}
+
+type packetPlayerClicked struct {
+	PacketID               byte
+	Button, Action         byte
+	Yaw, Pitch             int16
+	TargetID               byte
+	BlockX, BlockY, BlockZ int16
+	BlockFace              byte
 }
 
 func padString(str string) [64]byte {
