@@ -75,6 +75,7 @@ const (
 	packetTypeExtEntry                = 0x11
 	packetTypeSetClickDistance        = 0x12
 	packetTypeCustomBlockSupportLevel = 0x13
+	packetTypeHoldThis                = 0x14
 	packetTypeExtAddPlayerName        = 0x16
 	packetTypeExtRemovePlayerName     = 0x18
 	packetTypeChangeModel             = 0x1d
@@ -207,6 +208,12 @@ type packetSetClickDistance struct {
 type packetCustomBlockSupportLevel struct {
 	PacketID     byte
 	SupportLevel byte
+}
+
+type packetHoldThis struct {
+	PacketID      byte
+	BlockToHold   byte
+	PreventChange byte
 }
 
 type packetExtAddPlayerName struct {

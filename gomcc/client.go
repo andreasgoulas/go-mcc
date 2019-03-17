@@ -37,6 +37,7 @@ var Extensions = []struct {
 	{"ClickDistance", 1},
 	{"CustomBlocks", 1},
 	{"ExtPlayerList", 2},
+	{"HeldBlock", 1},
 	{"LongerMessages", 1},
 	{"ChangeModel", 1},
 	{"EnvMapAppearance", 2},
@@ -62,6 +63,7 @@ type Client struct {
 	message                 string
 	customBlockSupportLevel byte
 	clickDistance           float64
+	heldBlock               BlockID
 
 	pingTicker *time.Ticker
 }
@@ -191,6 +193,25 @@ func (client *Client) SetClickDistance(value float64) {
 	}
 
 	client.clickDistance = value
+}
+
+func (client *Client) HeldBlock() BlockID {
+	return client.heldBlock
+}
+
+func (client *Client) SetHeldBlock(block BlockID, lock bool) {
+	if client.loggedIn == 1 && client.HasExtension("HeldBlock") {
+		preventChange := byte(0)
+		if lock {
+			preventChange = 1
+		}
+
+		client.sendPacket(&packetHoldThis{
+			packetTypeHoldThis,
+			client.convertBlock(block),
+			preventChange,
+		})
+	}
 }
 
 func (client *Client) SendMessage(message string) {
@@ -715,7 +736,9 @@ func (client *Client) handlePlayerTeleport(reader io.Reader) {
 
 	packet := packetPlayerTeleport{}
 	binary.Read(reader, binary.BigEndian, &packet)
-	if packet.PlayerID != 0xff {
+	if client.HasExtension("HeldBlock") {
+		client.heldBlock = BlockID(packet.PlayerID)
+	} else if packet.PlayerID != 0xff {
 		return
 	}
 
