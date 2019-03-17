@@ -23,6 +23,37 @@ import (
 	"Go-MCC/gomcc"
 )
 
+var commandCopyLvl = gomcc.Command{
+	Name:        "copylvl",
+	Description: "Copy a level.",
+	Permission:  "core.copylvl",
+	Handler:     handleCopyLvl,
+}
+
+func handleCopyLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	args := strings.Split(message, " ")
+	if len(args) != 2 {
+		sender.SendMessage("Usage: " + command.Name + " <src> <dest>")
+		return
+	}
+
+	src := sender.Server().FindLevel(args[0])
+	if src == nil {
+		sender.SendMessage("Level " + args[0] + " not found")
+		return
+	}
+
+	dest := sender.Server().FindLevel(args[1])
+	if dest != nil {
+		sender.SendMessage("Level " + args[1] + " already exists")
+		return
+	}
+
+	dest = src.Clone(args[1])
+	sender.Server().AddLevel(dest)
+	sender.SendMessage("Level " + args[0] + " has been copied to " + args[1])
+}
+
 var commandGoto = gomcc.Command{
 	Name:        "goto",
 	Description: "Move to another level.",

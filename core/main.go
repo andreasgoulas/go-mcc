@@ -21,6 +21,7 @@ import (
 )
 
 func Initialize(server *gomcc.Server) {
+	server.RegisterCommand(&commandCopyLvl)
 	server.RegisterCommand(&commandGoto)
 	server.RegisterCommand(&commandKick)
 	server.RegisterCommand(&commandLoad)

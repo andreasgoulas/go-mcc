@@ -73,6 +73,25 @@ func NewLevel(name string, width, height, length uint) *Level {
 	}
 }
 
+func (level *Level) Clone(name string) *Level {
+	if len(name) == 0 {
+		return nil
+	}
+
+	blocks := make([]BlockID, len(level.Blocks))
+	copy(blocks, level.Blocks)
+
+	return &Level{
+		nil,
+		name,
+		level.Width, level.Height, level.Length,
+		blocks,
+		level.Spawn,
+		level.Appearance,
+		level.Weather,
+	}
+}
+
 func (level *Level) Volume() uint {
 	return level.Width * level.Height * level.Length
 }
