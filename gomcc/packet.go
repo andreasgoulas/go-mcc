@@ -79,10 +79,11 @@ const (
 	packetTypeExtAddPlayerName        = 0x16
 	packetTypeExtRemovePlayerName     = 0x18
 	packetTypeChangeModel             = 0x1d
-	packetTypeEnvSetMapAppearance2    = 0x1e
 	packetTypeEnvSetWeatherType       = 0x1f
 	packetTypeExtAddEntity2           = 0x21
 	packetTypePlayerClicked           = 0x22
+	packetTypeSetMapEnvUrl            = 0x28
+	packetTypeSetMapEnvProperty       = 0x29
 )
 
 type packetClientIdentification struct {
@@ -237,14 +238,6 @@ type packetChangeModel struct {
 	ModelName [64]byte
 }
 
-type packetEnvSetMapAppearance2 struct {
-	PacketID              byte
-	TexturePackURL        [64]byte
-	SideBlock, EdgeBlock  byte
-	SideLevel, CloudLevel int16
-	MaxViewDistance       int16
-}
-
 type packetEnvSetWeatherType struct {
 	PacketID    byte
 	WeatherType byte
@@ -266,6 +259,17 @@ type packetPlayerClicked struct {
 	TargetID               byte
 	BlockX, BlockY, BlockZ int16
 	BlockFace              byte
+}
+
+type packetSetMapEnvUrl struct {
+	PacketID       byte
+	TexturePackURL [64]byte
+}
+
+type packetSetMapEnvProperty struct {
+	PacketID byte
+	Type     byte
+	Value    int32
 }
 
 func padString(str string) [64]byte {

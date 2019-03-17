@@ -40,9 +40,9 @@ var Extensions = []struct {
 	{"ExtPlayerList", 2},
 	{"LongerMessages", 1},
 	{"ChangeModel", 1},
-	{"EnvMapAppearance", 2},
 	{"EnvWeatherType", 1},
 	{"PlayerClick", 1},
+	{"EnvMapAspect", 1},
 }
 
 type Client struct {
@@ -287,8 +287,8 @@ func (client *Client) sendLevel(level *Level) {
 		client.sendPacket(packet)
 	}
 
-	client.sendLevelAppearance(level.appearance)
 	client.sendWeather(level.weather)
+	client.sendEnvConfig(level.envConfig)
 
 	client.sendPacket(&packetLevelFinalize{
 		packetTypeLevelFinalize,
@@ -455,22 +455,6 @@ func (client *Client) sendChangeModel(entity *Entity) {
 	})
 }
 
-func (client *Client) sendLevelAppearance(appearance LevelAppearance) {
-	if client.loggedIn == 0 || !client.HasExtension("EnvMapAppearance") {
-		return
-	}
-
-	client.sendPacket(&packetEnvSetMapAppearance2{
-		packetTypeEnvSetMapAppearance2,
-		padString(appearance.TexturePackURL),
-		client.convertBlock(appearance.SideBlock),
-		client.convertBlock(appearance.EdgeBlock),
-		int16(appearance.SideLevel),
-		int16(appearance.CloudLevel),
-		int16(appearance.MaxViewDistance),
-	})
-}
-
 func (client *Client) sendWeather(weather WeatherType) {
 	if client.loggedIn == 0 || !client.HasExtension("EnvWeatherType") {
 		return
@@ -480,6 +464,46 @@ func (client *Client) sendWeather(weather WeatherType) {
 		packetTypeEnvSetWeatherType,
 		byte(weather),
 	})
+}
+
+func (client *Client) sendTexturePack(texturePack string) {
+	if client.loggedIn == 0 || !client.HasExtension("EnvMapAspect") {
+		return
+	}
+
+	client.sendPacket(&packetSetMapEnvUrl{
+		packetTypeSetMapEnvUrl,
+		padString(texturePack),
+	})
+}
+
+func (client *Client) sendEnvProp(id byte, value int) {
+	client.sendPacket(&packetSetMapEnvProperty{
+		packetTypeSetMapEnvProperty,
+		id, int32(value),
+	})
+}
+
+func (client *Client) sendEnvConfig(env EnvConfig) {
+	if client.loggedIn == 0 || !client.HasExtension("EnvMapAspect") {
+		return
+	}
+
+	client.sendEnvProp(0, int(client.convertBlock(env.SideBlock)))
+	client.sendEnvProp(1, int(client.convertBlock(env.EdgeBlock)))
+	client.sendEnvProp(2, int(env.EdgeHeight))
+	client.sendEnvProp(3, int(env.CloudHeight))
+	client.sendEnvProp(4, int(env.MaxViewDistance))
+	client.sendEnvProp(5, int(256*env.CloudSpeed))
+	client.sendEnvProp(6, int(256*env.WeatherSpeed))
+	client.sendEnvProp(7, int(128*env.WeatherFade))
+	client.sendEnvProp(9, env.SideOffset)
+
+	if env.ExpFog {
+		client.sendEnvProp(8, 1)
+	} else {
+		client.sendEnvProp(8, 0)
+	}
 }
 
 func (client *Client) handle() {

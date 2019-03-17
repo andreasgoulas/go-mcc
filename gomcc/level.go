@@ -29,11 +29,17 @@ const (
 	WeatherSnowing = 2
 )
 
-type LevelAppearance struct {
-	TexturePackURL        string
-	SideBlock, EdgeBlock  BlockID
-	SideLevel, CloudLevel uint
-	MaxViewDistance       uint
+type EnvConfig struct {
+	SideBlock       BlockID
+	EdgeBlock       BlockID
+	EdgeHeight      uint
+	CloudHeight     uint
+	MaxViewDistance uint
+	CloudSpeed      float64
+	WeatherSpeed    float64
+	WeatherFade     float64
+	ExpFog          bool
+	SideOffset      int
 }
 
 type Level struct {
@@ -45,8 +51,9 @@ type Level struct {
 	width, height, length uint
 	blocks                []BlockID
 
-	appearance LevelAppearance
-	weather    WeatherType
+	weather     WeatherType
+	texturePack string
+	envConfig   EnvConfig
 }
 
 func NewLevel(name string, width, height, length uint) *Level {
@@ -55,23 +62,29 @@ func NewLevel(name string, width, height, length uint) *Level {
 	}
 
 	return &Level{
-		nil,
-		name,
-		Location{
+		name: name,
+		Spawn: Location{
 			X: float64(width) / 2,
 			Y: float64(height) * 3 / 4,
 			Z: float64(length) / 2,
 		},
-		width, height, length,
-		make([]BlockID, width*height*length),
-		LevelAppearance{
+		width:   width,
+		height:  height,
+		length:  length,
+		blocks:  make([]BlockID, width*height*length),
+		weather: WeatherSunny,
+		envConfig: EnvConfig{
 			SideBlock:       BlockBedrock,
 			EdgeBlock:       BlockActiveWater,
-			SideLevel:       height / 2,
-			CloudLevel:      height + 2,
+			EdgeHeight:      height / 2,
+			CloudHeight:     height + 2,
 			MaxViewDistance: 0,
+			CloudSpeed:      1.0,
+			WeatherSpeed:    1.0,
+			WeatherFade:     1.0,
+			ExpFog:          false,
+			SideOffset:      -2,
 		},
-		WeatherSunny,
 	}
 }
 
@@ -84,13 +97,14 @@ func (level *Level) Clone(name string) *Level {
 	copy(blocks, level.blocks)
 
 	return &Level{
-		nil,
-		name,
-		level.Spawn,
-		level.width, level.height, level.length,
-		blocks,
-		level.appearance,
-		level.weather,
+		name:      name,
+		Spawn:     level.Spawn,
+		width:     level.width,
+		height:    level.height,
+		length:    level.length,
+		blocks:    blocks,
+		weather:   level.weather,
+		envConfig: level.envConfig,
 	}
 }
 
@@ -180,17 +194,32 @@ func (level *Level) SetWeather(weather WeatherType) {
 	})
 }
 
-func (level *Level) Appearance() LevelAppearance {
-	return level.appearance
+func (level *Level) TexturePack() string {
+	return level.texturePack
 }
 
-func (level *Level) SetAppearance(appearance LevelAppearance) {
-	if appearance == level.appearance {
+func (level *Level) SetTexturePack(texturePack string) {
+	if texturePack == level.texturePack {
 		return
 	}
 
-	level.appearance = appearance
+	level.texturePack = texturePack
 	level.ForEachClient(func(client *Client) {
-		client.sendLevelAppearance(level.appearance)
+		client.sendTexturePack(texturePack)
+	})
+}
+
+func (level *Level) EnvConfig() EnvConfig {
+	return level.envConfig
+}
+
+func (level *Level) SetEnvConfig(envConfig EnvConfig) {
+	if envConfig == level.envConfig {
+		return
+	}
+
+	level.envConfig = envConfig
+	level.ForEachClient(func(client *Client) {
+		client.sendEnvConfig(envConfig)
 	})
 }
