@@ -239,7 +239,7 @@ func (client *Client) sendLevel(level *Level) {
 	var GZIPBuffer bytes.Buffer
 	GZIPWriter := gzip.NewWriter(&GZIPBuffer)
 	binary.Write(GZIPWriter, binary.BigEndian, int32(level.Volume()))
-	for _, block := range level.Blocks {
+	for _, block := range level.blocks {
 		GZIPWriter.Write([]byte{client.convertBlock(block)})
 	}
 	GZIPWriter.Close()
@@ -264,12 +264,12 @@ func (client *Client) sendLevel(level *Level) {
 		client.sendPacket(packet)
 	}
 
-	client.sendLevelAppearance(level.Appearance)
-	client.sendWeather(level.Weather)
+	client.sendLevelAppearance(level.appearance)
+	client.sendWeather(level.weather)
 
 	client.sendPacket(&packetLevelFinalize{
 		packetTypeLevelFinalize,
-		int16(level.Width), int16(level.Height), int16(level.Length),
+		int16(level.width), int16(level.height), int16(level.length),
 	})
 }
 

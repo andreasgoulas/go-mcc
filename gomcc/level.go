@@ -37,14 +37,16 @@ type LevelAppearance struct {
 }
 
 type Level struct {
-	Server *Server
+	server *Server
+	name   string
 
-	Name                  string
-	Width, Height, Length uint
-	Blocks                []BlockID
-	Spawn                 Location
-	Appearance            LevelAppearance
-	Weather               WeatherType
+	Spawn Location
+
+	width, height, length uint
+	blocks                []BlockID
+
+	appearance LevelAppearance
+	weather    WeatherType
 }
 
 func NewLevel(name string, width, height, length uint) *Level {
@@ -55,13 +57,13 @@ func NewLevel(name string, width, height, length uint) *Level {
 	return &Level{
 		nil,
 		name,
-		width, height, length,
-		make([]BlockID, width*height*length),
 		Location{
 			X: float64(width) / 2,
 			Y: float64(height) * 3 / 4,
 			Z: float64(length) / 2,
 		},
+		width, height, length,
+		make([]BlockID, width*height*length),
 		LevelAppearance{
 			SideBlock:       BlockBedrock,
 			EdgeBlock:       BlockActiveWater,
@@ -78,42 +80,62 @@ func (level *Level) Clone(name string) *Level {
 		return nil
 	}
 
-	blocks := make([]BlockID, len(level.Blocks))
-	copy(blocks, level.Blocks)
+	blocks := make([]BlockID, len(level.blocks))
+	copy(blocks, level.blocks)
 
 	return &Level{
 		nil,
 		name,
-		level.Width, level.Height, level.Length,
-		blocks,
 		level.Spawn,
-		level.Appearance,
-		level.Weather,
+		level.width, level.height, level.length,
+		blocks,
+		level.appearance,
+		level.weather,
 	}
 }
 
+func (level *Level) Server() *Server {
+	return level.server
+}
+
+func (level *Level) Name() string {
+	return level.name
+}
+
+func (level *Level) Width() uint {
+	return level.width
+}
+
+func (level *Level) Height() uint {
+	return level.height
+}
+
+func (level *Level) Length() uint {
+	return level.length
+}
+
 func (level *Level) Volume() uint {
-	return level.Width * level.Height * level.Length
+	return level.width * level.height * level.length
 }
 
 func (level *Level) Index(x, y, z uint) uint {
-	return x + level.Width*(z+level.Length*y)
+	return x + level.width*(z+level.length*y)
 }
 
 func (level *Level) GetBlock(x, y, z uint) BlockID {
-	if x < level.Width && y < level.Height && z < level.Length {
-		return level.Blocks[level.Index(x, y, z)]
+	if x < level.width && y < level.height && z < level.length {
+		return level.blocks[level.Index(x, y, z)]
 	}
 
 	return BlockAir
 }
 
 func (level *Level) ForEachEntity(fn func(*Entity)) {
-	if level.Server == nil {
+	if level.server == nil {
 		return
 	}
 
-	level.Server.ForEachEntity(func(entity *Entity) {
+	level.server.ForEachEntity(func(entity *Entity) {
 		if entity.level == level {
 			fn(entity)
 		}
@@ -121,11 +143,11 @@ func (level *Level) ForEachEntity(fn func(*Entity)) {
 }
 
 func (level *Level) ForEachClient(fn func(*Client)) {
-	if level.Server == nil {
+	if level.server == nil {
 		return
 	}
 
-	level.Server.ForEachClient(func(client *Client) {
+	level.server.ForEachClient(func(client *Client) {
 		if client.entity.level == level {
 			fn(client)
 		}
@@ -133,8 +155,8 @@ func (level *Level) ForEachClient(fn func(*Client)) {
 }
 
 func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
-	if x < level.Width && y < level.Height && z < level.Length {
-		level.Blocks[level.Index(x, y, z)] = block
+	if x < level.width && y < level.height && z < level.length {
+		level.blocks[level.Index(x, y, z)] = block
 		if broadcast {
 			level.ForEachClient(func(client *Client) {
 				client.sendBlockChange(x, y, z, block)
@@ -143,12 +165,32 @@ func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
 	}
 }
 
-func (level *Level) SetWeather(weather WeatherType) {
-	if weather != level.Weather {
-		level.ForEachClient(func(client *Client) {
-			client.sendWeather(weather)
-		})
+func (level *Level) Weather() WeatherType {
+	return level.weather
+}
 
-		level.Weather = weather
+func (level *Level) SetWeather(weather WeatherType) {
+	if weather == level.weather {
+		return
 	}
+
+	level.weather = weather
+	level.ForEachClient(func(client *Client) {
+		client.sendWeather(weather)
+	})
+}
+
+func (level *Level) Appearance() LevelAppearance {
+	return level.appearance
+}
+
+func (level *Level) SetAppearance(appearance LevelAppearance) {
+	if appearance == level.appearance {
+		return
+	}
+
+	level.appearance = appearance
+	level.ForEachClient(func(client *Client) {
+		client.sendLevelAppearance(level.appearance)
+	})
 }

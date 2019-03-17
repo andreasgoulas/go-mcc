@@ -208,7 +208,7 @@ func (server *Server) BroadcastMessage(message string) {
 }
 
 func (server *Server) AddLevel(level *Level) {
-	if level.Server != nil {
+	if level.server != nil {
 		return
 	}
 
@@ -216,14 +216,14 @@ func (server *Server) AddLevel(level *Level) {
 	server.levels = append(server.levels, level)
 	server.levelsLock.Unlock()
 
-	level.Server = server
+	level.server = server
 
 	event := EventLevelLoad{level}
 	server.FireEvent(EventTypeLevelLoad, &event)
 }
 
 func (server *Server) RemoveLevel(level *Level) {
-	if level.Server != server {
+	if level.server != server {
 		return
 	}
 
@@ -250,7 +250,7 @@ func (server *Server) RemoveLevel(level *Level) {
 		client.entity.TeleportLevel(server.MainLevel)
 	})
 
-	level.Server = nil
+	level.server = nil
 
 	server.levels[index] = server.levels[len(server.levels)-1]
 	server.levels[len(server.levels)-1] = nil
@@ -265,7 +265,7 @@ func (server *Server) FindLevel(name string) *Level {
 	defer server.levelsLock.RUnlock()
 
 	for _, level := range server.levels {
-		if level.Name == name {
+		if level.name == name {
 			return level
 		}
 	}

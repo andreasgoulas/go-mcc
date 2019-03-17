@@ -76,9 +76,9 @@ func (storage *LvlStorage) Load(name string) (*gomcc.Level, error) {
 	level.Spawn.Yaw = float64(header.SpawnYaw) * 360 / 256
 	level.Spawn.Pitch = float64(header.SpawnPitch) * 360 / 256
 
-	for y := uint(0); y < level.Height; y++ {
-		for z := uint(0); z < level.Length; z++ {
-			for x := uint(0); x < level.Width; x++ {
+	for y := uint(0); y < level.Height(); y++ {
+		for z := uint(0); z < level.Length(); z++ {
+			for x := uint(0); x < level.Width(); x++ {
 				block := make([]byte, 1)
 				n, err := reader.Read(block)
 				if n != len(block) && err != nil {
@@ -94,7 +94,7 @@ func (storage *LvlStorage) Load(name string) (*gomcc.Level, error) {
 }
 
 func (storage *LvlStorage) Save(level *gomcc.Level) error {
-	file, err := os.Create(storage.getPath(level.Name))
+	file, err := os.Create(storage.getPath(level.Name()))
 	if err != nil {
 		return err
 	}
@@ -105,9 +105,9 @@ func (storage *LvlStorage) Save(level *gomcc.Level) error {
 
 	err = binary.Write(writer, binary.BigEndian, &lvlHeader{
 		1874,
-		uint16(level.Width),
-		uint16(level.Height),
-		uint16(level.Length),
+		uint16(level.Width()),
+		uint16(level.Height()),
+		uint16(level.Length()),
 		uint16(level.Spawn.X * 32),
 		uint16(level.Spawn.Y * 32),
 		uint16(level.Spawn.Z * 32),
@@ -120,9 +120,9 @@ func (storage *LvlStorage) Save(level *gomcc.Level) error {
 		return err
 	}
 
-	for y := uint(0); y < level.Height; y++ {
-		for z := uint(0); z < level.Length; z++ {
-			for x := uint(0); x < level.Width; x++ {
+	for y := uint(0); y < level.Height(); y++ {
+		for z := uint(0); z < level.Length(); z++ {
+			for x := uint(0); x < level.Width(); x++ {
 				block := make([]byte, 1)
 				block[0] = byte(level.GetBlock(x, y, z))
 

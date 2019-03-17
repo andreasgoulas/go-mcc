@@ -31,12 +31,12 @@ type FlatGenerator struct {
 func (generator *FlatGenerator) Generate(level *Level) {
 	grassHeight := generator.GrassHeight
 	if generator.GrassHeight == 0 {
-		grassHeight = level.Height / 2
+		grassHeight = level.height / 2
 	}
 
 	for y := uint(0); y < grassHeight; y++ {
-		for z := uint(0); z < level.Length; z++ {
-			for x := uint(0); x < level.Width; x++ {
+		for z := uint(0); z < level.length; z++ {
+			for x := uint(0); x < level.width; x++ {
 				level.SetBlock(x, y, z, BlockGrass, false)
 			}
 		}

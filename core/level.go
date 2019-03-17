@@ -82,7 +82,7 @@ func handleGoto(sender gomcc.CommandSender, command *gomcc.Command, message stri
 
 	entity := client.Entity()
 	if level == entity.Level() {
-		sender.SendMessage("You are already in " + level.Name)
+		sender.SendMessage("You are already in " + level.Name())
 		return
 	}
 
@@ -121,7 +121,7 @@ var commandMain = gomcc.Command{
 
 func handleMain(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
-		sender.SendMessage("Main level is " + sender.Server().MainLevel.Name)
+		sender.SendMessage("Main level is " + sender.Server().MainLevel.Name())
 		return
 	}
 
@@ -138,7 +138,7 @@ func handleMain(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	}
 
 	sender.Server().MainLevel = level
-	sender.SendMessage("Set main level to " + level.Name)
+	sender.SendMessage("Set main level to " + level.Name())
 }
 
 var commandNewLvl = gomcc.Command{
@@ -194,7 +194,7 @@ func handleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message st
 	generator.Generate(level)
 
 	sender.Server().AddLevel(level)
-	sender.SendMessage("Level " + level.Name + " created")
+	sender.SendMessage("Level " + level.Name() + " created")
 }
 
 var commandSave = gomcc.Command{
@@ -226,7 +226,7 @@ func handleSave(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	}
 
 	sender.Server().SaveLevel(level)
-	sender.SendMessage("Level " + level.Name + " saved")
+	sender.SendMessage("Level " + level.Name() + " saved")
 }
 
 var commandSetSpawn = gomcc.Command{
