@@ -51,6 +51,36 @@ func handleKick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	player.Kick(reason)
 }
 
+var commandSkin = gomcc.Command{
+	Name:        "skin",
+	Description: "Set the skin of a player.",
+	Permission:  "core.skin",
+	Handler:     handleSkin,
+}
+
+func handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	args := strings.Split(message, " ")
+	if len(args) != 2 {
+		sender.SendMessage("Usage: " + command.Name + " <name> <skin>")
+		return
+	}
+
+	entity := sender.Server().FindEntity(args[0])
+	if entity == nil {
+		sender.SendMessage("Player " + args[0] + " not found")
+		return
+	}
+
+	entity.SkinName = args[1]
+	entity.Respawn()
+
+	if entity.Client == sender {
+		sender.SendMessage("Skin set to " + args[1])
+	} else {
+		sender.SendMessage("Skin of " + args[0] + " set to " + args[1])
+	}
+}
+
 var commandTp = gomcc.Command{
 	Name:        "tp",
 	Description: "Teleport to another player.",

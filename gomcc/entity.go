@@ -43,17 +43,16 @@ type Entity struct {
 	Client *Client
 	Server *Server
 
-	id byte
+	id    byte
+	name  string
+	model string
 
-	Name        string
 	DisplayName string
-	ListName    string
+	SkinName    string
 
+	listName  string
 	groupName string
 	groupRank byte
-
-	modelName string
-	skinName  string
 
 	level        *Level
 	location     Location
@@ -64,12 +63,60 @@ func NewEntity(name string, server *Server) *Entity {
 	return &Entity{
 		Server:      server,
 		id:          0xff,
-		Name:        name,
+		name:        name,
+		model:       ModelHumanoid,
 		DisplayName: name,
-		ListName:    name,
-		modelName:   ModelHumanoid,
-		skinName:    name,
+		SkinName:    name,
+		listName:    name,
 	}
+}
+
+func (entity *Entity) Name() string {
+	return entity.name
+}
+
+func (entity *Entity) Model() string {
+	return entity.model
+}
+
+func (entity *Entity) SetModel(model string) {
+	if model == entity.model {
+		return
+	}
+
+	entity.model = model
+	if entity.level != nil {
+		entity.level.ForEachClient(func(client *Client) {
+			client.sendChangeModel(entity)
+		})
+	}
+}
+
+func (entity *Entity) ListName() string {
+	return entity.listName
+}
+
+func (entity *Entity) Group() string {
+	return entity.groupName
+}
+
+func (entity *Entity) GroupRank() byte {
+	return entity.groupRank
+}
+
+func (entity *Entity) SetList(listName string, groupName string, groupRank byte) {
+	if listName == entity.listName &&
+		groupName == entity.groupName &&
+		groupRank == entity.groupRank {
+		return
+	}
+
+	entity.listName = listName
+	entity.groupName = groupName
+	entity.groupRank = groupRank
+	entity.Server.ForEachClient(func(client *Client) {
+		client.sendAddPlayerList(entity)
+	})
 }
 
 func (entity *Entity) Location() Location {
@@ -118,62 +165,6 @@ func (entity *Entity) TeleportLevel(level *Level) {
 
 	event := EventEntityLevelChange{entity, lastLevel, level}
 	entity.Server.FireEvent(EventTypeEntityLevelChange, &event)
-}
-
-func (entity *Entity) Group() string {
-	return entity.groupName
-}
-
-func (entity *Entity) GroupRank() byte {
-	return entity.groupRank
-}
-
-func (entity *Entity) SetGroup(groupName string, groupRank byte) {
-	if groupName == entity.groupName && groupRank == entity.groupRank {
-		return
-	}
-
-	entity.groupName = groupName
-	entity.groupRank = groupRank
-	entity.Server.ForEachClient(func(client *Client) {
-		client.sendAddPlayerList(entity)
-	})
-}
-
-func (entity *Entity) Model() string {
-	return entity.modelName
-}
-
-func (entity *Entity) SetModel(modelName string) {
-	if modelName == entity.modelName {
-		return
-	}
-
-	entity.modelName = modelName
-	if entity.level != nil {
-		entity.level.ForEachClient(func(client *Client) {
-			client.sendChangeModel(entity)
-		})
-	}
-}
-
-func (entity *Entity) Skin() string {
-	return entity.skinName
-}
-
-func (entity *Entity) SetSkin(skinName string) {
-	if skinName == entity.skinName {
-		return
-	}
-
-	entity.skinName = skinName
-	if entity.level != nil {
-		entity.level.ForEachClient(func(client *Client) {
-			if client != entity.Client {
-				client.sendSpawn(entity)
-			}
-		})
-	}
 }
 
 func (entity *Entity) update() {
@@ -246,6 +237,23 @@ func (entity *Entity) update() {
 		if client != entity.Client {
 			client.sendPacket(packet)
 		}
+	})
+}
+
+func (entity *Entity) Respawn() {
+	if entity.level == nil {
+		return
+	}
+
+	entity.level.ForEachClient(func(client *Client) {
+		client.sendDespawn(entity)
+	})
+
+	entity.location = entity.level.Spawn
+	entity.lastLocation = Location{}
+
+	entity.level.ForEachClient(func(client *Client) {
+		client.sendSpawn(entity)
 	})
 }
 

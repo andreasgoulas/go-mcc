@@ -377,7 +377,7 @@ func (server *Server) FindEntity(name string) *Entity {
 	defer server.entitiesLock.RUnlock()
 
 	for _, entity := range server.entities {
-		if entity.Name == name {
+		if entity.name == name {
 			return entity
 		}
 	}
@@ -425,7 +425,7 @@ func (server *Server) FindClient(name string) *Client {
 	defer server.clientsLock.RUnlock()
 
 	for _, client := range server.clients {
-		if client.Entity != nil && client.Entity.Name == name {
+		if client.Entity != nil && client.Entity.name == name {
 			return client
 		}
 	}

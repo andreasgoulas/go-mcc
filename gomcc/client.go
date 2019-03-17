@@ -111,7 +111,7 @@ func (client *Client) Server() *Server {
 
 func (client *Client) Name() string {
 	if client.Entity != nil {
-		return client.Entity.DisplayName
+		return client.Entity.name
 	}
 
 	return client.name
@@ -170,7 +170,7 @@ func (client *Client) Disconnect() {
 		client.server.FireEvent(EventTypePlayerQuit, &event)
 
 		client.Entity.TeleportLevel(nil)
-		client.server.BroadcastMessage(ColorYellow + client.Entity.Name + " has left the game!")
+		client.server.BroadcastMessage(ColorYellow + client.Entity.name + " has left the game!")
 		client.server.RemoveClient(client)
 		client.server.RemoveEntity(client.Entity)
 		atomic.AddInt32(&client.server.playerCount, -1)
@@ -319,7 +319,7 @@ func (client *Client) sendSpawn(entity *Entity) {
 			packetTypeExtAddEntity2,
 			id,
 			padString(entity.DisplayName),
-			padString(entity.skinName),
+			padString(entity.SkinName),
 			int16(location.X * 32),
 			int16(location.Y * 32),
 			int16(location.Z * 32),
@@ -330,7 +330,7 @@ func (client *Client) sendSpawn(entity *Entity) {
 		client.sendPacket(&packetSpawnPlayer{
 			packetTypeSpawnPlayer,
 			id,
-			padString(entity.Name),
+			padString(entity.DisplayName),
 			int16(location.X * 32),
 			int16(location.Y * 32),
 			int16(location.Z * 32),
@@ -339,7 +339,7 @@ func (client *Client) sendSpawn(entity *Entity) {
 		})
 	}
 
-	if entity.modelName != ModelHumanoid {
+	if entity.model != ModelHumanoid {
 		client.sendChangeModel(entity)
 	}
 }
@@ -422,8 +422,8 @@ func (client *Client) sendAddPlayerList(entity *Entity) {
 	client.sendPacket(&packetExtAddPlayerName{
 		packetTypeExtAddPlayerName,
 		int16(id),
-		padString(entity.Name),
-		padString(entity.ListName),
+		padString(entity.name),
+		padString(entity.listName),
 		padString(entity.groupName),
 		entity.groupRank,
 	})
@@ -458,7 +458,7 @@ func (client *Client) sendChangeModel(entity *Entity) {
 	client.sendPacket(&packetChangeModel{
 		packetTypeChangeModel,
 		id,
-		padString(entity.modelName),
+		padString(entity.model),
 	})
 }
 
@@ -599,7 +599,7 @@ func (client *Client) login() {
 
 	atomic.StoreUint32(&client.loggedIn, 1)
 	client.server.AddClient(client)
-	client.server.BroadcastMessage(ColorYellow + client.Entity.Name + " has joined the game!")
+	client.server.BroadcastMessage(ColorYellow + client.Entity.name + " has joined the game!")
 	if client.server.AddEntity(client.Entity) == 0xff {
 		client.Kick("Server full!")
 		return
@@ -796,7 +796,7 @@ func (client *Client) handleMessage(reader io.Reader) {
 	if message[0] == '/' {
 		client.server.ExecuteCommand(client, message[1:])
 	} else {
-		client.server.BroadcastMessage(ColorDefault + "<" + client.Entity.Name + "> " + ConvertColors(message))
+		client.server.BroadcastMessage(ColorDefault + "<" + client.Entity.name + "> " + ConvertColors(message))
 	}
 }
 

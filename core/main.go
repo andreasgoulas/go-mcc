@@ -31,6 +31,7 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&commandSave)
 	server.RegisterCommand(&commandSay)
 	server.RegisterCommand(&commandSetSpawn)
+	server.RegisterCommand(&commandSkin)
 	server.RegisterCommand(&commandSpawn)
 	server.RegisterCommand(&commandTell)
 	server.RegisterCommand(&commandTp)
