@@ -142,3 +142,44 @@ func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 		sender.SendMessage("Usage: " + command.Name + " <player> or <x> <y> <z>")
 	}
 }
+
+var commandSummon = gomcc.Command{
+	Name:        "summon",
+	Description: "Summon a player to your location.",
+	Permission:  "core.summon",
+	Handler:     handleSummon,
+}
+
+func handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	client, ok := sender.(*gomcc.Client)
+	if !ok {
+		sender.SendMessage("You are not a player")
+		return
+	}
+
+	args := strings.Split(message, " ")
+	if len(args) != 1 || len(args[0]) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <player> or all")
+		return
+	}
+
+	player := client.Entity
+	if args[0] == "all" {
+		player.Level().ForEachEntity(func(entity *gomcc.Entity) {
+			entity.Teleport(player.Location())
+		})
+	} else {
+		entity := sender.Server().FindEntity(args[0])
+		if entity == nil {
+			sender.SendMessage("Player " + args[0] + " not found")
+			return
+		}
+
+		level := player.Level()
+		if level != entity.Level() {
+			entity.TeleportLevel(level)
+		}
+
+		entity.Teleport(player.Location())
+	}
+}
