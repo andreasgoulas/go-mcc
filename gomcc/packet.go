@@ -67,6 +67,7 @@ var Extensions = []struct {
 	{"PlayerClick", 1},
 	{"EnvMapAspect", 1},
 	{"FastMap", 1},
+	{"TwoWayPing", 1},
 }
 
 const (
@@ -100,6 +101,7 @@ const (
 	packetTypePlayerClicked           = 0x22
 	packetTypeSetMapEnvUrl            = 0x28
 	packetTypeSetMapEnvProperty       = 0x29
+	packetTypeTwoWayPing              = 0x2b
 )
 
 type packetClientIdentification struct {
@@ -291,6 +293,12 @@ type packetSetMapEnvProperty struct {
 	PacketID byte
 	Type     byte
 	Value    int32
+}
+
+type packetTwoWayPing struct {
+	PacketID  byte
+	Direction byte
+	Data      int16
 }
 
 func padString(str string) [64]byte {

@@ -535,6 +535,8 @@ func (client *Client) handle() {
 			size = 2
 		case packetTypePlayerClicked:
 			size = 15
+		case packetTypeTwoWayPing:
+			size = 4
 
 		default:
 			fmt.Printf("Invalid Packet: %d\n", id)
@@ -566,6 +568,8 @@ func (client *Client) handle() {
 			client.handleCustomBlockSupportLevel(reader)
 		case packetTypePlayerClicked:
 			client.handlePlayerClicked(reader)
+		case packetTypeTwoWayPing:
+			client.handleTwoWayPing(reader)
 		}
 	}
 }
@@ -878,4 +882,17 @@ func (client *Client) handlePlayerClicked(reader io.Reader) {
 		packet.BlockFace,
 	}
 	client.server.FireEvent(EventTypeClientClick, &event)
+}
+
+func (client *Client) handleTwoWayPing(reader io.Reader) {
+	packet := packetTwoWayPing{}
+	binary.Read(reader, binary.BigEndian, &packet)
+
+	switch packet.Direction {
+	case 0:
+		client.sendPacket(&packetTwoWayPing{
+			packetTypeTwoWayPing,
+			0, packet.Data,
+		})
+	}
 }
