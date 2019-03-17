@@ -28,7 +28,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
-	"unicode"
 )
 
 var Extensions = []struct {
@@ -44,39 +43,9 @@ var Extensions = []struct {
 	{"EnvWeatherType", 1},
 }
 
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
-func IsValidName(name string) bool {
-	if len(name) < 3 || len(name) > 16 {
-		return false
-	}
-
-	for _, c := range name {
-		if c > unicode.MaxASCII || (!unicode.IsLetter(c) && !unicode.IsDigit(c) && c != '_') {
-			return false
-		}
-	}
-
-	return true
-}
-
-func IsValidMessage(message string) bool {
-	for _, c := range message {
-		if c > unicode.MaxASCII || !unicode.IsPrint(c) || c == '&' {
-			return false
-		}
-	}
-
-	return true
-}
-
 type Client struct {
-	Entity *Entity
+	Entity   *Entity
+	NickName string
 
 	server    *Server
 	conn      net.Conn
@@ -110,11 +79,7 @@ func (client *Client) Server() *Server {
 }
 
 func (client *Client) Name() string {
-	if client.Entity != nil {
-		return client.Entity.name
-	}
-
-	return client.name
+	return client.NickName
 }
 
 func (client *Client) checkPermission(permission []string, template []string) bool {
@@ -587,7 +552,7 @@ func (client *Client) login() {
 		userType,
 	})
 
-	client.Entity = NewEntity(client.name, client.server)
+	client.Entity = NewEntity(client.NickName, client.server)
 	client.Entity.Client = client
 
 	event := EventPlayerJoin{client.Entity, false, ""}
@@ -630,7 +595,7 @@ func (client *Client) verify(key []byte) bool {
 
 	data := make([]byte, len(client.server.salt))
 	copy(data, client.server.salt[:])
-	data = append(data, []byte(client.name)...)
+	data = append(data, []byte(client.NickName)...)
 
 	digest := md5.Sum(data)
 	return bytes.Equal(digest[:], key)
@@ -649,8 +614,8 @@ func (client *Client) handleIdentification(reader io.Reader) {
 		return
 	}
 
-	client.name = trimString(packet.Name)
-	if !IsValidName(client.name) {
+	client.NickName = trimString(packet.Name)
+	if !IsValidName(client.NickName) {
 		client.Kick("Invalid name!")
 		return
 	}
@@ -663,7 +628,7 @@ func (client *Client) handleIdentification(reader io.Reader) {
 		}
 	}
 
-	if client.server.FindEntity(client.name) != nil {
+	if client.server.FindEntity(client.NickName) != nil {
 		client.Kick("Already logged in!")
 		return
 	}
@@ -796,7 +761,7 @@ func (client *Client) handleMessage(reader io.Reader) {
 	if message[0] == '/' {
 		client.server.ExecuteCommand(client, message[1:])
 	} else {
-		client.server.BroadcastMessage(ColorDefault + "<" + client.Entity.name + "> " + ConvertColors(message))
+		client.server.BroadcastMessage(ColorDefault + "<" + client.NickName + "> " + ConvertColors(message))
 	}
 }
 

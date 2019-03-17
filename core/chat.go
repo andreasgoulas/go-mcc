@@ -38,6 +38,43 @@ func handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string
 	sender.Server().BroadcastMessage("* " + sender.Name() + " " + gomcc.ConvertColors(message))
 }
 
+var commandNick = gomcc.Command{
+	Name:        "nick",
+	Description: "Set the nickname of a player",
+	Permission:  "core.nick",
+	Handler:     handleNick,
+}
+
+func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	args := strings.Split(message, " ")
+	if len(args) == 1 && len(args[0]) > 0 {
+		client := sender.Server().FindClient(args[0])
+		if client == nil {
+			sender.SendMessage("Player " + args[0] + " not found")
+			return
+		}
+
+		client.NickName = client.Entity.Name()
+		sender.SendMessage("Nick of " + args[0] + " reset")
+	} else if len(args) == 2 {
+		if !gomcc.IsValidName(args[1]) {
+			sender.SendMessage(args[1] + " is not a valid name")
+			return
+		}
+
+		client := sender.Server().FindClient(args[0])
+		if client == nil {
+			sender.SendMessage("Player " + args[0] + " not found")
+			return
+		}
+
+		client.NickName = args[1]
+		sender.SendMessage("Nick of " + args[0] + " set to " + args[1])
+	} else {
+		sender.SendMessage("Usage: " + command.Name + " <player> <nick>")
+	}
+}
+
 var commandSay = gomcc.Command{
 	Name:        "say",
 	Description: "Broadcast a message.",

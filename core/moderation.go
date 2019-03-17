@@ -61,7 +61,7 @@ var commandSkin = gomcc.Command{
 func handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Split(message, " ")
 	if len(args) != 2 {
-		sender.SendMessage("Usage: " + command.Name + " <name> <skin>")
+		sender.SendMessage("Usage: " + command.Name + " <player> <skin>")
 		return
 	}
 
@@ -73,12 +73,7 @@ func handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message stri
 
 	entity.SkinName = args[1]
 	entity.Respawn()
-
-	if entity.Client == sender {
-		sender.SendMessage("Skin set to " + args[1])
-	} else {
-		sender.SendMessage("Skin of " + args[0] + " set to " + args[1])
-	}
+	sender.SendMessage("Skin of " + args[0] + " set to " + args[1])
 }
 
 var commandTp = gomcc.Command{

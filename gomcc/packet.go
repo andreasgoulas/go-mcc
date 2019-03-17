@@ -19,7 +19,39 @@ package gomcc
 import (
 	"bytes"
 	"strings"
+	"unicode"
 )
+
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+
+func IsValidName(name string) bool {
+	if len(name) < 3 || len(name) > 16 {
+		return false
+	}
+
+	for _, c := range name {
+		if c > unicode.MaxASCII || (!unicode.IsLetter(c) && !unicode.IsDigit(c) && c != '_') {
+			return false
+		}
+	}
+
+	return true
+}
+
+func IsValidMessage(message string) bool {
+	for _, c := range message {
+		if c > unicode.MaxASCII || !unicode.IsPrint(c) || c == '&' {
+			return false
+		}
+	}
+
+	return true
+}
 
 const (
 	packetTypeIdentification            = 0x00
