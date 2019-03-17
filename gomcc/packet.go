@@ -53,6 +53,22 @@ func IsValidMessage(message string) bool {
 	return true
 }
 
+var Extensions = []struct {
+	Name    string
+	Version int
+}{
+	{"ClickDistance", 1},
+	{"CustomBlocks", 1},
+	{"HeldBlock", 1},
+	{"ExtPlayerList", 2},
+	{"LongerMessages", 1},
+	{"ChangeModel", 1},
+	{"EnvWeatherType", 1},
+	{"PlayerClick", 1},
+	{"EnvMapAspect", 1},
+	{"FastMap", 1},
+}
+
 const (
 	packetTypeIdentification            = 0x00
 	packetTypePing                      = 0x01
@@ -108,6 +124,11 @@ type packetPing struct {
 
 type packetLevelInitialize struct {
 	PacketID byte
+}
+
+type packetLevelInitializeExt struct {
+	PacketID byte
+	Size     int32
 }
 
 type packetLevelDataChunk struct {

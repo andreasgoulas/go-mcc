@@ -18,6 +18,7 @@ package gomcc
 
 import (
 	"bytes"
+	"compress/flate"
 	"compress/gzip"
 	"crypto/md5"
 	"encoding/binary"
@@ -29,21 +30,6 @@ import (
 	"sync/atomic"
 	"time"
 )
-
-var Extensions = []struct {
-	Name    string
-	Version int
-}{
-	{"ClickDistance", 1},
-	{"CustomBlocks", 1},
-	{"HeldBlock", 1},
-	{"ExtPlayerList", 2},
-	{"LongerMessages", 1},
-	{"ChangeModel", 1},
-	{"EnvWeatherType", 1},
-	{"PlayerClick", 1},
-	{"EnvMapAspect", 1},
-}
 
 type Client struct {
 	NickName string
@@ -257,21 +243,34 @@ func (client *Client) sendLevel(level *Level) {
 		return
 	}
 
-	client.sendPacket(&packetLevelInitialize{packetTypeLevelInitialize})
+	var buffer bytes.Buffer
+	if client.HasExtension("FastMap") {
+		client.sendPacket(&packetLevelInitializeExt{
+			packetTypeLevelInitialize,
+			int32(level.Volume()),
+		})
 
-	var GZIPBuffer bytes.Buffer
-	GZIPWriter := gzip.NewWriter(&GZIPBuffer)
-	binary.Write(GZIPWriter, binary.BigEndian, int32(level.Volume()))
-	for _, block := range level.blocks {
-		GZIPWriter.Write([]byte{client.convertBlock(block)})
+		writer, _ := flate.NewWriter(&buffer, -1)
+		for _, block := range level.blocks {
+			writer.Write([]byte{client.convertBlock(block)})
+		}
+		writer.Close()
+	} else {
+		client.sendPacket(&packetLevelInitialize{packetTypeLevelInitialize})
+
+		writer := gzip.NewWriter(&buffer)
+		binary.Write(writer, binary.BigEndian, int32(level.Volume()))
+		for _, block := range level.blocks {
+			writer.Write([]byte{client.convertBlock(block)})
+		}
+		writer.Close()
 	}
-	GZIPWriter.Close()
 
-	GZIPData := GZIPBuffer.Bytes()
-	packets := int(math.Ceil(float64(len(GZIPData)) / 1024))
+	data := buffer.Bytes()
+	packets := int(math.Ceil(float64(len(data)) / 1024))
 	for i := 0; i < packets; i++ {
 		offset := 1024 * i
-		size := len(GZIPData) - offset
+		size := len(data) - offset
 		if size > 1024 {
 			size = 1024
 		}
@@ -283,7 +282,7 @@ func (client *Client) sendLevel(level *Level) {
 			byte(i * 100 / packets),
 		}
 
-		copy(packet.ChunkData[:], GZIPData[offset:offset+size])
+		copy(packet.ChunkData[:], data[offset:offset+size])
 		client.sendPacket(packet)
 	}
 
