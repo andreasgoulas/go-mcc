@@ -75,6 +75,32 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	}
 }
 
+var commandR = gomcc.Command{
+	Name:        "r",
+	Description: "Reply to the last message.",
+	Permission:  "core.r",
+	Handler:     handleR,
+}
+
+func handleR(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	if len(message) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <message>")
+		return
+	}
+
+	player := sender.Server().FindClient(lastSender[sender.Name()])
+	if player == nil {
+		sender.SendMessage("Player not found")
+		return
+	}
+
+	message = gomcc.ConvertColors(message)
+	sender.SendMessage("[me -> " + player.Name() + "] " + message)
+	player.SendMessage("[" + sender.Name() + " -> me] " + message)
+
+	lastSender[player.Name()] = sender.Name()
+}
+
 var commandSay = gomcc.Command{
 	Name:        "say",
 	Description: "Broadcast a message.",
@@ -114,4 +140,6 @@ func handleTell(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	message = gomcc.ConvertColors(args[1])
 	sender.SendMessage("[me -> " + player.Name() + "] " + message)
 	player.SendMessage("[" + sender.Name() + " -> me] " + message)
+
+	lastSender[player.Name()] = sender.Name()
 }

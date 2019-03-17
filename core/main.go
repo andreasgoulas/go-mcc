@@ -20,7 +20,11 @@ import (
 	"Go-MCC/gomcc"
 )
 
+var lastSender map[string]string
+
 func Initialize(server *gomcc.Server) {
+	lastSender = make(map[string]string)
+
 	server.RegisterCommand(&commandCopyLvl)
 	server.RegisterCommand(&commandGoto)
 	server.RegisterCommand(&commandKick)
@@ -29,6 +33,7 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&commandMe)
 	server.RegisterCommand(&commandNewLvl)
 	server.RegisterCommand(&commandNick)
+	server.RegisterCommand(&commandR)
 	server.RegisterCommand(&commandSave)
 	server.RegisterCommand(&commandSay)
 	server.RegisterCommand(&commandSetSpawn)
