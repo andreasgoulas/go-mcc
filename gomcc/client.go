@@ -27,6 +27,7 @@ import (
 	"math"
 	"net"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -52,6 +53,9 @@ type Client struct {
 	clickDistance           float64
 	heldBlock               BlockID
 
+	selections     map[int]Selection
+	selectionsLock sync.Mutex
+
 	pingTicker *time.Ticker
 }
 
@@ -61,6 +65,7 @@ func NewClient(conn net.Conn, server *Server) *Client {
 		conn:          conn,
 		extensions:    make(map[string]int),
 		clickDistance: 5.0,
+		selections:    make(map[int]Selection),
 	}
 }
 
@@ -188,18 +193,83 @@ func (client *Client) HeldBlock() BlockID {
 }
 
 func (client *Client) SetHeldBlock(block BlockID, lock bool) {
-	if client.loggedIn == 1 && client.HasExtension("HeldBlock") {
-		preventChange := byte(0)
-		if lock {
-			preventChange = 1
-		}
-
-		client.sendPacket(&packetHoldThis{
-			packetTypeHoldThis,
-			client.convertBlock(block),
-			preventChange,
-		})
+	if client.loggedIn == 0 || !client.HasExtension("HeldBlock") {
+		return
 	}
+
+	preventChange := byte(0)
+	if lock {
+		preventChange = 1
+	}
+
+	client.sendPacket(&packetHoldThis{
+		packetTypeHoldThis,
+		client.convertBlock(block),
+		preventChange,
+	})
+}
+
+func (client *Client) Selection(id int) (sel Selection, ok bool) {
+	client.selectionsLock.Lock()
+	sel, ok = client.selections[id]
+	client.selectionsLock.Unlock()
+	return
+}
+
+func (client *Client) SetSelection(id int, sel Selection) int {
+	if client.loggedIn == 0 || !client.HasExtension("SelectionCuboid") {
+		return -1
+	}
+
+	client.selectionsLock.Lock()
+	defer client.selectionsLock.Unlock()
+
+	if id < 0 {
+		for i := 0; i < 128; i++ {
+			_, ok := client.selections[i]
+			if !ok {
+				id = i
+				break
+			}
+		}
+	}
+
+	if id < 0 || id >= 128 {
+		return -1
+	}
+
+	client.sendPacket(&packetMakeSelection{
+		packetTypeMakeSelection,
+		byte(id),
+		padString(sel.Label),
+		int16(sel.Min.X), int16(sel.Min.Y), int16(sel.Min.Z),
+		int16(sel.Max.X), int16(sel.Max.Y), int16(sel.Max.Z),
+		int16(sel.Color.R), int16(sel.Color.G), int16(sel.Color.B), int16(sel.Color.A),
+	})
+
+	client.selections[id] = sel
+	return id
+}
+
+func (client *Client) ResetSelection(id int) {
+	if client.loggedIn == 0 || !client.HasExtension("SelectionCuboid") {
+		return
+	}
+
+	client.selectionsLock.Lock()
+	defer client.selectionsLock.Unlock()
+
+	_, ok := client.selections[id]
+	if !ok {
+		return
+	}
+
+	client.sendPacket(&packetRemoveSelection{
+		packetTypeRemoveSelection,
+		byte(id),
+	})
+
+	delete(client.selections, id)
 }
 
 func (client *Client) SendMessage(message string) {

@@ -19,39 +19,7 @@ package gomcc
 import (
 	"bytes"
 	"strings"
-	"unicode"
 )
-
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
-func IsValidName(name string) bool {
-	if len(name) < 3 || len(name) > 16 {
-		return false
-	}
-
-	for _, c := range name {
-		if c > unicode.MaxASCII || (!unicode.IsLetter(c) && !unicode.IsDigit(c) && c != '_') {
-			return false
-		}
-	}
-
-	return true
-}
-
-func IsValidMessage(message string) bool {
-	for _, c := range message {
-		if c > unicode.MaxASCII || !unicode.IsPrint(c) || c == '&' {
-			return false
-		}
-	}
-
-	return true
-}
 
 var Extensions = []struct {
 	Name    string
@@ -62,6 +30,7 @@ var Extensions = []struct {
 	{"HeldBlock", 1},
 	{"ExtPlayerList", 2},
 	{"LongerMessages", 1},
+	{"SelectionCuboid", 1},
 	{"ChangeModel", 1},
 	{"EnvWeatherType", 1},
 	{"PlayerClick", 1},
@@ -95,6 +64,8 @@ const (
 	packetTypeHoldThis                = 0x14
 	packetTypeExtAddPlayerName        = 0x16
 	packetTypeExtRemovePlayerName     = 0x18
+	packetTypeMakeSelection           = 0x1a
+	packetTypeRemoveSelection         = 0x1b
 	packetTypeChangeModel             = 0x1d
 	packetTypeEnvSetWeatherType       = 0x1f
 	packetTypeExtAddEntity2           = 0x21
@@ -253,6 +224,20 @@ type packetExtAddPlayerName struct {
 type packetExtRemovePlayerName struct {
 	PacketID byte
 	NameID   int16
+}
+
+type packetMakeSelection struct {
+	PacketID               byte
+	SelectionID            byte
+	Label                  [64]byte
+	StartX, StartY, StartZ int16
+	EndX, EndY, Endz       int16
+	R, G, B, Opacity       int16
+}
+
+type packetRemoveSelection struct {
+	PacketID    byte
+	SelectionID byte
 }
 
 type packetChangeModel struct {
