@@ -289,7 +289,7 @@ func (entity *Entity) despawn(level *Level) {
 		client.sendDespawn(entity)
 	})
 
-	if entity.client != nil && entity.client.loggedIn == 1 {
+	if entity.client != nil && entity.client.state == stateGame {
 		entity.client.sendDespawn(entity)
 		level.ForEachEntity(func(other *Entity) {
 			entity.client.sendDespawn(other)

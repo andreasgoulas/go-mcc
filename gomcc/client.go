@@ -22,7 +22,6 @@ import (
 	"compress/gzip"
 	"crypto/md5"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"math"
 	"net"
@@ -32,17 +31,22 @@ import (
 	"time"
 )
 
+const (
+	stateClosed = 0
+	stateLogin  = 1
+	stateGame   = 2
+)
+
 type Client struct {
 	NickName string
 
 	entity *Entity
 	server *Server
 
-	conn      net.Conn
-	connected uint32
-	loggedIn  uint32
-	name      string
+	conn  net.Conn
+	state uint32
 
+	name        string
 	operator    bool
 	permissions [][]string
 
@@ -63,6 +67,7 @@ func NewClient(conn net.Conn, server *Server) *Client {
 	return &Client{
 		server:        server,
 		conn:          conn,
+		state:         stateClosed,
 		clickDistance: 5.0,
 		selections:    make(map[int]Selection),
 	}
@@ -114,20 +119,19 @@ func (client *Client) HasExtension(extension uint) bool {
 }
 
 func (client *Client) Disconnect() {
-	if client.connected == 0 {
+	if client.state == stateClosed {
 		return
 	}
-	atomic.StoreUint32(&client.connected, 0)
 
 	if client.pingTicker != nil {
 		client.pingTicker.Stop()
 	}
 
+	loggedIn := client.state == stateGame
+	atomic.StoreUint32(&client.state, stateClosed)
 	client.conn.Close()
 
-	if client.loggedIn == 1 {
-		atomic.StoreUint32(&client.loggedIn, 0)
-
+	if loggedIn {
 		event := EventPlayerQuit{client.entity}
 		client.server.FireEvent(EventTypePlayerQuit, &event)
 
@@ -156,7 +160,8 @@ func (client *Client) Operator() bool {
 }
 
 func (client *Client) SetOperator(value bool) {
-	if client.loggedIn == 1 && value != client.operator {
+	client.operator = value
+	if client.state == stateGame && value != client.operator {
 		userType := byte(0x00)
 		if value {
 			userType = 0x64
@@ -167,8 +172,6 @@ func (client *Client) SetOperator(value bool) {
 			userType,
 		})
 	}
-
-	client.operator = value
 }
 
 func (client *Client) ClickDistance() float64 {
@@ -176,14 +179,13 @@ func (client *Client) ClickDistance() float64 {
 }
 
 func (client *Client) SetClickDistance(value float64) {
-	if client.loggedIn == 1 && client.cpe[CpeClickDistance] {
+	client.clickDistance = value
+	if client.state == stateGame && client.cpe[CpeClickDistance] {
 		client.sendPacket(&packetSetClickDistance{
 			packetTypeSetClickDistance,
 			int16(value * 32),
 		})
 	}
-
-	client.clickDistance = value
 }
 
 func (client *Client) HeldBlock() BlockID {
@@ -191,7 +193,7 @@ func (client *Client) HeldBlock() BlockID {
 }
 
 func (client *Client) SetHeldBlock(block BlockID, lock bool) {
-	if client.loggedIn == 0 || !client.cpe[CpeHeldBlock] {
+	if client.state != stateGame || !client.cpe[CpeHeldBlock] {
 		return
 	}
 
@@ -215,7 +217,7 @@ func (client *Client) Selection(id int) (sel Selection, ok bool) {
 }
 
 func (client *Client) SetSelection(id int, sel Selection) int {
-	if client.loggedIn == 0 || !client.cpe[CpeSelectionCuboid] {
+	if client.state != stateGame || !client.cpe[CpeSelectionCuboid] {
 		return -1
 	}
 
@@ -250,7 +252,7 @@ func (client *Client) SetSelection(id int, sel Selection) int {
 }
 
 func (client *Client) ResetSelection(id int) {
-	if client.loggedIn == 0 || !client.cpe[CpeSelectionCuboid] {
+	if client.state != stateGame || !client.cpe[CpeSelectionCuboid] {
 		return
 	}
 
@@ -298,7 +300,7 @@ func (client *Client) SetSpawn() {
 }
 
 func (client *Client) sendPacket(packet interface{}) {
-	if client.connected == 0 {
+	if client.state == stateClosed {
 		return
 	}
 
@@ -319,7 +321,7 @@ func (client *Client) convertBlock(block BlockID) byte {
 }
 
 func (client *Client) sendLevel(level *Level) {
-	if client.loggedIn == 0 {
+	if client.state != stateGame {
 		return
 	}
 
@@ -376,7 +378,7 @@ func (client *Client) sendLevel(level *Level) {
 }
 
 func (client *Client) sendSpawn(entity *Entity) {
-	if client.loggedIn == 0 {
+	if client.state != stateGame {
 		return
 	}
 
@@ -417,7 +419,7 @@ func (client *Client) sendSpawn(entity *Entity) {
 }
 
 func (client *Client) sendDespawn(entity *Entity) {
-	if client.loggedIn == 0 {
+	if client.state != stateGame {
 		return
 	}
 
@@ -433,7 +435,7 @@ func (client *Client) sendDespawn(entity *Entity) {
 }
 
 func (client *Client) sendTeleport(entity *Entity) {
-	if client.loggedIn == 0 {
+	if client.state != stateGame {
 		return
 	}
 
@@ -454,7 +456,7 @@ func (client *Client) sendTeleport(entity *Entity) {
 }
 
 func (client *Client) sendBlockChange(x, y, z uint, block BlockID) {
-	if client.loggedIn == 0 {
+	if client.state != stateGame {
 		return
 	}
 
@@ -482,7 +484,7 @@ func (client *Client) sendCPE() {
 }
 
 func (client *Client) sendAddPlayerList(entity *Entity) {
-	if client.loggedIn == 0 || !client.cpe[CpeExtPlayerList] {
+	if client.state != stateGame || !client.cpe[CpeExtPlayerList] {
 		return
 	}
 
@@ -502,7 +504,7 @@ func (client *Client) sendAddPlayerList(entity *Entity) {
 }
 
 func (client *Client) sendRemovePlayerList(entity *Entity) {
-	if client.loggedIn == 0 || !client.cpe[CpeExtPlayerList] {
+	if client.state != stateGame || !client.cpe[CpeExtPlayerList] {
 		return
 	}
 
@@ -518,7 +520,7 @@ func (client *Client) sendRemovePlayerList(entity *Entity) {
 }
 
 func (client *Client) sendChangeModel(entity *Entity) {
-	if client.loggedIn == 0 || !client.cpe[CpeChangeModel] {
+	if client.state != stateGame || !client.cpe[CpeChangeModel] {
 		return
 	}
 
@@ -535,7 +537,7 @@ func (client *Client) sendChangeModel(entity *Entity) {
 }
 
 func (client *Client) sendWeather(weather WeatherType) {
-	if client.loggedIn == 0 || !client.cpe[CpeEnvWeatherType] {
+	if client.state != stateGame || !client.cpe[CpeEnvWeatherType] {
 		return
 	}
 
@@ -546,7 +548,7 @@ func (client *Client) sendWeather(weather WeatherType) {
 }
 
 func (client *Client) sendTexturePack(texturePack string) {
-	if client.loggedIn == 0 || !client.cpe[CpeEnvMapAspect] {
+	if client.state != stateGame || !client.cpe[CpeEnvMapAspect] {
 		return
 	}
 
@@ -564,7 +566,7 @@ func (client *Client) sendEnvProp(id byte, value int) {
 }
 
 func (client *Client) sendEnvConfig(env EnvConfig) {
-	if client.loggedIn == 0 || !client.cpe[CpeEnvMapAspect] {
+	if client.state != stateGame || !client.cpe[CpeEnvMapAspect] {
 		return
 	}
 
@@ -587,8 +589,8 @@ func (client *Client) sendEnvConfig(env EnvConfig) {
 
 func (client *Client) handle() {
 	buffer := make([]byte, 256)
-	atomic.StoreUint32(&client.connected, 1)
-	for client.connected == 1 {
+	atomic.StoreUint32(&client.state, stateLogin)
+	for client.state != stateClosed {
 		buffer = buffer[:1]
 		_, err := io.ReadFull(client.conn, buffer)
 		if err != nil {
@@ -619,7 +621,7 @@ func (client *Client) handle() {
 			size = 4
 
 		default:
-			fmt.Printf("Invalid Packet: %d\n", id)
+			client.Kick("Invalid Packet")
 			continue
 		}
 
@@ -655,7 +657,7 @@ func (client *Client) handle() {
 }
 
 func (client *Client) login() {
-	if client.loggedIn == 1 {
+	if client.state != stateLogin {
 		return
 	}
 
@@ -700,19 +702,20 @@ func (client *Client) login() {
 		return
 	}
 
-	atomic.StoreUint32(&client.loggedIn, 1)
-	client.server.AddClient(client)
-	client.server.BroadcastMessage(ColorYellow + client.entity.name + " has joined the game!")
-	if client.server.AddEntity(client.entity) == 0xff {
+	if !client.server.AddEntity(client.entity) {
 		client.Kick("Server full!")
 		return
 	}
 
+	atomic.StoreUint32(&client.state, stateGame)
+	client.server.AddClient(client)
 	client.server.ForEachEntity(func(entity *Entity) {
 		if entity != client.entity {
 			client.sendAddPlayerList(entity)
 		}
 	})
+
+	client.server.BroadcastMessage(ColorYellow + client.entity.name + " has joined the game!")
 
 	if client.server.MainLevel != nil {
 		client.entity.TeleportLevel(client.server.MainLevel)
@@ -740,7 +743,7 @@ func (client *Client) verify(key []byte) bool {
 }
 
 func (client *Client) handleIdentification(reader io.Reader) {
-	if client.loggedIn == 1 {
+	if client.state != stateLogin {
 		return
 	}
 
@@ -783,7 +786,7 @@ func (client *Client) revertBlock(x, y, z uint) {
 }
 
 func (client *Client) handleSetBlock(reader io.Reader) {
-	if client.loggedIn == 0 {
+	if client.state != stateGame {
 		return
 	}
 
@@ -843,7 +846,7 @@ func (client *Client) handleSetBlock(reader io.Reader) {
 }
 
 func (client *Client) handlePlayerTeleport(reader io.Reader) {
-	if client.loggedIn == 0 {
+	if client.state != stateGame {
 		return
 	}
 
@@ -878,7 +881,7 @@ func (client *Client) handlePlayerTeleport(reader io.Reader) {
 }
 
 func (client *Client) handleMessage(reader io.Reader) {
-	if client.loggedIn == 0 {
+	if client.state != stateGame {
 		return
 	}
 
@@ -906,6 +909,10 @@ func (client *Client) handleMessage(reader io.Reader) {
 }
 
 func (client *Client) handleExtInfo(reader io.Reader) {
+	if client.state != stateLogin {
+		return
+	}
+
 	packet := packetExtInfo{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
@@ -916,6 +923,10 @@ func (client *Client) handleExtInfo(reader io.Reader) {
 }
 
 func (client *Client) handleExtEntry(reader io.Reader) {
+	if client.state != stateLogin {
+		return
+	}
+
 	packet := packetExtEntry{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
@@ -944,6 +955,10 @@ func (client *Client) handleCustomBlockSupportLevel(reader io.Reader) {
 }
 
 func (client *Client) handlePlayerClicked(reader io.Reader) {
+	if client.state != stateGame {
+		return
+	}
+
 	packet := packetPlayerClicked{}
 	binary.Read(reader, binary.BigEndian, &packet)
 

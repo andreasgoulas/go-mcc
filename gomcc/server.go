@@ -330,13 +330,13 @@ func (server *Server) UnloadAll() {
 	}
 }
 
-func (server *Server) AddEntity(entity *Entity) byte {
+func (server *Server) AddEntity(entity *Entity) bool {
 	server.entitiesLock.Lock()
 	defer server.entitiesLock.Unlock()
 
 	entity.id = server.generateID()
 	if entity.id == 0xff {
-		return 0xff
+		return false
 	}
 
 	server.entities = append(server.entities, entity)
@@ -344,7 +344,7 @@ func (server *Server) AddEntity(entity *Entity) byte {
 		client.sendAddPlayerList(entity)
 	})
 
-	return entity.id
+	return true
 }
 
 func (server *Server) RemoveEntity(entity *Entity) {
