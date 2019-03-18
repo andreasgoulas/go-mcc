@@ -21,7 +21,26 @@ import (
 	"strings"
 )
 
-var Extensions = []struct {
+const (
+	CpeClickDistance = iota
+	CpeCustomBlocks
+	CpeHeldBlock
+	CpeExtPlayerList
+	CpeLongerMessages
+	CpeSelectionCuboid
+	CpeChangeModel
+	CpeEnvWeatherType
+	CpeMessageTypes
+	CpePlayerClick
+	CpeEnvMapAspect
+	CpeFastMap
+	CpeTwoWayPing
+
+	CpeMax   = CpeTwoWayPing
+	CpeCount = CpeMax + 1
+)
+
+var Extensions = [CpeCount]struct {
 	Name    string
 	Version int
 }{

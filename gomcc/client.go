@@ -46,12 +46,12 @@ type Client struct {
 	operator    bool
 	permissions [][]string
 
-	remainingExtensions     uint
-	extensions              map[string]int
-	message                 string
-	customBlockSupportLevel byte
-	clickDistance           float64
-	heldBlock               BlockID
+	cpe           [CpeCount]bool
+	remExtensions uint
+	message       string
+	cpeBlockLevel byte
+	clickDistance float64
+	heldBlock     BlockID
 
 	selections     map[int]Selection
 	selectionsLock sync.Mutex
@@ -63,7 +63,6 @@ func NewClient(conn net.Conn, server *Server) *Client {
 	return &Client{
 		server:        server,
 		conn:          conn,
-		extensions:    make(map[string]int),
 		clickDistance: 5.0,
 		selections:    make(map[int]Selection),
 	}
@@ -110,9 +109,8 @@ func (client *Client) HasPermission(permission string) bool {
 	return false
 }
 
-func (client *Client) HasExtension(extension string) (f bool) {
-	_, f = client.extensions[extension]
-	return
+func (client *Client) HasExtension(extension uint) bool {
+	return client.cpe[extension]
 }
 
 func (client *Client) Disconnect() {
@@ -178,7 +176,7 @@ func (client *Client) ClickDistance() float64 {
 }
 
 func (client *Client) SetClickDistance(value float64) {
-	if client.loggedIn == 1 && client.HasExtension("ClickDistance") {
+	if client.loggedIn == 1 && client.cpe[CpeClickDistance] {
 		client.sendPacket(&packetSetClickDistance{
 			packetTypeSetClickDistance,
 			int16(value * 32),
@@ -193,7 +191,7 @@ func (client *Client) HeldBlock() BlockID {
 }
 
 func (client *Client) SetHeldBlock(block BlockID, lock bool) {
-	if client.loggedIn == 0 || !client.HasExtension("HeldBlock") {
+	if client.loggedIn == 0 || !client.cpe[CpeHeldBlock] {
 		return
 	}
 
@@ -217,7 +215,7 @@ func (client *Client) Selection(id int) (sel Selection, ok bool) {
 }
 
 func (client *Client) SetSelection(id int, sel Selection) int {
-	if client.loggedIn == 0 || !client.HasExtension("SelectionCuboid") {
+	if client.loggedIn == 0 || !client.cpe[CpeSelectionCuboid] {
 		return -1
 	}
 
@@ -252,7 +250,7 @@ func (client *Client) SetSelection(id int, sel Selection) int {
 }
 
 func (client *Client) ResetSelection(id int) {
-	if client.loggedIn == 0 || !client.HasExtension("SelectionCuboid") {
+	if client.loggedIn == 0 || !client.cpe[CpeSelectionCuboid] {
 		return
 	}
 
@@ -277,7 +275,7 @@ func (client *Client) SendMessage(message string) {
 }
 
 func (client *Client) SendMessageExt(msgType int, message string) {
-	if msgType != MessageChat && !client.HasExtension("MessageTypes") {
+	if msgType != MessageChat && !client.cpe[CpeMessageTypes] {
 		if msgType == MessageAnnouncement {
 			msgType = MessageChat
 		} else {
@@ -313,7 +311,7 @@ func (client *Client) sendPacket(packet interface{}) {
 }
 
 func (client *Client) convertBlock(block BlockID) byte {
-	if client.customBlockSupportLevel < 1 {
+	if client.cpeBlockLevel < 1 {
 		return byte(FallbackBlock(block))
 	}
 
@@ -326,7 +324,7 @@ func (client *Client) sendLevel(level *Level) {
 	}
 
 	var buffer bytes.Buffer
-	if client.HasExtension("FastMap") {
+	if client.cpe[CpeFastMap] {
 		client.sendPacket(&packetLevelInitializeExt{
 			packetTypeLevelInitialize,
 			int32(level.Volume()),
@@ -388,7 +386,7 @@ func (client *Client) sendSpawn(entity *Entity) {
 	}
 
 	location := entity.location
-	if client.HasExtension("ExtPlayerList") {
+	if client.cpe[CpeExtPlayerList] {
 		client.sendPacket(&packetExtAddEntity2{
 			packetTypeExtAddEntity2,
 			id,
@@ -484,7 +482,7 @@ func (client *Client) sendCPE() {
 }
 
 func (client *Client) sendAddPlayerList(entity *Entity) {
-	if client.loggedIn == 0 || !client.HasExtension("ExtPlayerList") {
+	if client.loggedIn == 0 || !client.cpe[CpeExtPlayerList] {
 		return
 	}
 
@@ -504,7 +502,7 @@ func (client *Client) sendAddPlayerList(entity *Entity) {
 }
 
 func (client *Client) sendRemovePlayerList(entity *Entity) {
-	if client.loggedIn == 0 || !client.HasExtension("ExtPlayerList") {
+	if client.loggedIn == 0 || !client.cpe[CpeExtPlayerList] {
 		return
 	}
 
@@ -520,7 +518,7 @@ func (client *Client) sendRemovePlayerList(entity *Entity) {
 }
 
 func (client *Client) sendChangeModel(entity *Entity) {
-	if client.loggedIn == 0 || !client.HasExtension("ChangeModel") {
+	if client.loggedIn == 0 || !client.cpe[CpeChangeModel] {
 		return
 	}
 
@@ -537,7 +535,7 @@ func (client *Client) sendChangeModel(entity *Entity) {
 }
 
 func (client *Client) sendWeather(weather WeatherType) {
-	if client.loggedIn == 0 || !client.HasExtension("EnvWeatherType") {
+	if client.loggedIn == 0 || !client.cpe[CpeEnvWeatherType] {
 		return
 	}
 
@@ -548,7 +546,7 @@ func (client *Client) sendWeather(weather WeatherType) {
 }
 
 func (client *Client) sendTexturePack(texturePack string) {
-	if client.loggedIn == 0 || !client.HasExtension("EnvMapAspect") {
+	if client.loggedIn == 0 || !client.cpe[CpeEnvMapAspect] {
 		return
 	}
 
@@ -566,7 +564,7 @@ func (client *Client) sendEnvProp(id byte, value int) {
 }
 
 func (client *Client) sendEnvConfig(env EnvConfig) {
-	if client.loggedIn == 0 || !client.HasExtension("EnvMapAspect") {
+	if client.loggedIn == 0 || !client.cpe[CpeEnvMapAspect] {
 		return
 	}
 
@@ -673,7 +671,7 @@ func (client *Client) login() {
 		}
 	}
 
-	if client.HasExtension("CustomBlocks") {
+	if client.cpe[CpeCustomBlocks] {
 		client.sendPacket(&packetCustomBlockSupportLevel{
 			packetTypeCustomBlockSupportLevel,
 			1,
@@ -821,7 +819,7 @@ func (client *Client) handleSetBlock(reader io.Reader) {
 		client.entity.level.SetBlock(x, y, z, BlockAir, true)
 
 	case 0x01:
-		if block > BlockMaxCPE || (client.customBlockSupportLevel < 1 && block > BlockMax) {
+		if block > BlockMaxCPE || (client.cpeBlockLevel < 1 && block > BlockMax) {
 			client.SendMessage("Invalid block!")
 			client.revertBlock(x, y, z)
 			return
@@ -851,7 +849,7 @@ func (client *Client) handlePlayerTeleport(reader io.Reader) {
 
 	packet := packetPlayerTeleport{}
 	binary.Read(reader, binary.BigEndian, &packet)
-	if client.HasExtension("HeldBlock") {
+	if client.cpe[CpeHeldBlock] {
 		client.heldBlock = BlockID(packet.PlayerID)
 	} else if packet.PlayerID != 0xff {
 		return
@@ -888,7 +886,7 @@ func (client *Client) handleMessage(reader io.Reader) {
 	binary.Read(reader, binary.BigEndian, &packet)
 
 	client.message += trimString(packet.Message)
-	if packet.PlayerID != 0x00 && client.HasExtension("LongerMessages") {
+	if packet.PlayerID != 0x00 && client.cpe[CpeLongerMessages] {
 		return
 	}
 
@@ -911,8 +909,8 @@ func (client *Client) handleExtInfo(reader io.Reader) {
 	packet := packetExtInfo{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
-	client.remainingExtensions = uint(packet.ExtensionCount)
-	if client.remainingExtensions == 0 {
+	client.remExtensions = uint(packet.ExtensionCount)
+	if client.remExtensions == 0 {
 		client.login()
 	}
 }
@@ -921,17 +919,17 @@ func (client *Client) handleExtEntry(reader io.Reader) {
 	packet := packetExtEntry{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
-	for _, extension := range Extensions {
+	for i, extension := range Extensions {
 		if extension.Name == trimString(packet.ExtName) {
 			if extension.Version == int(packet.Version) {
-				client.extensions[extension.Name] = int(packet.Version)
+				client.cpe[i] = true
 				break
 			}
 		}
 	}
 
-	client.remainingExtensions--
-	if client.remainingExtensions == 0 {
+	client.remExtensions--
+	if client.remExtensions == 0 {
 		client.login()
 	}
 }
@@ -941,7 +939,7 @@ func (client *Client) handleCustomBlockSupportLevel(reader io.Reader) {
 	binary.Read(reader, binary.BigEndian, &packet)
 
 	if packet.SupportLevel <= 1 {
-		client.customBlockSupportLevel = packet.SupportLevel
+		client.cpeBlockLevel = packet.SupportLevel
 	}
 }
 
