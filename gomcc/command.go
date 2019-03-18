@@ -56,6 +56,17 @@ func ConvertColors(message string) string {
 	return string(result)
 }
 
+const (
+	MessageChat         = 0
+	MessageStatus1      = 1
+	MessageStatus2      = 2
+	MessageStatus3      = 3
+	MessageBottomRight1 = 11
+	MessageBottomRight2 = 12
+	MessageBottomRight3 = 13
+	MessageAnnouncement = 100
+)
+
 // A CommandSender is a generic entity that can execute commands and receive
 // messages.
 type CommandSender interface {

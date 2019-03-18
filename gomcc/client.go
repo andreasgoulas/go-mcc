@@ -273,11 +273,23 @@ func (client *Client) ResetSelection(id int) {
 }
 
 func (client *Client) SendMessage(message string) {
+	client.SendMessageExt(MessageChat, message)
+}
+
+func (client *Client) SendMessageExt(msgType int, message string) {
+	if msgType != MessageChat && !client.HasExtension("MessageTypes") {
+		if msgType == MessageAnnouncement {
+			msgType = MessageChat
+		} else {
+			return
+		}
+	}
+
 	lines := strings.Split(message, "\n")
 	for _, line := range lines {
 		client.sendPacket(&packetMessage{
 			packetTypeMessage,
-			0x00,
+			byte(msgType),
 			padString(line),
 		})
 	}

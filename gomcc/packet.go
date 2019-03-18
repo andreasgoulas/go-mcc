@@ -33,6 +33,7 @@ var Extensions = []struct {
 	{"SelectionCuboid", 1},
 	{"ChangeModel", 1},
 	{"EnvWeatherType", 1},
+	{"MessageTypes", 1},
 	{"PlayerClick", 1},
 	{"EnvMapAspect", 1},
 	{"FastMap", 1},
