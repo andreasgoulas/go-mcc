@@ -46,6 +46,7 @@ type Level struct {
 	server *Server
 	name   string
 
+	MOTD  string
 	Spawn Location
 
 	width, height, length uint

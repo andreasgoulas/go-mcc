@@ -279,10 +279,32 @@ func (client *Client) convertBlock(block BlockID) byte {
 	return byte(block)
 }
 
+func (client *Client) sendMOTD(level *Level) {
+	motd := level.MOTD
+	if len(motd) == 0 {
+		motd = client.server.Config.MOTD
+	}
+
+	userType := byte(0x00)
+	if client.operator {
+		userType = 0x64
+	}
+
+	client.sendPacket(&packetServerIdentification{
+		packetTypeIdentification,
+		0x07,
+		padString(client.server.Config.Name),
+		padString(motd),
+		userType,
+	})
+}
+
 func (client *Client) sendLevel(level *Level) {
 	if client.state != stateGame {
 		return
 	}
+
+	client.sendMOTD(level)
 
 	var buffer bytes.Buffer
 	if client.cpe[CpeFastMap] {
@@ -638,19 +660,6 @@ func (client *Client) login() {
 			1,
 		})
 	}
-
-	userType := byte(0x00)
-	if client.operator {
-		userType = 0x64
-	}
-
-	client.sendPacket(&packetServerIdentification{
-		packetTypeIdentification,
-		0x07,
-		padString(client.server.Config.Name),
-		padString(client.server.Config.MOTD),
-		userType,
-	})
 
 	client.entity = NewEntity(client.NickName, client.server, client)
 
