@@ -351,6 +351,7 @@ func (client *Client) sendLevel(level *Level) {
 
 	client.sendWeather(level.weather)
 	client.sendEnvConfig(level.envConfig)
+	client.sendHackConfig(level.hackConfig)
 
 	client.sendPacket(&packetLevelFinalize{
 		packetTypeLevelFinalize,
@@ -583,6 +584,36 @@ func (client *Client) sendEnvConfig(env EnvConfig) {
 	} else {
 		client.sendEnvProp(8, 0)
 	}
+}
+
+func (client *Client) sendHackConfig(hackConfig HackConfig) {
+	if client.state != stateGame || !client.cpe[CpeHackControl] {
+		return
+	}
+
+	packet := &packetHackControl{
+		packetTypeHackControl,
+		0, 0, 0, 0, 0,
+		int16(hackConfig.JumpHeight),
+	}
+
+	if hackConfig.Flying {
+		packet.Flying = 1
+	}
+	if hackConfig.NoClip {
+		packet.NoClip = 1
+	}
+	if hackConfig.Speeding {
+		packet.Speeding = 1
+	}
+	if hackConfig.SpawnControl {
+		packet.SpawnControl = 1
+	}
+	if hackConfig.ThirdPersonView {
+		packet.ThirdPersonView = 1
+	}
+
+	client.sendPacket(packet)
 }
 
 func (client *Client) handle() {

@@ -42,6 +42,15 @@ type EnvConfig struct {
 	SideOffset      int
 }
 
+type HackConfig struct {
+	Flying          bool
+	NoClip          bool
+	Speeding        bool
+	SpawnControl    bool
+	ThirdPersonView bool
+	JumpHeight      int
+}
+
 type Level struct {
 	server *Server
 	name   string
@@ -55,6 +64,7 @@ type Level struct {
 	weather     WeatherType
 	texturePack string
 	envConfig   EnvConfig
+	hackConfig  HackConfig
 }
 
 func NewLevel(name string, width, height, length uint) *Level {
@@ -85,6 +95,14 @@ func NewLevel(name string, width, height, length uint) *Level {
 			WeatherFade:     1.0,
 			ExpFog:          false,
 			SideOffset:      -2,
+		},
+		hackConfig: HackConfig{
+			Flying:          false,
+			NoClip:          false,
+			Speeding:        false,
+			SpawnControl:    true,
+			ThirdPersonView: true,
+			JumpHeight:      -1,
 		},
 	}
 }
@@ -222,6 +240,21 @@ func (level *Level) SetEnvConfig(envConfig EnvConfig) {
 	level.envConfig = envConfig
 	level.ForEachClient(func(client *Client) {
 		client.sendEnvConfig(envConfig)
+	})
+}
+
+func (level *Level) HackConfig() HackConfig {
+	return level.hackConfig
+}
+
+func (level *Level) SetHackConfig(hackConfig HackConfig) {
+	if hackConfig == level.hackConfig {
+		return
+	}
+
+	level.hackConfig = hackConfig
+	level.ForEachClient(func(client *Client) {
+		client.sendHackConfig(hackConfig)
 	})
 }
 

@@ -30,6 +30,7 @@ const (
 	CpeSelectionCuboid
 	CpeChangeModel
 	CpeEnvWeatherType
+	CpeHackControl
 	CpeMessageTypes
 	CpePlayerClick
 	CpeEnvMapAspect
@@ -53,6 +54,7 @@ var Extensions = [CpeCount]struct {
 	{"SelectionCuboid", 1},
 	{"ChangeModel", 1},
 	{"EnvWeatherType", 1},
+	{"HackControl", 1},
 	{"MessageTypes", 1},
 	{"PlayerClick", 1},
 	{"EnvMapAspect", 1},
@@ -90,6 +92,7 @@ const (
 	packetTypeRemoveSelection         = 0x1b
 	packetTypeChangeModel             = 0x1d
 	packetTypeEnvSetWeatherType       = 0x1f
+	packetTypeHackControl             = 0x20
 	packetTypeExtAddEntity2           = 0x21
 	packetTypePlayerClicked           = 0x22
 	packetTypeSetMapEnvUrl            = 0x28
@@ -271,6 +274,16 @@ type packetChangeModel struct {
 type packetEnvSetWeatherType struct {
 	PacketID    byte
 	WeatherType byte
+}
+
+type packetHackControl struct {
+	PacketID        byte
+	Flying          byte
+	NoClip          byte
+	Speeding        byte
+	SpawnControl    byte
+	ThirdPersonView byte
+	JumpHeight      int16
 }
 
 type packetExtAddEntity2 struct {
