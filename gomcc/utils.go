@@ -17,7 +17,6 @@
 package gomcc
 
 import (
-	"image/color"
 	"unicode"
 )
 
@@ -56,8 +55,6 @@ type BlockPos struct {
 	X, Y, Z uint
 }
 
-type Selection struct {
-	Label    string
+type AABB struct {
 	Min, Max BlockPos
-	Color    color.RGBA
 }
