@@ -358,6 +358,23 @@ func (client *Client) sendLevel(level *Level) {
 	})
 }
 
+func (client *Client) reload() {
+	level := client.entity.level
+	if level == nil {
+		return
+	}
+
+	level.ForEachEntity(func(other *Entity) {
+		client.sendDespawn(other)
+	})
+
+	client.sendLevel(level)
+
+	level.ForEachEntity(func(other *Entity) {
+		client.sendSpawn(other)
+	})
+}
+
 func (client *Client) sendSpawn(entity *Entity) {
 	if client.state != stateGame {
 		return

@@ -224,3 +224,14 @@ func (level *Level) SetEnvConfig(envConfig EnvConfig) {
 		client.sendEnvConfig(envConfig)
 	})
 }
+
+func (level *Level) SetMOTD(motd string) {
+	level.MOTD = motd
+	level.ForEachClient(func(client *Client) {
+		if client.cpe[CpeInstantMOTD] {
+			client.sendMOTD(level)
+		} else {
+			client.reload()
+		}
+	})
+}

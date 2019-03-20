@@ -277,7 +277,7 @@ func (entity *Entity) spawn(level *Level) {
 
 	if entity.client != nil {
 		entity.client.sendLevel(level)
-		entity.client.SetSpawn()
+		entity.client.sendSpawn(entity)
 		level.ForEachEntity(func(other *Entity) {
 			entity.client.sendSpawn(other)
 		})

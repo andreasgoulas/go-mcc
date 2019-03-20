@@ -33,10 +33,11 @@ const (
 	CpeMessageTypes
 	CpePlayerClick
 	CpeEnvMapAspect
-	CpeFastMap
 	CpeTwoWayPing
+	CpeInstantMOTD
+	CpeFastMap
 
-	CpeMax   = CpeTwoWayPing
+	CpeMax   = CpeFastMap
 	CpeCount = CpeMax + 1
 )
 
@@ -55,8 +56,9 @@ var Extensions = [CpeCount]struct {
 	{"MessageTypes", 1},
 	{"PlayerClick", 1},
 	{"EnvMapAspect", 1},
-	{"FastMap", 1},
 	{"TwoWayPing", 1},
+	{"InstantMOTD", 1},
+	{"FastMap", 1},
 }
 
 const (
