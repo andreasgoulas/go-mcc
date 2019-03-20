@@ -33,6 +33,7 @@ const (
 	CpeHackControl
 	CpeMessageTypes
 	CpePlayerClick
+	CpeBulkBlockUpdate
 	CpeEnvMapAspect
 	CpeTwoWayPing
 	CpeInstantMOTD
@@ -57,6 +58,7 @@ var Extensions = [CpeCount]struct {
 	{"HackControl", 1},
 	{"MessageTypes", 1},
 	{"PlayerClick", 1},
+	{"BulkBlockUpdate", 1},
 	{"EnvMapAspect", 1},
 	{"TwoWayPing", 1},
 	{"InstantMOTD", 1},
@@ -95,6 +97,7 @@ const (
 	packetTypeHackControl             = 0x20
 	packetTypeExtAddEntity2           = 0x21
 	packetTypePlayerClicked           = 0x22
+	packetTypeBulkBlockUpdate         = 0x26
 	packetTypeSetMapEnvUrl            = 0x28
 	packetTypeSetMapEnvProperty       = 0x29
 	packetTypeTwoWayPing              = 0x2b
@@ -302,6 +305,13 @@ type packetPlayerClicked struct {
 	TargetID               byte
 	BlockX, BlockY, BlockZ int16
 	BlockFace              byte
+}
+
+type packetBulkBlockUpdate struct {
+	PacketID byte
+	Count    byte
+	Indices  [256]int32
+	Blocks   [256]byte
 }
 
 type packetSetMapEnvUrl struct {

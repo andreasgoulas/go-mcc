@@ -155,6 +155,13 @@ func (level *Level) Index(x, y, z uint) uint {
 	return x + level.width*(z+level.length*y)
 }
 
+func (level *Level) Position(index uint) (x, y, z uint) {
+	x = index % level.width
+	y = (index / level.width) / level.length
+	z = (index / level.width) % level.length
+	return
+}
+
 func (level *Level) GetBlock(x, y, z uint) BlockID {
 	if x < level.width && y < level.height && z < level.length {
 		return level.blocks[level.Index(x, y, z)]
@@ -267,4 +274,56 @@ func (level *Level) SetMOTD(motd string) {
 			client.reload()
 		}
 	})
+}
+
+type BlockBuffer struct {
+	level   *Level
+	count   uint
+	indices [256]uint
+	blocks  [256]BlockID
+}
+
+func MakeBlockBuffer(level *Level) BlockBuffer {
+	return BlockBuffer{level: level}
+}
+
+func (buffer *BlockBuffer) Set(x, y, z uint, block BlockID) {
+	buffer.indices[buffer.count] = buffer.level.Index(x, y, z)
+	buffer.blocks[buffer.count] = block
+	buffer.count++
+	if buffer.count >= 256 {
+		buffer.Flush()
+	}
+}
+
+func (buffer *BlockBuffer) Flush() {
+	for i := uint(0); i < buffer.count; i++ {
+		index := buffer.indices[i]
+		buffer.level.blocks[index] = buffer.blocks[i]
+	}
+
+	buffer.level.ForEachClient(func(client *Client) {
+		if client.cpe[CpeBulkBlockUpdate] {
+			packet := &packetBulkBlockUpdate{
+				packetTypeBulkBlockUpdate,
+				byte(buffer.count),
+				[256]int32{},
+				[256]byte{},
+			}
+
+			for i := uint(0); i < buffer.count; i++ {
+				packet.Indices[i] = int32(buffer.indices[i])
+				packet.Blocks[i] = client.convertBlock(buffer.blocks[i])
+			}
+
+			client.sendPacket(packet)
+		} else {
+			for i := uint(0); i < buffer.count; i++ {
+				x, y, z := buffer.level.Position(buffer.indices[i])
+				client.sendBlockChange(x, y, z, buffer.blocks[i])
+			}
+		}
+	})
+
+	buffer.count = 0
 }
