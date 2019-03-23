@@ -88,7 +88,8 @@ func handleR(sender gomcc.CommandSender, command *gomcc.Command, message string)
 		return
 	}
 
-	player := sender.Server().FindClient(lastSender[sender.Name()])
+	lastSender := PlayerData(sender.Name()).LastSender
+	player := sender.Server().FindClient(lastSender)
 	if player == nil {
 		sender.SendMessage("Player not found")
 		return
@@ -98,7 +99,7 @@ func handleR(sender gomcc.CommandSender, command *gomcc.Command, message string)
 	sender.SendMessage("[me -> " + player.Name() + "] " + message)
 	player.SendMessage("[" + sender.Name() + " -> me] " + message)
 
-	lastSender[player.Name()] = sender.Name()
+	PlayerData(player.Name()).LastSender = sender.Name()
 }
 
 var commandSay = gomcc.Command{
@@ -141,5 +142,5 @@ func handleTell(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	sender.SendMessage("[me -> " + player.Name() + "] " + message)
 	player.SendMessage("[" + sender.Name() + " -> me] " + message)
 
-	lastSender[player.Name()] = sender.Name()
+	PlayerData(player.Name()).LastSender = sender.Name()
 }

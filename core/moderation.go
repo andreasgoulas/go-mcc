@@ -23,6 +23,36 @@ import (
 	"Go-MCC/gomcc"
 )
 
+var commandBack = gomcc.Command{
+	Name:        "back",
+	Description: "Return to your location before teleportation.",
+	Permission:  "core.back",
+	Handler:     handleBack,
+}
+
+func handleBack(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	client, ok := sender.(*gomcc.Client)
+	if !ok {
+		sender.SendMessage("You are not a player")
+		return
+	}
+
+	if len(message) > 0 {
+		sender.SendMessage("Usage: " + command.Name)
+		return
+	}
+
+	data := PlayerData(sender.Name())
+	if data.LastLevel == nil {
+		sender.SendMessage("Location not found")
+		return
+	}
+
+	player := client.Entity()
+	player.TeleportLevel(data.LastLevel)
+	player.Teleport(data.LastLocation)
+}
+
 var commandKick = gomcc.Command{
 	Name:        "kick",
 	Description: "Kick a player from the server.",
@@ -101,6 +131,9 @@ func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 	}
 
 	player := client.Entity()
+	lastLevel := player.Level()
+	lastLocation := player.Location()
+
 	args := strings.Split(message, " ")
 	if len(args) == 1 && len(args[0]) > 0 {
 		entity := sender.Server().FindEntity(args[0])
@@ -109,11 +142,7 @@ func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 			return
 		}
 
-		level := entity.Level()
-		if level != player.Level() {
-			player.TeleportLevel(level)
-		}
-
+		player.TeleportLevel(entity.Level())
 		player.Teleport(entity.Location())
 	} else if len(args) == 3 {
 		var err error
@@ -140,7 +169,12 @@ func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 		player.Teleport(location)
 	} else {
 		sender.SendMessage("Usage: " + command.Name + " <player> or <x> <y> <z>")
+		return
 	}
+
+	data := PlayerData(sender.Name())
+	data.LastLevel = lastLevel
+	data.LastLocation = lastLocation
 }
 
 var commandSummon = gomcc.Command{

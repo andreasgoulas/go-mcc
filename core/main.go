@@ -20,11 +20,29 @@ import (
 	"Go-MCC/gomcc"
 )
 
-var lastSender map[string]string
+type playerData struct {
+	LastSender string
+
+	LastLevel    *gomcc.Level
+	LastLocation gomcc.Location
+}
+
+var playerTable map[string]*playerData
+
+func PlayerData(name string) *playerData {
+	data, ok := playerTable[name]
+	if !ok {
+		data = &playerData{}
+		playerTable[name] = data
+	}
+
+	return data
+}
 
 func Initialize(server *gomcc.Server) {
-	lastSender = make(map[string]string)
+	playerTable = make(map[string]*playerData)
 
+	server.RegisterCommand(&commandBack)
 	server.RegisterCommand(&commandCopyLvl)
 	server.RegisterCommand(&commandGoto)
 	server.RegisterCommand(&commandKick)
