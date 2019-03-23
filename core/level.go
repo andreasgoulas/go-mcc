@@ -150,8 +150,8 @@ var commandNewLvl = gomcc.Command{
 
 func handleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Split(message, " ")
-	if len(args) != 5 {
-		sender.SendMessage("Usage: " + command.Name + " <name> <width> <height> <length> <theme>")
+	if len(args) < 5 {
+		sender.SendMessage("Usage: " + command.Name + " <name> <width> <height> <length> <theme> <args>")
 		return
 	}
 
@@ -173,7 +173,7 @@ func handleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message st
 		return
 	}
 
-	generator, ok := gomcc.Generators[args[4]]
+	genFunc, ok := gomcc.Generators[args[4]]
 	if !ok {
 		sender.SendMessage("Generator " + args[4] + " not found")
 		return
@@ -191,6 +191,7 @@ func handleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message st
 		return
 	}
 
+	generator := genFunc(args[5:]...)
 	generator.Generate(level)
 
 	sender.Server().AddLevel(level)

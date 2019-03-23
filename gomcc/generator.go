@@ -16,29 +16,54 @@
 
 package gomcc
 
-type LevelGenerator interface {
+import (
+	"strconv"
+)
+
+type Generator interface {
 	Generate(level *Level)
 }
 
-var Generators = map[string]LevelGenerator{
-	"flat": &FlatGenerator{},
+type FlatGenerator struct {
+	GrassHeight  int
+	SurfaceBlock BlockID
+	SoilBlock    BlockID
 }
 
-type FlatGenerator struct {
-	GrassHeight uint
+func newFlatGenerator(args ...string) Generator {
+	grassHeight := 0
+	if len(args) > 0 {
+		grassHeight, _ = strconv.Atoi(args[0])
+	}
+
+	return &FlatGenerator{
+		GrassHeight:  grassHeight,
+		SurfaceBlock: BlockGrass,
+		SoilBlock:    BlockDirt,
+	}
 }
 
 func (generator *FlatGenerator) Generate(level *Level) {
-	grassHeight := generator.GrassHeight
-	if generator.GrassHeight == 0 {
+	grassHeight := uint(generator.GrassHeight)
+	if generator.GrassHeight < 0 {
 		grassHeight = level.height / 2
 	}
 
 	for y := uint(0); y < grassHeight; y++ {
 		for z := uint(0); z < level.length; z++ {
 			for x := uint(0); x < level.width; x++ {
-				level.SetBlock(x, y, z, BlockGrass, false)
+				level.SetBlock(x, y, z, generator.SoilBlock, false)
 			}
 		}
 	}
+
+	for z := uint(0); z < level.length; z++ {
+		for x := uint(0); x < level.width; x++ {
+			level.SetBlock(x, grassHeight, z, generator.SurfaceBlock, false)
+		}
+	}
+}
+
+var Generators = map[string]func(args ...string) Generator{
+	"flat": newFlatGenerator,
 }
