@@ -134,7 +134,7 @@ func (client *Client) Disconnect() {
 	client.conn.Close()
 
 	if loggedIn {
-		event := EventPlayerQuit{client.entity}
+		event := EventPlayerQuit{client}
 		client.server.FireEvent(EventTypePlayerQuit, &event)
 
 		client.entity.TeleportLevel(nil)
@@ -143,9 +143,6 @@ func (client *Client) Disconnect() {
 		client.server.RemoveEntity(client.entity)
 		atomic.AddInt32(&client.server.playerCount, -1)
 	}
-
-	event := EventClientDisconnect{client}
-	client.server.FireEvent(EventTypeClientDisconnect, &event)
 }
 
 func (client *Client) Kick(reason string) {
@@ -696,6 +693,13 @@ func (client *Client) login() {
 		return
 	}
 
+	event := EventPlayerLogin{client, false, ""}
+	client.server.FireEvent(EventTypePlayerLogin, &event)
+	if event.Cancel {
+		client.Kick(event.CancelReason)
+		return
+	}
+
 	for {
 		count := client.server.playerCount
 		if int(count) >= client.server.Config.MaxPlayers {
@@ -717,12 +721,8 @@ func (client *Client) login() {
 
 	client.entity = NewEntity(client.NickName, client.server, client)
 
-	event := EventPlayerJoin{client.entity, false, ""}
-	client.server.FireEvent(EventTypePlayerJoin, &event)
-	if event.Cancel {
-		client.Kick(event.CancelReason)
-		return
-	}
+	joinEvent := EventPlayerJoin{client}
+	client.server.FireEvent(EventTypePlayerJoin, &joinEvent)
 
 	if !client.server.AddEntity(client.entity) {
 		client.Kick("Server full!")
@@ -783,8 +783,8 @@ func (client *Client) handleIdentification(reader io.Reader) {
 		return
 	}
 
-	event := EventClientConnect{client, false, ""}
-	client.server.FireEvent(EventTypeClientConnect, &event)
+	event := EventPlayerPreLogin{client, false, ""}
+	client.server.FireEvent(EventTypePlayerPreLogin, &event)
 	if event.Cancel {
 		client.Kick(event.CancelReason)
 		return
@@ -996,7 +996,7 @@ func (client *Client) handlePlayerClicked(reader io.Reader) {
 		target = client.server.FindEntityByID(packet.TargetID)
 	}
 
-	event := EventClientClick{
+	event := EventPlayerClick{
 		client,
 		packet.Button, packet.Action,
 		float64(packet.Yaw) * 360 / 65536,
@@ -1005,7 +1005,7 @@ func (client *Client) handlePlayerClicked(reader io.Reader) {
 		uint(packet.BlockX), uint(packet.BlockY), uint(packet.BlockZ),
 		packet.BlockFace,
 	}
-	client.server.FireEvent(EventTypeClientClick, &event)
+	client.server.FireEvent(EventTypePlayerClick, &event)
 }
 
 func (client *Client) handleTwoWayPing(reader io.Reader) {

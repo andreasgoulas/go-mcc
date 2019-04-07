@@ -41,7 +41,7 @@ func handleBan(sender gomcc.CommandSender, command *gomcc.Command, message strin
 		reason = args[1]
 	}
 
-	if !Ban(BanTypeName, args[0], reason, sender.Name()) {
+	if err := Ban(BanTypeName, args[0], reason, sender.Name()); err != nil {
 		sender.SendMessage("Player " + args[0] + " is already banned")
 		return
 	}
@@ -73,7 +73,7 @@ func handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message str
 		reason = args[1]
 	}
 
-	if !Ban(BanTypeIp, args[0], reason, sender.Name()) {
+	if err := Ban(BanTypeIp, args[0], reason, sender.Name()); err != nil {
 		sender.SendMessage("IP " + args[0] + " is already banned")
 		return
 	}
@@ -149,22 +149,4 @@ func handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message s
 
 	Unban(BanTypeIp, args[0])
 	sender.SendMessage("IP " + args[0] + " unbanned")
-}
-
-func handleClientConnect(eventType gomcc.EventType, event interface{}) {
-	e := event.(*gomcc.EventClientConnect)
-	result, reason := IsBanned(BanTypeIp, e.Client.RemoteAddr())
-	if result {
-		e.Cancel = true
-		e.CancelReason = reason
-	}
-}
-
-func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
-	e := event.(*gomcc.EventPlayerJoin)
-	result, reason := IsBanned(BanTypeName, e.Entity.Name())
-	if result {
-		e.Cancel = true
-		e.CancelReason = reason
-	}
 }

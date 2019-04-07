@@ -40,7 +40,7 @@ func PlayerData(name string) *playerData {
 }
 
 func Initialize(server *gomcc.Server) {
-	openDb()
+	dbOpen()
 	playerTable = make(map[string]*playerData)
 
 	server.RegisterCommand(&commandBack)
@@ -57,6 +57,7 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&commandR)
 	server.RegisterCommand(&commandSave)
 	server.RegisterCommand(&commandSay)
+	server.RegisterCommand(&commandSeen)
 	server.RegisterCommand(&commandSetSpawn)
 	server.RegisterCommand(&commandSkin)
 	server.RegisterCommand(&commandSpawn)
@@ -67,6 +68,30 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&commandUnbanIp)
 	server.RegisterCommand(&commandUnload)
 
-	server.RegisterHandler(gomcc.EventTypeClientConnect, handleClientConnect)
+	server.RegisterHandler(gomcc.EventTypePlayerPreLogin, handlePlayerPreLogin)
+	server.RegisterHandler(gomcc.EventTypePlayerLogin, handlePlayerLogin)
 	server.RegisterHandler(gomcc.EventTypePlayerJoin, handlePlayerJoin)
+}
+
+func handlePlayerPreLogin(eventType gomcc.EventType, event interface{}) {
+	e := event.(*gomcc.EventPlayerPreLogin)
+	result, reason := IsBanned(BanTypeIp, e.Client.RemoteAddr())
+	if result {
+		e.Cancel = true
+		e.CancelReason = reason
+	}
+}
+
+func handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
+	e := event.(*gomcc.EventPlayerLogin)
+	result, reason := IsBanned(BanTypeName, e.Client.Name())
+	if result {
+		e.Cancel = true
+		e.CancelReason = reason
+	}
+}
+
+func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
+	e := event.(*gomcc.EventPlayerJoin)
+	dbOnLogin(e.Client.Name())
 }

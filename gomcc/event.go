@@ -30,11 +30,11 @@ const (
 )
 
 const (
-	EventTypeClientConnect = iota
-	EventTypeClientDisconnect
-	EventTypeClientClick
+	EventTypePlayerPreLogin = iota
+	EventTypePlayerLogin
 	EventTypePlayerJoin
 	EventTypePlayerQuit
+	EventTypePlayerClick
 	EventTypeEntityLevelChange
 	EventTypeEntityMove
 	EventTypeBlockPlace
@@ -47,33 +47,33 @@ const (
 
 type EventHandler func(eventType EventType, event interface{})
 
-type EventClientConnect struct {
+type EventPlayerPreLogin struct {
 	Client       *Client
 	Cancel       bool
 	CancelReason string
 }
 
-type EventClientDisconnect struct {
+type EventPlayerLogin struct {
+	Client       *Client
+	Cancel       bool
+	CancelReason string
+}
+
+type EventPlayerJoin struct {
 	Client *Client
 }
 
-type EventClientClick struct {
+type EventPlayerQuit struct {
+	Client *Client
+}
+
+type EventPlayerClick struct {
 	Client                 *Client
 	Button, Action         byte
 	Yaw, Pitch             float64
 	Target                 *Entity
 	BlockX, BlockY, BlockZ uint
 	BlockFace              byte
-}
-
-type EventPlayerJoin struct {
-	Entity       *Entity
-	Cancel       bool
-	CancelReason string
-}
-
-type EventPlayerQuit struct {
-	Entity *Entity
 }
 
 type EventEntityLevelChange struct {
