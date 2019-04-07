@@ -17,40 +17,38 @@
 package core
 
 import (
-	"strconv"
 	"strings"
 
 	"Go-MCC/gomcc"
 )
 
-var commandBack = gomcc.Command{
-	Name:        "back",
-	Description: "Return to your location before teleportation.",
-	Permission:  "core.back",
-	Handler:     handleBack,
+var commandBan = gomcc.Command{
+	Name:        "ban",
+	Description: "Ban a player from the server.",
+	Permission:  "core.ban",
+	Handler:     handleBan,
 }
 
-func handleBack(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	client, ok := sender.(*gomcc.Client)
-	if !ok {
-		sender.SendMessage("You are not a player")
+func handleBan(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	if len(message) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <player> <reason>")
 		return
 	}
 
-	if len(message) > 0 {
-		sender.SendMessage("Usage: " + command.Name)
-		return
+	reason := "You have been banned"
+	args := strings.SplitN(message, " ", 2)
+	if len(args) > 1 {
+		reason = args[1]
 	}
 
-	data := PlayerData(sender.Name())
-	if data.LastLevel == nil {
-		sender.SendMessage("Location not found")
-		return
+	BanName(args[0], reason, sender.Name())
+
+	client := sender.Server().FindClient(args[0])
+	if client != nil {
+		client.Kick(reason)
 	}
 
-	player := client.Entity()
-	player.TeleportLevel(data.LastLevel)
-	player.Teleport(data.LastLocation)
+	sender.SendMessage("Player " + args[0] + " banned")
 }
 
 var commandKick = gomcc.Command{
@@ -81,139 +79,29 @@ func handleKick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	player.Kick(reason)
 }
 
-var commandSkin = gomcc.Command{
-	Name:        "skin",
-	Description: "Set the skin of a player.",
-	Permission:  "core.skin",
-	Handler:     handleSkin,
+var commandUnban = gomcc.Command{
+	Name:        "unban",
+	Description: "Remove the ban for a player.",
+	Permission:  "core.ban",
+	Handler:     handleUnban,
 }
 
-func handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
-	if len(args) != 2 {
-		sender.SendMessage("Usage: " + command.Name + " <player> <skin>")
-		return
-	}
-
-	entity := sender.Server().FindEntity(args[0])
-	if entity == nil {
-		sender.SendMessage("Player " + args[0] + " not found")
-		return
-	}
-
-	entity.SkinName = args[1]
-	entity.Respawn()
-	sender.SendMessage("Skin of " + args[0] + " set to " + args[1])
-}
-
-var commandTp = gomcc.Command{
-	Name:        "tp",
-	Description: "Teleport to another player.",
-	Permission:  "core.tp",
-	Handler:     handleTp,
-}
-
-func parseCoord(arg string, curr float64) (float64, error) {
-	if strings.HasPrefix(arg, "~") {
-		value, err := strconv.Atoi(arg[1:])
-		return curr + float64(value), err
-	} else {
-		value, err := strconv.Atoi(arg)
-		return float64(value), err
-	}
-}
-
-func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	client, ok := sender.(*gomcc.Client)
-	if !ok {
-		sender.SendMessage("You are not a player")
-		return
-	}
-
-	player := client.Entity()
-	lastLevel := player.Level()
-	lastLocation := player.Location()
-
-	args := strings.Split(message, " ")
-	if len(args) == 1 && len(args[0]) > 0 {
-		entity := sender.Server().FindEntity(args[0])
-		if entity == nil {
-			sender.SendMessage("Player " + args[0] + " not found")
-			return
-		}
-
-		player.TeleportLevel(entity.Level())
-		player.Teleport(entity.Location())
-	} else if len(args) == 3 {
-		var err error
-		location := player.Location()
-
-		location.X, err = parseCoord(args[0], location.X)
-		if err != nil {
-			sender.SendMessage(args[0] + " is not a valid number")
-			return
-		}
-
-		location.Y, err = parseCoord(args[1], location.Y)
-		if err != nil {
-			sender.SendMessage(args[1] + " is not a valid number")
-			return
-		}
-
-		location.Z, err = parseCoord(args[2], location.Z)
-		if err != nil {
-			sender.SendMessage(args[2] + " is not a valid number")
-			return
-		}
-
-		player.Teleport(location)
-	} else {
-		sender.SendMessage("Usage: " + command.Name + " <player> or <x> <y> <z>")
-		return
-	}
-
-	data := PlayerData(sender.Name())
-	data.LastLevel = lastLevel
-	data.LastLocation = lastLocation
-}
-
-var commandSummon = gomcc.Command{
-	Name:        "summon",
-	Description: "Summon a player to your location.",
-	Permission:  "core.summon",
-	Handler:     handleSummon,
-}
-
-func handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	client, ok := sender.(*gomcc.Client)
-	if !ok {
-		sender.SendMessage("You are not a player")
-		return
-	}
-
+func handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Split(message, " ")
 	if len(args) != 1 || len(args[0]) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <player> or all")
+		sender.SendMessage("Usage: " + command.Name + " <player>")
 		return
 	}
 
-	player := client.Entity()
-	if args[0] == "all" {
-		player.Level().ForEachEntity(func(entity *gomcc.Entity) {
-			entity.Teleport(player.Location())
-		})
-	} else {
-		entity := sender.Server().FindEntity(args[0])
-		if entity == nil {
-			sender.SendMessage("Player " + args[0] + " not found")
-			return
-		}
+	UnbanName(args[0])
+	sender.SendMessage("Player " + args[0] + " unbanned")
+}
 
-		level := player.Level()
-		if level != entity.Level() {
-			entity.TeleportLevel(level)
-		}
-
-		entity.Teleport(player.Location())
+func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
+	e := event.(*gomcc.EventPlayerJoin)
+	result, reason := IsNameBanned(e.Entity.Name())
+	if result {
+		e.Cancel = true
+		e.CancelReason = reason
 	}
 }

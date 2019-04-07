@@ -112,7 +112,7 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 			return nil
 		}
 
-		Generators["flat"].Generate(mainLevel)
+		Generators["flat"]().Generate(mainLevel)
 		server.AddLevel(mainLevel)
 	}
 
@@ -506,7 +506,7 @@ func (server *Server) RegisterHandler(eventType EventType, handler EventHandler)
 func (server *Server) FireEvent(eventType EventType, event interface{}) {
 	server.handlersLock.RLock()
 	for _, handler := range server.handlers[eventType] {
-		handler.Handle(eventType, event)
+		handler(eventType, event)
 	}
 	server.handlersLock.RUnlock()
 }

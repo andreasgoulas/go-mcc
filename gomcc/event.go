@@ -45,9 +45,7 @@ const (
 	EventTypeMessage
 )
 
-type EventHandler interface {
-	Handle(eventType EventType, event interface{})
-}
+type EventHandler func(eventType EventType, event interface{})
 
 type EventClientConnect struct {
 	Client *Client

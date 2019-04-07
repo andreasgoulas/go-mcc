@@ -40,9 +40,11 @@ func PlayerData(name string) *playerData {
 }
 
 func Initialize(server *gomcc.Server) {
+	openDb()
 	playerTable = make(map[string]*playerData)
 
 	server.RegisterCommand(&commandBack)
+	server.RegisterCommand(&commandBan)
 	server.RegisterCommand(&commandCopyLvl)
 	server.RegisterCommand(&commandGoto)
 	server.RegisterCommand(&commandKick)
@@ -60,5 +62,8 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&commandSummon)
 	server.RegisterCommand(&commandTell)
 	server.RegisterCommand(&commandTp)
+	server.RegisterCommand(&commandUnban)
 	server.RegisterCommand(&commandUnload)
+
+	server.RegisterHandler(gomcc.EventTypePlayerJoin, handlePlayerJoin)
 }
