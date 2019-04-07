@@ -182,14 +182,6 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 			}
 
 			client := NewClient(conn, server)
-
-			event := EventClientConnect{client, false}
-			server.FireEvent(EventTypeClientConnect, &event)
-			if event.Cancel {
-				client.Disconnect()
-				continue
-			}
-
 			go client.handle()
 		}
 	}

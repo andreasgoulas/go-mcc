@@ -48,8 +48,9 @@ const (
 type EventHandler func(eventType EventType, event interface{})
 
 type EventClientConnect struct {
-	Client *Client
-	Cancel bool
+	Client       *Client
+	Cancel       bool
+	CancelReason string
 }
 
 type EventClientDisconnect struct {

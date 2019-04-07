@@ -33,8 +33,9 @@ func openDb() {
 	}
 
 	_, err = db.Exec(`
-CREATE TABLE IF NOT EXISTS BannedNames(
+CREATE TABLE IF NOT EXISTS BanList(
 Name TEXT NOT NULL PRIMARY KEY,
+Type TEXT NOT NULL,
 Reason TEXT,
 BannedBy TEXT,
 Timestamp DATETIME);`)
@@ -43,34 +44,38 @@ Timestamp DATETIME);`)
 	}
 }
 
-func BanName(name string, reason string, bannedBy string) {
-	_, err := db.Exec(`INSERT INTO BannedNames(Name, Reason, BannedBy, Timestamp)
-		VALUES(?, ?, ?, CURRENT_TIMESTAMP)`, name, reason, bannedBy)
+const (
+	BanTypeName = "Name"
+	BanTypeIp   = "IP"
+)
+
+func Ban(banType string, name string, reason string, bannedBy string) bool {
+	_, err := db.Exec(`INSERT INTO BanList(Name, Type, Reason, BannedBy, Timestamp)
+		VALUES(?, ?, ?, ?, CURRENT_TIMESTAMP)`, name, banType, reason, bannedBy)
+	return err == nil
+}
+
+func Unban(banType string, name string) {
+	_, err := db.Exec("DELETE FROM BanList WHERE Name = ? AND Type = ?", name, banType)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func UnbanName(name string) {
-	_, err := db.Exec("DELETE FROM BannedNames WHERE Name = ?", name)
+func IsBanned(banType string, name string) (result bool, reason string) {
+	rows, err := db.Query("SELECT Reason FROM BanList WHERE Name = ? AND Type = ?", name, banType)
 	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func IsNameBanned(name string) (result bool, reason string) {
-	rows, err := db.Query("SELECT Reason FROM BannedNames WHERE Name = ?", name)
-	if err != nil {
-		log.Fatal(err)
+		return
 	}
 	defer rows.Close()
 
 	result = false
 	if rows.Next() {
-		result = true
-		if err := rows.Scan(&reason); err != nil {
-			log.Fatal(err)
+		if err = rows.Scan(&reason); err != nil {
+			return
 		}
+
+		result = true
 	}
 
 	return

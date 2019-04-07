@@ -114,6 +114,12 @@ func (client *Client) HasExtension(extension uint) bool {
 	return client.cpe[extension]
 }
 
+func (client *Client) RemoteAddr() string {
+	addr := client.conn.RemoteAddr()
+	host, _, _ := net.SplitHostPort(addr.String())
+	return host
+}
+
 func (client *Client) Disconnect() {
 	if client.state == stateClosed {
 		return
@@ -774,6 +780,13 @@ func (client *Client) handleIdentification(reader io.Reader) {
 	client.NickName = trimString(packet.Name)
 	if !IsValidName(client.NickName) {
 		client.Kick("Invalid name!")
+		return
+	}
+
+	event := EventClientConnect{client, false, ""}
+	client.server.FireEvent(EventTypeClientConnect, &event)
+	if event.Cancel {
+		client.Kick(event.CancelReason)
 		return
 	}
 

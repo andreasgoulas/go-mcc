@@ -41,7 +41,10 @@ func handleBan(sender gomcc.CommandSender, command *gomcc.Command, message strin
 		reason = args[1]
 	}
 
-	BanName(args[0], reason, sender.Name())
+	if !Ban(BanTypeName, args[0], reason, sender.Name()) {
+		sender.SendMessage("Player " + args[0] + " is already banned")
+		return
+	}
 
 	client := sender.Server().FindClient(args[0])
 	if client != nil {
@@ -49,6 +52,39 @@ func handleBan(sender gomcc.CommandSender, command *gomcc.Command, message strin
 	}
 
 	sender.SendMessage("Player " + args[0] + " banned")
+}
+
+var commandBanIp = gomcc.Command{
+	Name:        "banip",
+	Description: "Ban an IP address from the server.",
+	Permission:  "core.banip",
+	Handler:     handleBanIp,
+}
+
+func handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	if len(message) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <ip> <reason>")
+		return
+	}
+
+	reason := "You have been banned"
+	args := strings.SplitN(message, " ", 2)
+	if len(args) > 1 {
+		reason = args[1]
+	}
+
+	if !Ban(BanTypeIp, args[0], reason, sender.Name()) {
+		sender.SendMessage("IP " + args[0] + " is already banned")
+		return
+	}
+
+	sender.Server().ForEachClient(func(client *gomcc.Client) {
+		if client.RemoteAddr() == args[0] {
+			client.Kick(reason)
+		}
+	})
+
+	sender.SendMessage("IP " + args[0] + " banned")
 }
 
 var commandKick = gomcc.Command{
@@ -82,7 +118,7 @@ func handleKick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 var commandUnban = gomcc.Command{
 	Name:        "unban",
 	Description: "Remove the ban for a player.",
-	Permission:  "core.ban",
+	Permission:  "core.unban",
 	Handler:     handleUnban,
 }
 
@@ -93,13 +129,40 @@ func handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message str
 		return
 	}
 
-	UnbanName(args[0])
+	Unban(BanTypeName, args[0])
 	sender.SendMessage("Player " + args[0] + " unbanned")
+}
+
+var commandUnbanIp = gomcc.Command{
+	Name:        "unbanip",
+	Description: "Remove the ban for an IP address.",
+	Permission:  "core.unbanip",
+	Handler:     handleUnbanIp,
+}
+
+func handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	args := strings.Split(message, " ")
+	if len(args) != 1 || len(args[0]) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <ip>")
+		return
+	}
+
+	Unban(BanTypeIp, args[0])
+	sender.SendMessage("IP " + args[0] + " unbanned")
+}
+
+func handleClientConnect(eventType gomcc.EventType, event interface{}) {
+	e := event.(*gomcc.EventClientConnect)
+	result, reason := IsBanned(BanTypeIp, e.Client.RemoteAddr())
+	if result {
+		e.Cancel = true
+		e.CancelReason = reason
+	}
 }
 
 func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerJoin)
-	result, reason := IsNameBanned(e.Entity.Name())
+	result, reason := IsBanned(BanTypeName, e.Entity.Name())
 	if result {
 		e.Cancel = true
 		e.CancelReason = reason

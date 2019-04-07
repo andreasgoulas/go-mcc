@@ -45,6 +45,7 @@ func Initialize(server *gomcc.Server) {
 
 	server.RegisterCommand(&commandBack)
 	server.RegisterCommand(&commandBan)
+	server.RegisterCommand(&commandBanIp)
 	server.RegisterCommand(&commandCopyLvl)
 	server.RegisterCommand(&commandGoto)
 	server.RegisterCommand(&commandKick)
@@ -63,7 +64,9 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&commandTell)
 	server.RegisterCommand(&commandTp)
 	server.RegisterCommand(&commandUnban)
+	server.RegisterCommand(&commandUnbanIp)
 	server.RegisterCommand(&commandUnload)
 
+	server.RegisterHandler(gomcc.EventTypeClientConnect, handleClientConnect)
 	server.RegisterHandler(gomcc.EventTypePlayerJoin, handlePlayerJoin)
 }
