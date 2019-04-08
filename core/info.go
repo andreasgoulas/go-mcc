@@ -92,6 +92,42 @@ func handleLevels(sender gomcc.CommandSender, command *gomcc.Command, message st
 	sender.SendMessage(strings.Join(levels, ", "))
 }
 
+var commandPlayers = gomcc.Command{
+	Name:        "players",
+	Description: "List all players.",
+	Permission:  "core.players",
+	Handler:     handlePlayers,
+}
+
+func handlePlayers(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	var players []string
+	args := strings.Fields(message)
+	switch len(args) {
+	case 0:
+		sender.Server().ForEachPlayer(func(player *gomcc.Player) {
+			players = append(players, player.Name())
+		})
+
+	case 1:
+		level := sender.Server().FindLevel(args[0])
+		if level == nil {
+			sender.SendMessage("Level " + args[0] + " not found")
+			return
+		}
+
+		level.ForEachPlayer(func(player *gomcc.Player) {
+			players = append(players, player.Name())
+		})
+
+	default:
+		sender.SendMessage("Usage: " + command.Name + " <level>")
+		return
+	}
+
+	sort.Strings(players)
+	sender.SendMessage(strings.Join(players, ", "))
+}
+
 var commandSeen = gomcc.Command{
 	Name:        "seen",
 	Description: "Check when a player was last online.",

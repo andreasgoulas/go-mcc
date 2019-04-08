@@ -774,6 +774,7 @@ func (player *Player) handleIdentification(reader io.Reader) {
 		return
 	}
 
+	player.NickName = player.name
 	player.DisplayName = player.name
 	player.SkinName = player.name
 	player.listName = player.name

@@ -58,6 +58,7 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&commandMe)
 	server.RegisterCommand(&commandNewLvl)
 	server.RegisterCommand(&commandNick)
+	server.RegisterCommand(&commandPlayers)
 	server.RegisterCommand(&commandR)
 	server.RegisterCommand(&commandRank)
 	server.RegisterCommand(&commandSave)

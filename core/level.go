@@ -119,25 +119,24 @@ var commandMain = gomcc.Command{
 }
 
 func handleMain(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	if len(message) == 0 {
-		sender.SendMessage("Main level is " + sender.Server().MainLevel.Name())
-		return
-	}
-
 	args := strings.Fields(message)
-	if len(args) != 1 {
+	switch len(args) {
+	case 0:
+		sender.SendMessage("Main level is " + sender.Server().MainLevel.Name())
+
+	case 1:
+		level := sender.Server().FindLevel(args[0])
+		if level == nil {
+			sender.SendMessage("Level " + args[0] + " not found")
+			return
+		}
+
+		sender.Server().MainLevel = level
+		sender.SendMessage("Set main level to " + level.Name())
+
+	default:
 		sender.SendMessage("Usage: " + command.Name + " <level>")
-		return
 	}
-
-	level := sender.Server().FindLevel(args[0])
-	if level == nil {
-		sender.SendMessage("Level " + args[0] + " not found")
-		return
-	}
-
-	sender.Server().MainLevel = level
-	sender.SendMessage("Set main level to " + level.Name())
 }
 
 var commandNewLvl = gomcc.Command{
@@ -243,33 +242,32 @@ func handleSetSpawn(sender gomcc.CommandSender, command *gomcc.Command, message 
 		return
 	}
 
-	if len(message) == 0 {
+	args := strings.Fields(message)
+	switch len(args) {
+	case 0:
 		player.Level().Spawn = player.Location()
 		player.SetSpawn()
 		sender.SendMessage("Spawn location set to your current location")
-		return
-	}
 
-	args := strings.Fields(message)
-	if len(args) != 1 {
+	case 1:
+		target := sender.Server().FindPlayer(args[0])
+		if target == nil {
+			sender.SendMessage("Player " + args[0] + " not found")
+			return
+		}
+
+		if target.Level() != player.Level() {
+			sender.SendMessage(target.Name() + " is on a different level")
+			return
+		}
+
+		target.Teleport(player.Location())
+		target.SetSpawn()
+		sender.SendMessage("Spawn location of " + player.Name() + " set to your current location")
+
+	default:
 		sender.SendMessage("Usage: " + command.Name + " <player>")
-		return
 	}
-
-	target := sender.Server().FindPlayer(args[0])
-	if target == nil {
-		sender.SendMessage("Player " + args[0] + " not found")
-		return
-	}
-
-	if target.Level() != player.Level() {
-		sender.SendMessage(target.Name() + " is on a different level")
-		return
-	}
-
-	target.Teleport(player.Location())
-	target.SetSpawn()
-	sender.SendMessage("Spawn location of " + player.Name() + " set to your current location")
 }
 
 var commandSpawn = gomcc.Command{
