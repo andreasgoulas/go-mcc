@@ -888,6 +888,11 @@ func (client *Client) handlePlayerTeleport(reader io.Reader) {
 
 	packet := packetPlayerTeleport{}
 	binary.Read(reader, binary.BigEndian, &packet)
+
+	if client.entity.level == nil {
+		return
+	}
+
 	if client.cpe[CpeHeldBlock] {
 		client.heldBlock = BlockID(packet.PlayerID)
 	} else if packet.PlayerID != 0xff {

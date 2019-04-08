@@ -170,7 +170,7 @@ func (entity *Entity) TeleportLevel(level *Level) {
 
 	if level != nil {
 		entity.location = level.Spawn
-		entity.lastLocation = Location{}
+		entity.lastLocation = level.Spawn
 		entity.spawn(level)
 	}
 
