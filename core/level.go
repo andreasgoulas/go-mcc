@@ -62,7 +62,7 @@ var commandGoto = gomcc.Command{
 }
 
 func handleGoto(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	client, ok := sender.(*gomcc.Client)
+	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -80,13 +80,12 @@ func handleGoto(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	entity := client.Entity()
-	if level == entity.Level() {
+	if level == player.Level() {
 		sender.SendMessage("You are already in " + level.Name())
 		return
 	}
 
-	entity.TeleportLevel(level)
+	player.TeleportLevel(level)
 }
 
 var commandLoad = gomcc.Command{
@@ -238,16 +237,15 @@ var commandSetSpawn = gomcc.Command{
 }
 
 func handleSetSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	client, ok := sender.(*gomcc.Client)
+	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
 	}
 
-	entity := client.Entity()
 	if len(message) == 0 {
-		entity.Level().Spawn = entity.Location()
-		client.SetSpawn()
+		player.Level().Spawn = player.Location()
+		player.SetSpawn()
 		sender.SendMessage("Spawn location set to your current location")
 		return
 	}
@@ -258,20 +256,19 @@ func handleSetSpawn(sender gomcc.CommandSender, command *gomcc.Command, message 
 		return
 	}
 
-	player := sender.Server().FindClient(args[0])
-	if player == nil {
+	target := sender.Server().FindPlayer(args[0])
+	if target == nil {
 		sender.SendMessage("Player " + args[0] + " not found")
 		return
 	}
 
-	other := player.Entity()
-	if other.Level() != entity.Level() {
-		sender.SendMessage(player.Name() + " is on a different level")
+	if target.Level() != player.Level() {
+		sender.SendMessage(target.Name() + " is on a different level")
 		return
 	}
 
-	other.Teleport(entity.Location())
-	player.SetSpawn()
+	target.Teleport(player.Location())
+	target.SetSpawn()
 	sender.SendMessage("Spawn location of " + player.Name() + " set to your current location")
 }
 
@@ -283,7 +280,7 @@ var commandSpawn = gomcc.Command{
 }
 
 func handleSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	client, ok := sender.(*gomcc.Client)
+	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -294,8 +291,7 @@ func handleSpawn(sender gomcc.CommandSender, command *gomcc.Command, message str
 		return
 	}
 
-	entity := client.Entity()
-	entity.Teleport(entity.Level().Spawn)
+	player.Teleport(player.Level().Spawn)
 }
 
 var commandUnload = gomcc.Command{

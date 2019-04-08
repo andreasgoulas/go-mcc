@@ -49,13 +49,13 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
-		client := sender.Server().FindClient(args[0])
-		if client == nil {
+		player := sender.Server().FindPlayer(args[0])
+		if player == nil {
 			sender.SendMessage("Player " + args[0] + " not found")
 			return
 		}
 
-		client.NickName = client.Entity().Name()
+		player.NickName = player.Name()
 		sender.SendMessage("Nick of " + args[0] + " reset")
 
 	case 2:
@@ -64,13 +64,13 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 			return
 		}
 
-		client := sender.Server().FindClient(args[0])
-		if client == nil {
+		player := sender.Server().FindPlayer(args[0])
+		if player == nil {
 			sender.SendMessage("Player " + args[0] + " not found")
 			return
 		}
 
-		client.NickName = args[1]
+		player.NickName = args[1]
 		sender.SendMessage("Nick of " + args[0] + " set to " + args[1])
 
 	default:
@@ -92,7 +92,7 @@ func handleR(sender gomcc.CommandSender, command *gomcc.Command, message string)
 	}
 
 	lastSender := PlayerData(sender.Name()).LastSender
-	player := sender.Server().FindClient(lastSender)
+	player := sender.Server().FindPlayer(lastSender)
 	if player == nil {
 		sender.SendMessage("Player not found")
 		return
@@ -135,7 +135,7 @@ func handleTell(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	player := sender.Server().FindClient(args[0])
+	player := sender.Server().FindPlayer(args[0])
 	if player == nil {
 		sender.SendMessage("Player " + args[0] + " not found")
 		return

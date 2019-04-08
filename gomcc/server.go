@@ -71,8 +71,8 @@ type Server struct {
 	entities     []*Entity
 	entitiesLock sync.RWMutex
 
-	clients     []*Client
-	clientsLock sync.RWMutex
+	players     []*Player
+	playersLock sync.RWMutex
 
 	listener net.Listener
 	stopChan chan bool
@@ -96,7 +96,7 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 		storage:  storage,
 		levels:   []*Level{},
 		entities: []*Entity{},
-		clients:  []*Client{},
+		players:  []*Player{},
 		listener: listener,
 		stopChan: make(chan bool),
 	}
@@ -156,13 +156,13 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-server.stopChan:
-			server.clientsLock.RLock()
-			clients := make([]*Client, len(server.clients))
-			copy(clients, server.clients)
-			server.clientsLock.RUnlock()
+			server.playersLock.RLock()
+			players := make([]*Player, len(server.players))
+			copy(players, server.players)
+			server.playersLock.RUnlock()
 
-			for _, client := range clients {
-				client.Kick("Server shutting down!")
+			for _, player := range players {
+				player.Kick("Server shutting down!")
 			}
 
 			server.updateTicker.Stop()
@@ -181,8 +181,8 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 				continue
 			}
 
-			client := NewClient(conn, server)
-			go client.handle()
+			player := NewPlayer(conn, server)
+			go player.handle()
 		}
 	}
 }
@@ -194,8 +194,8 @@ func (server *Server) Stop() {
 
 func (server *Server) BroadcastMessage(message string) {
 	fmt.Printf("%s\n", message)
-	server.ForEachClient(func(client *Client) {
-		client.SendMessage(message)
+	server.ForEachPlayer(func(player *Player) {
+		player.SendMessage(message)
 	})
 }
 
@@ -238,8 +238,8 @@ func (server *Server) RemoveLevel(level *Level) {
 		server.MainLevel = nil
 	}
 
-	level.ForEachClient(func(client *Client) {
-		client.entity.TeleportLevel(server.MainLevel)
+	level.ForEachPlayer(func(player *Player) {
+		player.TeleportLevel(server.MainLevel)
 	})
 
 	level.server = nil
@@ -332,8 +332,8 @@ func (server *Server) AddEntity(entity *Entity) bool {
 	}
 
 	server.entities = append(server.entities, entity)
-	server.ForEachClient(func(client *Client) {
-		client.sendAddPlayerList(entity)
+	server.ForEachPlayer(func(player *Player) {
+		player.sendAddPlayerList(entity)
 	})
 
 	return true
@@ -359,8 +359,8 @@ func (server *Server) RemoveEntity(entity *Entity) {
 	server.entities[len(server.entities)-1] = nil
 	server.entities = server.entities[:len(server.entities)-1]
 
-	server.ForEachClient(func(client *Client) {
-		client.sendRemovePlayerList(entity)
+	server.ForEachPlayer(func(player *Player) {
+		player.sendRemovePlayerList(entity)
 	})
 }
 
@@ -398,19 +398,19 @@ func (server *Server) ForEachEntity(fn func(*Entity)) {
 	server.entitiesLock.RUnlock()
 }
 
-func (server *Server) AddClient(client *Client) {
-	server.clientsLock.Lock()
-	server.clients = append(server.clients, client)
-	server.clientsLock.Unlock()
+func (server *Server) AddPlayer(player *Player) {
+	server.playersLock.Lock()
+	server.players = append(server.players, player)
+	server.playersLock.Unlock()
 }
 
-func (server *Server) RemoveClient(client *Client) {
-	server.clientsLock.Lock()
-	defer server.clientsLock.Unlock()
+func (server *Server) RemovePlayer(player *Player) {
+	server.playersLock.Lock()
+	defer server.playersLock.Unlock()
 
 	index := -1
-	for i, p := range server.clients {
-		if p == client {
+	for i, p := range server.players {
+		if p == player {
 			index = i
 			break
 		}
@@ -420,30 +420,30 @@ func (server *Server) RemoveClient(client *Client) {
 		return
 	}
 
-	server.clients[index] = server.clients[len(server.clients)-1]
-	server.clients[len(server.clients)-1] = nil
-	server.clients = server.clients[:len(server.clients)-1]
+	server.players[index] = server.players[len(server.players)-1]
+	server.players[len(server.players)-1] = nil
+	server.players = server.players[:len(server.players)-1]
 }
 
-func (server *Server) FindClient(name string) *Client {
-	server.clientsLock.RLock()
-	defer server.clientsLock.RUnlock()
+func (server *Server) FindPlayer(name string) *Player {
+	server.playersLock.RLock()
+	defer server.playersLock.RUnlock()
 
-	for _, client := range server.clients {
-		if client.entity != nil && client.entity.name == name {
-			return client
+	for _, player := range server.players {
+		if player.name == name {
+			return player
 		}
 	}
 
 	return nil
 }
 
-func (server *Server) ForEachClient(fn func(*Client)) {
-	server.clientsLock.RLock()
-	for _, client := range server.clients {
-		fn(client)
+func (server *Server) ForEachPlayer(fn func(*Player)) {
+	server.playersLock.RLock()
+	for _, player := range server.players {
+		fn(player)
 	}
-	server.clientsLock.RUnlock()
+	server.playersLock.RUnlock()
 }
 
 func (server *Server) RegisterCommand(command *Command) {

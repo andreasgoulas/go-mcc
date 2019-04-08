@@ -80,7 +80,7 @@ func Initialize(server *gomcc.Server) {
 
 func handlePlayerPreLogin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerPreLogin)
-	result, reason := CoreDb.IsBanned(BanTypeIp, e.Client.RemoteAddr())
+	result, reason := CoreDb.IsBanned(BanTypeIp, e.Player.RemoteAddr())
 	if result {
 		e.Cancel = true
 		e.CancelReason = reason
@@ -89,7 +89,7 @@ func handlePlayerPreLogin(eventType gomcc.EventType, event interface{}) {
 
 func handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerLogin)
-	result, reason := CoreDb.IsBanned(BanTypeName, e.Client.Name())
+	result, reason := CoreDb.IsBanned(BanTypeName, e.Player.Name())
 	if result {
 		e.Cancel = true
 		e.CancelReason = reason
@@ -98,8 +98,8 @@ func handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
 
 func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerJoin)
-	name := e.Client.Name()
+	name := e.Player.Name()
 
 	CoreDb.onLogin(name)
-	e.Client.SetPermissions(CoreDb.PlayerPermissions(name))
+	e.Player.SetPermissions(CoreDb.PlayerPermissions(name))
 }

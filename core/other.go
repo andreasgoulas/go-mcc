@@ -31,7 +31,7 @@ var commandBack = gomcc.Command{
 }
 
 func handleBack(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	client, ok := sender.(*gomcc.Client)
+	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -48,7 +48,6 @@ func handleBack(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	player := client.Entity()
 	player.TeleportLevel(data.LastLevel)
 	player.Teleport(data.LastLocation)
 }
@@ -96,27 +95,26 @@ func parseCoord(arg string, curr float64) (float64, error) {
 }
 
 func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	client, ok := sender.(*gomcc.Client)
+	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
 	}
 
-	player := client.Entity()
 	lastLevel := player.Level()
 	lastLocation := player.Location()
 
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
-		entity := sender.Server().FindEntity(args[0])
-		if entity == nil {
+		target := sender.Server().FindEntity(args[0])
+		if target == nil {
 			sender.SendMessage("Player " + args[0] + " not found")
 			return
 		}
 
-		player.TeleportLevel(entity.Level())
-		player.Teleport(entity.Location())
+		player.TeleportLevel(target.Level())
+		player.Teleport(target.Location())
 
 	case 3:
 		var err error
@@ -160,7 +158,7 @@ var commandSummon = gomcc.Command{
 }
 
 func handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	client, ok := sender.(*gomcc.Client)
+	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -172,23 +170,22 @@ func handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message st
 		return
 	}
 
-	player := client.Entity()
 	if args[0] == "all" {
 		player.Level().ForEachEntity(func(entity *gomcc.Entity) {
 			entity.Teleport(player.Location())
 		})
 	} else {
-		entity := sender.Server().FindEntity(args[0])
-		if entity == nil {
+		target := sender.Server().FindEntity(args[0])
+		if target == nil {
 			sender.SendMessage("Player " + args[0] + " not found")
 			return
 		}
 
 		level := player.Level()
-		if level != entity.Level() {
-			entity.TeleportLevel(level)
+		if level != target.Level() {
+			target.TeleportLevel(level)
 		}
 
-		entity.Teleport(player.Location())
+		target.Teleport(player.Location())
 	}
 }

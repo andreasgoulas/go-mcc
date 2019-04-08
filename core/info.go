@@ -116,7 +116,7 @@ func handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	if client := sender.Server().FindClient(args[0]); client != nil {
+	if player := sender.Server().FindPlayer(args[0]); player != nil {
 		sender.SendMessage("Player " + args[0] + " is currently online")
 		return
 	}

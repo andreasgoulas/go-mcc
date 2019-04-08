@@ -41,7 +41,7 @@ const (
 
 type Entity struct {
 	server *Server
-	client *Client
+	player *Player
 
 	id    byte
 	name  string
@@ -59,10 +59,9 @@ type Entity struct {
 	lastLocation Location
 }
 
-func NewEntity(name string, server *Server, client *Client) *Entity {
+func NewEntity(name string, server *Server) *Entity {
 	return &Entity{
 		server:      server,
-		client:      client,
 		id:          0xff,
 		name:        name,
 		model:       ModelHumanoid,
@@ -74,10 +73,6 @@ func NewEntity(name string, server *Server, client *Client) *Entity {
 
 func (entity *Entity) Server() *Server {
 	return entity.server
-}
-
-func (entity *Entity) Client() *Client {
-	return entity.client
 }
 
 func (entity *Entity) ID() byte {
@@ -99,8 +94,8 @@ func (entity *Entity) SetModel(model string) {
 
 	entity.model = model
 	if entity.level != nil {
-		entity.level.ForEachClient(func(client *Client) {
-			client.sendChangeModel(entity)
+		entity.level.ForEachPlayer(func(player *Player) {
+			player.sendChangeModel(entity)
 		})
 	}
 }
@@ -127,8 +122,8 @@ func (entity *Entity) SetList(listName string, groupName string, groupRank byte)
 	entity.listName = listName
 	entity.groupName = groupName
 	entity.groupRank = groupRank
-	entity.server.ForEachClient(func(client *Client) {
-		client.sendAddPlayerList(entity)
+	entity.server.ForEachPlayer(func(player *Player) {
+		player.sendAddPlayerList(entity)
 	})
 }
 
@@ -148,8 +143,8 @@ func (entity *Entity) Teleport(location Location) {
 	}
 
 	entity.location = location
-	if entity.client != nil {
-		entity.client.sendTeleport(entity)
+	if entity.player != nil {
+		entity.player.sendTeleport(entity)
 	}
 }
 
@@ -163,15 +158,21 @@ func (entity *Entity) TeleportLevel(level *Level) {
 	}
 
 	lastLevel := entity.level
-	if entity.level != nil {
+	if lastLevel != nil {
 		entity.level = nil
 		entity.despawn(lastLevel)
+		if entity.player != nil {
+			entity.player.despawnLevel(lastLevel)
+		}
 	}
 
 	if level != nil {
 		entity.location = level.Spawn
 		entity.lastLocation = level.Spawn
 		entity.spawn(level)
+		if entity.player != nil {
+			entity.player.spawnLevel(level)
+		}
 	}
 
 	entity.level = level
@@ -246,9 +247,9 @@ func (entity *Entity) update() {
 	}
 
 	entity.lastLocation = entity.location
-	entity.level.ForEachClient(func(client *Client) {
-		if client != entity.client {
-			client.sendPacket(packet)
+	entity.level.ForEachPlayer(func(player *Player) {
+		if player.Entity != entity {
+			player.sendPacket(packet)
 		}
 	})
 }
@@ -258,41 +259,20 @@ func (entity *Entity) Respawn() {
 		return
 	}
 
-	entity.level.ForEachClient(func(client *Client) {
-		client.sendDespawn(entity)
-	})
-
+	entity.despawn(entity.level)
 	entity.location = entity.level.Spawn
 	entity.lastLocation = Location{}
-
-	entity.level.ForEachClient(func(client *Client) {
-		client.sendSpawn(entity)
-	})
+	entity.spawn(entity.level)
 }
 
 func (entity *Entity) spawn(level *Level) {
-	level.ForEachClient(func(client *Client) {
-		client.sendSpawn(entity)
+	level.ForEachPlayer(func(player *Player) {
+		player.sendSpawn(entity)
 	})
-
-	if entity.client != nil {
-		entity.client.sendLevel(level)
-		entity.client.sendSpawn(entity)
-		level.ForEachEntity(func(other *Entity) {
-			entity.client.sendSpawn(other)
-		})
-	}
 }
 
 func (entity *Entity) despawn(level *Level) {
-	level.ForEachClient(func(client *Client) {
-		client.sendDespawn(entity)
+	level.ForEachPlayer(func(player *Player) {
+		player.sendDespawn(entity)
 	})
-
-	if entity.client != nil && entity.client.state == stateGame {
-		entity.client.sendDespawn(entity)
-		level.ForEachEntity(func(other *Entity) {
-			entity.client.sendDespawn(other)
-		})
-	}
 }

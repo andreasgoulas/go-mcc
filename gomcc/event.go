@@ -49,33 +49,33 @@ const (
 type EventHandler func(eventType EventType, event interface{})
 
 type EventPlayerPreLogin struct {
-	Client       *Client
+	Player       *Player
 	Cancel       bool
 	CancelReason string
 }
 
 type EventPlayerLogin struct {
-	Client       *Client
+	Player       *Player
 	Cancel       bool
 	CancelReason string
 }
 
 type EventPlayerJoin struct {
-	Client *Client
+	Player *Player
 }
 
 type EventPlayerQuit struct {
-	Client *Client
+	Player *Player
 }
 
 type EventPlayerChat struct {
-	Client  *Client
+	Player  *Player
 	Message string
 	Cancel  bool
 }
 
 type EventPlayerClick struct {
-	Client                 *Client
+	Player                 *Player
 	Button, Action         byte
 	Yaw, Pitch             float64
 	Target                 *Entity
@@ -95,7 +95,7 @@ type EventEntityMove struct {
 }
 
 type EventBlockPlace struct {
-	Entity  *Entity
+	Player  *Player
 	Level   *Level
 	Block   BlockID
 	X, Y, Z uint
@@ -103,7 +103,7 @@ type EventBlockPlace struct {
 }
 
 type EventBlockBreak struct {
-	Entity  *Entity
+	Player  *Player
 	Level   *Level
 	Block   BlockID
 	X, Y, Z uint

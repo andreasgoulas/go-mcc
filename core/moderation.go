@@ -48,9 +48,9 @@ func handleBan(sender gomcc.CommandSender, command *gomcc.Command, message strin
 
 	CoreDb.Ban(BanTypeName, args[0], reason, sender.Name())
 
-	client := sender.Server().FindClient(args[0])
-	if client != nil {
-		client.Kick(reason)
+	player := sender.Server().FindPlayer(args[0])
+	if player != nil {
+		player.Kick(reason)
 	}
 
 	sender.SendMessage("Player " + args[0] + " banned")
@@ -82,9 +82,9 @@ func handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message str
 
 	CoreDb.Ban(BanTypeIp, args[0], reason, sender.Name())
 
-	sender.Server().ForEachClient(func(client *gomcc.Client) {
-		if client.RemoteAddr() == args[0] {
-			client.Kick(reason)
+	sender.Server().ForEachPlayer(func(player *gomcc.Player) {
+		if player.RemoteAddr() == args[0] {
+			player.Kick(reason)
 		}
 	})
 
@@ -105,7 +105,7 @@ func handleKick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	}
 
 	args := strings.SplitN(message, " ", 2)
-	player := sender.Server().FindClient(args[0])
+	player := sender.Server().FindPlayer(args[0])
 	if player == nil {
 		sender.SendMessage("Player " + args[0] + " not found")
 		return
@@ -145,8 +145,8 @@ func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message stri
 
 		CoreDb.SetRank(args[0], args[1])
 
-		if client := sender.Server().FindClient(args[0]); client != nil {
-			client.SetPermissions(CoreDb.PlayerPermissions(args[0]))
+		if player := sender.Server().FindPlayer(args[0]); player != nil {
+			player.SetPermissions(CoreDb.PlayerPermissions(args[0]))
 		}
 
 	default:

@@ -182,14 +182,14 @@ func (level *Level) ForEachEntity(fn func(*Entity)) {
 	})
 }
 
-func (level *Level) ForEachClient(fn func(*Client)) {
+func (level *Level) ForEachPlayer(fn func(*Player)) {
 	if level.server == nil {
 		return
 	}
 
-	level.server.ForEachClient(func(client *Client) {
-		if client.entity.level == level {
-			fn(client)
+	level.server.ForEachPlayer(func(player *Player) {
+		if player.level == level {
+			fn(player)
 		}
 	})
 }
@@ -198,8 +198,8 @@ func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
 	if x < level.width && y < level.height && z < level.length {
 		level.blocks[level.Index(x, y, z)] = block
 		if broadcast {
-			level.ForEachClient(func(client *Client) {
-				client.sendBlockChange(x, y, z, block)
+			level.ForEachPlayer(func(player *Player) {
+				player.sendBlockChange(x, y, z, block)
 			})
 		}
 	}
@@ -215,8 +215,8 @@ func (level *Level) SetWeather(weather WeatherType) {
 	}
 
 	level.weather = weather
-	level.ForEachClient(func(client *Client) {
-		client.sendWeather(weather)
+	level.ForEachPlayer(func(player *Player) {
+		player.sendWeather(weather)
 	})
 }
 
@@ -230,8 +230,8 @@ func (level *Level) SetTexturePack(texturePack string) {
 	}
 
 	level.texturePack = texturePack
-	level.ForEachClient(func(client *Client) {
-		client.sendTexturePack(texturePack)
+	level.ForEachPlayer(func(player *Player) {
+		player.sendTexturePack(texturePack)
 	})
 }
 
@@ -245,8 +245,8 @@ func (level *Level) SetEnvConfig(envConfig EnvConfig) {
 	}
 
 	level.envConfig = envConfig
-	level.ForEachClient(func(client *Client) {
-		client.sendEnvConfig(envConfig)
+	level.ForEachPlayer(func(player *Player) {
+		player.sendEnvConfig(envConfig)
 	})
 }
 
@@ -260,18 +260,21 @@ func (level *Level) SetHackConfig(hackConfig HackConfig) {
 	}
 
 	level.hackConfig = hackConfig
-	level.ForEachClient(func(client *Client) {
-		client.sendHackConfig(hackConfig)
+	level.ForEachPlayer(func(player *Player) {
+		player.sendHackConfig(hackConfig)
 	})
 }
 
 func (level *Level) SetMOTD(motd string) {
 	level.MOTD = motd
-	level.ForEachClient(func(client *Client) {
-		if client.cpe[CpeInstantMOTD] {
-			client.sendMOTD(level)
+	level.ForEachPlayer(func(player *Player) {
+		if player.cpe[CpeInstantMOTD] {
+			player.sendMOTD(level)
 		} else {
-			client.reload()
+			player.level = nil
+			player.despawnLevel(level)
+			player.spawnLevel(level)
+			player.level = level
 		}
 	})
 }
@@ -302,8 +305,8 @@ func (buffer *BlockBuffer) Flush() {
 		buffer.level.blocks[index] = buffer.blocks[i]
 	}
 
-	buffer.level.ForEachClient(func(client *Client) {
-		if client.cpe[CpeBulkBlockUpdate] {
+	buffer.level.ForEachPlayer(func(player *Player) {
+		if player.cpe[CpeBulkBlockUpdate] {
 			packet := &packetBulkBlockUpdate{
 				packetTypeBulkBlockUpdate,
 				byte(buffer.count),
@@ -313,14 +316,14 @@ func (buffer *BlockBuffer) Flush() {
 
 			for i := uint(0); i < buffer.count; i++ {
 				packet.Indices[i] = int32(buffer.indices[i])
-				packet.Blocks[i] = client.convertBlock(buffer.blocks[i])
+				packet.Blocks[i] = player.convertBlock(buffer.blocks[i])
 			}
 
-			client.sendPacket(packet)
+			player.sendPacket(packet)
 		} else {
 			for i := uint(0); i < buffer.count; i++ {
 				x, y, z := buffer.level.Position(buffer.indices[i])
-				client.sendBlockChange(x, y, z, buffer.blocks[i])
+				player.sendBlockChange(x, y, z, buffer.blocks[i])
 			}
 		}
 	})
