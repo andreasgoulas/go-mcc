@@ -47,6 +47,7 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&commandBack)
 	server.RegisterCommand(&commandBan)
 	server.RegisterCommand(&commandBanIp)
+	server.RegisterCommand(&commandCommands)
 	server.RegisterCommand(&commandCopyLvl)
 	server.RegisterCommand(&commandGoto)
 	server.RegisterCommand(&commandHelp)

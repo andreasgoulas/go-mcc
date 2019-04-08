@@ -31,7 +31,7 @@ var commandCopyLvl = gomcc.Command{
 }
 
 func handleCopyLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
+	args := strings.Fields(message)
 	if len(args) != 2 {
 		sender.SendMessage("Usage: " + command.Name + " <src> <dest>")
 		return
@@ -68,8 +68,8 @@ func handleGoto(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	args := strings.Split(message, " ")
-	if len(args) != 1 || len(args[0]) == 0 {
+	args := strings.Fields(message)
+	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")
 		return
 	}
@@ -97,8 +97,8 @@ var commandLoad = gomcc.Command{
 }
 
 func handleLoad(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
-	if len(args) != 1 || len(args[0]) == 0 {
+	args := strings.Fields(message)
+	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")
 		return
 	}
@@ -125,8 +125,8 @@ func handleMain(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	args := strings.Split(message, " ")
-	if len(args) != 1 || len(args[0]) == 0 {
+	args := strings.Fields(message)
+	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")
 		return
 	}
@@ -149,7 +149,7 @@ var commandNewLvl = gomcc.Command{
 }
 
 func handleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
+	args := strings.Fields(message)
 	if len(args) < 5 {
 		sender.SendMessage("Usage: " + command.Name + " <name> <width> <height> <length> <theme> <args>")
 		return
@@ -206,8 +206,8 @@ var commandSave = gomcc.Command{
 }
 
 func handleSave(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
-	if len(args) != 1 || len(args[0]) == 0 {
+	args := strings.Fields(message)
+	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")
 		return
 	}
@@ -252,7 +252,7 @@ func handleSetSpawn(sender gomcc.CommandSender, command *gomcc.Command, message 
 		return
 	}
 
-	args := strings.Split(message, " ")
+	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <player>")
 		return
@@ -306,8 +306,8 @@ var commandUnload = gomcc.Command{
 }
 
 func handleUnload(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
-	if len(args) != 1 || len(args[0]) == 0 {
+	args := strings.Fields(message)
+	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")
 		return
 	}

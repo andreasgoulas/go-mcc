@@ -61,7 +61,7 @@ var commandSkin = gomcc.Command{
 }
 
 func handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
+	args := strings.Fields(message)
 	if len(args) != 2 {
 		sender.SendMessage("Usage: " + command.Name + " <player> <skin>")
 		return
@@ -106,8 +106,9 @@ func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 	lastLevel := player.Level()
 	lastLocation := player.Location()
 
-	args := strings.Split(message, " ")
-	if len(args) == 1 && len(args[0]) > 0 {
+	args := strings.Fields(message)
+	switch len(args) {
+	case 1:
 		entity := sender.Server().FindEntity(args[0])
 		if entity == nil {
 			sender.SendMessage("Player " + args[0] + " not found")
@@ -116,7 +117,8 @@ func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 
 		player.TeleportLevel(entity.Level())
 		player.Teleport(entity.Location())
-	} else if len(args) == 3 {
+
+	case 3:
 		var err error
 		location := player.Location()
 
@@ -139,7 +141,8 @@ func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 		}
 
 		player.Teleport(location)
-	} else {
+
+	default:
 		sender.SendMessage("Usage: " + command.Name + " <player> or <x> <y> <z>")
 		return
 	}
@@ -163,8 +166,8 @@ func handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message st
 		return
 	}
 
-	args := strings.Split(message, " ")
-	if len(args) != 1 || len(args[0]) == 0 {
+	args := strings.Fields(message)
+	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <player> or all")
 		return
 	}

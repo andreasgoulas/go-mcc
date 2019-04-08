@@ -17,8 +17,17 @@
 package gomcc
 
 import (
+	"strings"
 	"unicode"
 )
+
+type BlockPos struct {
+	X, Y, Z uint
+}
+
+type AABB struct {
+	Min, Max BlockPos
+}
 
 func min(x, y int) int {
 	if x < y {
@@ -51,10 +60,27 @@ func IsValidMessage(message string) bool {
 	return true
 }
 
-type BlockPos struct {
-	X, Y, Z uint
-}
+func WordWrap(message string, limit int) (result []string) {
+	for _, line := range strings.Split(message, "\n") {
+		for {
+			if len(line) <= limit {
+				break
+			}
 
-type AABB struct {
-	Min, Max BlockPos
+			i := strings.LastIndex(line[:limit+1], " ")
+			if i < 0 {
+				i = strings.LastIndex(line, " ")
+				if i < 0 {
+					break
+				}
+			}
+
+			result = append(result, line[:i])
+			line = line[i+1:]
+		}
+
+		result = append(result, line)
+	}
+
+	return
 }

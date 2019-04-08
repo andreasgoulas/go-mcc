@@ -127,15 +127,17 @@ var commandRank = gomcc.Command{
 }
 
 func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
-	if len(args) == 1 && len(args[0]) > 0 {
+	args := strings.Fields(message)
+	switch len(args) {
+	case 1:
 		rank := CoreDb.Rank(args[0])
 		if len(rank) == 0 {
 			sender.SendMessage(args[0] + " has no rank assigned")
 		} else {
 			sender.SendMessage("The rank of " + args[0] + " is " + rank)
 		}
-	} else if len(args) == 2 {
+
+	case 2:
 		if !CoreDb.RankExists(args[1]) {
 			sender.SendMessage("Rank " + args[1] + " does not exist")
 			return
@@ -146,7 +148,8 @@ func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		if client := sender.Server().FindClient(args[0]); client != nil {
 			client.SetPermissions(CoreDb.PlayerPermissions(args[0]))
 		}
-	} else {
+
+	default:
 		sender.SendMessage("Usage: " + command.Name + " <player> <rank>")
 	}
 }
@@ -159,8 +162,8 @@ var commandUnban = gomcc.Command{
 }
 
 func handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
-	if len(args) != 1 || len(args[0]) == 0 {
+	args := strings.Fields(message)
+	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <player>")
 		return
 	}
@@ -177,8 +180,8 @@ var commandUnbanIp = gomcc.Command{
 }
 
 func handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
-	if len(args) != 1 || len(args[0]) == 0 {
+	args := strings.Fields(message)
+	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <ip>")
 		return
 	}

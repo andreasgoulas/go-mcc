@@ -46,8 +46,9 @@ var commandNick = gomcc.Command{
 }
 
 func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
-	if len(args) == 1 && len(args[0]) > 0 {
+	args := strings.Fields(message)
+	switch len(args) {
+	case 1:
 		client := sender.Server().FindClient(args[0])
 		if client == nil {
 			sender.SendMessage("Player " + args[0] + " not found")
@@ -56,7 +57,8 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 
 		client.NickName = client.Entity().Name()
 		sender.SendMessage("Nick of " + args[0] + " reset")
-	} else if len(args) == 2 {
+
+	case 2:
 		if !gomcc.IsValidName(args[1]) {
 			sender.SendMessage(args[1] + " is not a valid name")
 			return
@@ -70,7 +72,8 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 
 		client.NickName = args[1]
 		sender.SendMessage("Nick of " + args[0] + " set to " + args[1])
-	} else {
+
+	default:
 		sender.SendMessage("Usage: " + command.Name + " <player> <nick>")
 	}
 }

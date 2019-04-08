@@ -255,8 +255,7 @@ func (client *Client) SendMessageExt(msgType int, message string) {
 		}
 	}
 
-	lines := strings.Split(message, "\n")
-	for _, line := range lines {
+	for _, line := range WordWrap(message, 64) {
 		client.sendPacket(&packetMessage{
 			packetTypeMessage,
 			byte(msgType),

@@ -18,11 +18,34 @@ package core
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"Go-MCC/gomcc"
 )
+
+var commandCommands = gomcc.Command{
+	Name:        "commands",
+	Description: "List all commands.",
+	Permission:  "core.commands",
+	Handler:     handleCommands,
+}
+
+func handleCommands(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	if len(message) != 0 {
+		sender.SendMessage("Usage: " + command.Name)
+		return
+	}
+
+	var cmds []string
+	sender.Server().ForEachCommand(func(cmd *gomcc.Command) {
+		cmds = append(cmds, cmd.Name)
+	})
+
+	sort.Strings(cmds)
+	sender.SendMessage(strings.Join(cmds, ", "))
+}
 
 var commandHelp = gomcc.Command{
 	Name:        "help",
@@ -32,8 +55,8 @@ var commandHelp = gomcc.Command{
 }
 
 func handleHelp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
-	if len(args) != 1 || len(args[0]) == 0 {
+	args := strings.Fields(message)
+	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <command>")
 		return
 	}
@@ -65,6 +88,7 @@ func handleLevels(sender gomcc.CommandSender, command *gomcc.Command, message st
 		levels = append(levels, level.Name())
 	})
 
+	sort.Strings(levels)
 	sender.SendMessage(strings.Join(levels, ", "))
 }
 
@@ -86,8 +110,8 @@ func fmtDuration(t time.Duration) string {
 }
 
 func handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	args := strings.Split(message, " ")
-	if len(args) != 1 || len(args[0]) == 0 {
+	args := strings.Fields(message)
+	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <player>")
 		return
 	}
