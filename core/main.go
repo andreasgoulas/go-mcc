@@ -51,6 +51,7 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&commandGoto)
 	server.RegisterCommand(&commandHelp)
 	server.RegisterCommand(&commandKick)
+	server.RegisterCommand(&commandLevels)
 	server.RegisterCommand(&commandLoad)
 	server.RegisterCommand(&commandMain)
 	server.RegisterCommand(&commandMe)

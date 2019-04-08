@@ -37,7 +37,7 @@ func handleBack(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	if len(message) > 0 {
+	if len(message) != 0 {
 		sender.SendMessage("Usage: " + command.Name)
 		return
 	}

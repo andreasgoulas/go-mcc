@@ -47,6 +47,27 @@ func handleHelp(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	sender.SendMessage(cmd.Description)
 }
 
+var commandLevels = gomcc.Command{
+	Name:        "levels",
+	Description: "List all loaded levels.",
+	Permission:  "core.levels",
+	Handler:     handleLevels,
+}
+
+func handleLevels(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	if len(message) != 0 {
+		sender.SendMessage("Usage: " + command.Name)
+		return
+	}
+
+	var levels []string
+	sender.Server().ForEachLevel(func(level *gomcc.Level) {
+		levels = append(levels, level.Name())
+	})
+
+	sender.SendMessage(strings.Join(levels, ", "))
+}
+
 var commandSeen = gomcc.Command{
 	Name:        "seen",
 	Description: "Check when a player was last online.",
