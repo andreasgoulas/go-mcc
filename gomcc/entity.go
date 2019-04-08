@@ -37,6 +37,9 @@ const (
 	ModelSkeleton  = "skeleton"
 	ModelSpider    = "spider"
 	ModelZombie    = "zombie"
+	ModelHead      = "head"
+	ModelSitting   = "sitting"
+	ModelChibi     = "chibi"
 )
 
 type Entity struct {
@@ -63,8 +66,8 @@ func NewEntity(name string, server *Server) *Entity {
 	return &Entity{
 		server:      server,
 		id:          0xff,
-		name:        name,
 		model:       ModelHumanoid,
+		name:        name,
 		DisplayName: name,
 		SkinName:    name,
 		listName:    name,

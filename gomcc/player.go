@@ -819,10 +819,19 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 	x, y, z := uint(packet.X), uint(packet.Y), uint(packet.Z)
 	block := BlockID(packet.BlockType)
 
-	dx := uint(player.location.X) - x
-	dy := uint(player.location.Y) - y
-	dz := uint(player.location.Z) - z
-	if math.Sqrt(float64(dx*dx+dy*dy+dz*dz)) > player.clickDistance {
+	level := player.level
+	if x >= level.width || y >= level.height || z >= level.length {
+		return
+	}
+
+	px := player.location.X
+	py := player.location.Y
+	pz := player.location.Z
+
+	dx := math.Min(math.Abs(px-float64(x)), math.Abs(px-float64(x+1)))
+	dy := math.Min(math.Abs(py-float64(y)), math.Abs(py-float64(y+1)))
+	dz := math.Min(math.Abs(pz-float64(z)), math.Abs(pz-float64(z+1)))
+	if dx*dx+dy*dy+dz*dz > player.clickDistance*player.clickDistance {
 		player.SendMessage("You can't build that far away.")
 		player.revertBlock(x, y, z)
 		return
@@ -832,8 +841,8 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 	case 0x00:
 		event := &EventBlockBreak{
 			player,
-			player.level,
-			player.level.GetBlock(x, y, z),
+			level,
+			level.GetBlock(x, y, z),
 			x, y, z,
 			false,
 		}
@@ -843,7 +852,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 			return
 		}
 
-		player.level.SetBlock(x, y, z, BlockAir, true)
+		level.SetBlock(x, y, z, BlockAir, true)
 
 	case 0x01:
 		if block > BlockMaxCPE || (player.cpeBlockLevel < 1 && block > BlockMax) {
@@ -854,7 +863,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 
 		event := &EventBlockPlace{
 			player,
-			player.level,
+			level,
 			block,
 			x, y, z,
 			false,
@@ -865,7 +874,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 			return
 		}
 
-		player.level.SetBlock(x, y, z, block, true)
+		level.SetBlock(x, y, z, block, true)
 	}
 }
 
