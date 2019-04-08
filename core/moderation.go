@@ -41,10 +41,12 @@ func handleBan(sender gomcc.CommandSender, command *gomcc.Command, message strin
 		reason = args[1]
 	}
 
-	if err := Ban(BanTypeName, args[0], reason, sender.Name()); err != nil {
+	if banned, _ := CoreDb.IsBanned(BanTypeName, args[0]); banned {
 		sender.SendMessage("Player " + args[0] + " is already banned")
 		return
 	}
+
+	CoreDb.Ban(BanTypeName, args[0], reason, sender.Name())
 
 	client := sender.Server().FindClient(args[0])
 	if client != nil {
@@ -73,10 +75,12 @@ func handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message str
 		reason = args[1]
 	}
 
-	if err := Ban(BanTypeIp, args[0], reason, sender.Name()); err != nil {
+	if banned, _ := CoreDb.IsBanned(BanTypeIp, args[0]); banned {
 		sender.SendMessage("IP " + args[0] + " is already banned")
 		return
 	}
+
+	CoreDb.Ban(BanTypeIp, args[0], reason, sender.Name())
 
 	sender.Server().ForEachClient(func(client *gomcc.Client) {
 		if client.RemoteAddr() == args[0] {
@@ -115,6 +119,38 @@ func handleKick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	player.Kick(reason)
 }
 
+var commandRank = gomcc.Command{
+	Name:        "rank",
+	Description: "Set the rank of a player.",
+	Permission:  "core.rank",
+	Handler:     handleRank,
+}
+
+func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	args := strings.Split(message, " ")
+	if len(args) == 1 && len(args[0]) > 0 {
+		rank := CoreDb.Rank(args[0])
+		if len(rank) == 0 {
+			sender.SendMessage(args[0] + " has no rank assigned")
+		} else {
+			sender.SendMessage("The rank of " + args[0] + " is " + rank)
+		}
+	} else if len(args) == 2 {
+		if !CoreDb.RankExists(args[1]) {
+			sender.SendMessage("Rank " + args[1] + " does not exist")
+			return
+		}
+
+		CoreDb.SetRank(args[0], args[1])
+
+		if client := sender.Server().FindClient(args[0]); client != nil {
+			client.SetPermissions(CoreDb.PlayerPermissions(args[0]))
+		}
+	} else {
+		sender.SendMessage("Usage: " + command.Name + " <player> <rank>")
+	}
+}
+
 var commandUnban = gomcc.Command{
 	Name:        "unban",
 	Description: "Remove the ban for a player.",
@@ -129,7 +165,7 @@ func handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message str
 		return
 	}
 
-	Unban(BanTypeName, args[0])
+	CoreDb.Unban(BanTypeName, args[0])
 	sender.SendMessage("Player " + args[0] + " unbanned")
 }
 
@@ -147,6 +183,6 @@ func handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message s
 		return
 	}
 
-	Unban(BanTypeIp, args[0])
+	CoreDb.Unban(BanTypeIp, args[0])
 	sender.SendMessage("IP " + args[0] + " unbanned")
 }

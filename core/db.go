@@ -24,11 +24,17 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var db *sql.DB
+const (
+	BanTypeName = iota
+	BanTypeIp
+)
 
-func dbOpen() {
-	var err error
-	db, err = sql.Open("sqlite3", "core.sqlite")
+type Database struct {
+	conn *sql.DB
+}
+
+func newDatabase(path string) *Database {
+	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -36,51 +42,58 @@ func dbOpen() {
 	_, err = db.Exec(`
 CREATE TABLE IF NOT EXISTS BanList(
 	Name TEXT NOT NULL PRIMARY KEY,
-	Type TEXT NOT NULL,
+	Type INTEGER,
 	Reason TEXT,
 	BannedBy TEXT,
 	Timestamp DATETIME);
 
 CREATE TABLE IF NOT EXISTS Players(
 	Name TEXT NOT NULL PRIMARY KEY,
-	LastLogin DATETIME)`)
+	Rank TEXT NOT NULL,
+	LastLogin DATETIME);
+
+CREATE TABLE IF NOT EXISTS Ranks(
+	Name TEXT PRIMARY KEY);
+
+CREATE TABLE IF NOT EXISTS Permissions(
+	Rank TEXT,
+	Permission TEXT);`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &Database{db}
+}
+
+func (db *Database) onLogin(name string) {
+	_, err := db.conn.Exec(`INSERT OR IGNORE INTO Players(Name, Rank) VALUES(?, "")`, name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = db.conn.Exec("UPDATE Players SET LastLogin = CURRENT_TIMESTAMP WHERE Name = ?", name)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func dbOnLogin(name string) {
-	_, err := db.Exec("INSERT OR IGNORE INTO Players(Name) VALUES(?)", name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = db.Exec("UPDATE Players SET LastLogin = CURRENT_TIMESTAMP WHERE Name = ?", name)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-const (
-	BanTypeName = "Name"
-	BanTypeIp   = "IP"
-)
-
-func Ban(banType string, name string, reason string, bannedBy string) error {
-	_, err := db.Exec(`INSERT INTO BanList(Name, Type, Reason, BannedBy, Timestamp)
+func (db *Database) Ban(banType int, name, reason, bannedBy string) {
+	_, err := db.conn.Exec(`INSERT OR IGNORE INTO BanList(Name, Type, Reason, BannedBy, Timestamp)
 		VALUES(?, ?, ?, ?, CURRENT_TIMESTAMP)`, name, banType, reason, bannedBy)
-	return err
-}
-
-func Unban(banType string, name string) {
-	_, err := db.Exec("DELETE FROM BanList WHERE Name = ? AND Type = ?", name, banType)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func IsBanned(banType string, name string) (result bool, reason string) {
-	rows := db.QueryRow("SELECT Reason FROM BanList WHERE Name = ? AND Type = ?", name, banType)
+func (db *Database) Unban(banType int, name string) {
+	_, err := db.conn.Exec("DELETE FROM BanList WHERE Name = ? AND Type = ?", name, banType)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (db *Database) IsBanned(banType int, name string) (result bool, reason string) {
+	rows := db.conn.QueryRow("SELECT Reason FROM BanList WHERE Name = ? AND Type = ?", name, banType)
 	if err := rows.Scan(&reason); err != nil {
 		return
 	}
@@ -89,8 +102,61 @@ func IsBanned(banType string, name string) (result bool, reason string) {
 	return
 }
 
-func LastLogin(name string) (lastLogin time.Time, err error) {
-	rows := db.QueryRow("SELECT LastLogin FROM Players WHERE Name = ?", name)
-	err = rows.Scan(&lastLogin)
+func (db *Database) SetRank(name, rank string) {
+	_, err := db.conn.Exec("UPDATE Players SET Rank = ? WHERE Name = ?", rank, name)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (db *Database) Rank(name string) (rank string) {
+	rows := db.conn.QueryRow("SELECT Rank FROM Players WHERE Name = ?", name)
+	if err := rows.Scan(&rank); err != sql.ErrNoRows && err != nil {
+		log.Fatal(err)
+	}
+
+	return
+}
+
+func (db *Database) RankExists(rank string) bool {
+	rows, _ := db.conn.Query("SELECT 1 FROM Ranks WHERE Name = ?", rank)
+	defer rows.Close()
+	return rows.Next()
+}
+
+func (db *Database) RankPermissions(rank string) (result []string) {
+	rows, err := db.conn.Query(`SELECT Permission FROM Permissions WHERE Rank == ?`, rank)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var perm string
+		if err := rows.Scan(&perm); err != nil {
+			log.Fatal(err)
+		}
+
+		result = append(result, perm)
+	}
+
+	return
+}
+
+func (db *Database) PlayerPermissions(name string) []string {
+	rank := db.Rank(name)
+	if len(rank) == 0 {
+		return nil
+	}
+
+	return db.RankPermissions(rank)
+}
+
+func (db *Database) LastLogin(name string) (lastLogin time.Time, found bool) {
+	rows := db.conn.QueryRow("SELECT LastLogin FROM Players WHERE Name = ?", name)
+	if rows.Scan(&lastLogin) == nil {
+		found = true
+	}
+
 	return
 }

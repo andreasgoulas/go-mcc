@@ -110,6 +110,14 @@ func (client *Client) HasPermission(permission string) bool {
 	return false
 }
 
+func (client *Client) SetPermissions(permissions []string) {
+	client.permissions = nil
+	for _, permission := range permissions {
+		split := strings.Split(permission, ".")
+		client.permissions = append(client.permissions, split)
+	}
+}
+
 func (client *Client) HasExtension(extension uint) bool {
 	return client.cpe[extension]
 }

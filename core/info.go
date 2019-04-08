@@ -53,8 +53,8 @@ func handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	lastLogin, err := LastLogin(args[0])
-	if err != nil {
+	lastLogin, found := CoreDb.LastLogin(args[0])
+	if !found {
 		sender.SendMessage("Player " + args[0] + " not found")
 		return
 	}
