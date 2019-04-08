@@ -452,6 +452,19 @@ func (server *Server) RegisterCommand(command *Command) {
 	server.commandsLock.Unlock()
 }
 
+func (server *Server) FindCommand(name string) *Command {
+	server.commandsLock.RLock()
+	defer server.commandsLock.RUnlock()
+
+	for _, command := range server.commands {
+		if command.Name == name {
+			return command
+		}
+	}
+
+	return nil
+}
+
 func (server *Server) ForEachCommand(fn func(*Command)) {
 	server.commandsLock.RLock()
 	for _, command := range server.commands {

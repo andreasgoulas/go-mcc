@@ -49,6 +49,7 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterCommand(&commandBanIp)
 	server.RegisterCommand(&commandCopyLvl)
 	server.RegisterCommand(&commandGoto)
+	server.RegisterCommand(&commandHelp)
 	server.RegisterCommand(&commandKick)
 	server.RegisterCommand(&commandLoad)
 	server.RegisterCommand(&commandMain)

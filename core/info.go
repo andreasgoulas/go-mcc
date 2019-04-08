@@ -24,6 +24,29 @@ import (
 	"Go-MCC/gomcc"
 )
 
+var commandHelp = gomcc.Command{
+	Name:        "help",
+	Description: "Describe a command.",
+	Permission:  "core.help",
+	Handler:     handleHelp,
+}
+
+func handleHelp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	args := strings.Split(message, " ")
+	if len(args) != 1 || len(args[0]) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <command>")
+		return
+	}
+
+	cmd := sender.Server().FindCommand(args[0])
+	if cmd == nil {
+		sender.SendMessage("Unknown command " + args[0])
+		return
+	}
+
+	sender.SendMessage(cmd.Description)
+}
+
 var commandSeen = gomcc.Command{
 	Name:        "seen",
 	Description: "Check when a player was last online.",
