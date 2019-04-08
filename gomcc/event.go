@@ -34,6 +34,7 @@ const (
 	EventTypePlayerLogin
 	EventTypePlayerJoin
 	EventTypePlayerQuit
+	EventTypePlayerChat
 	EventTypePlayerClick
 	EventTypeEntityLevelChange
 	EventTypeEntityMove
@@ -65,6 +66,12 @@ type EventPlayerJoin struct {
 
 type EventPlayerQuit struct {
 	Client *Client
+}
+
+type EventPlayerChat struct {
+	Client  *Client
+	Message string
+	Cancel  bool
 }
 
 type EventPlayerClick struct {

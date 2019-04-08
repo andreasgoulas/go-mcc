@@ -945,6 +945,12 @@ func (client *Client) handleMessage(reader io.Reader) {
 	if message[0] == '/' {
 		client.server.ExecuteCommand(client, message[1:])
 	} else {
+		event := &EventPlayerChat{client, message, false}
+		client.server.FireEvent(EventTypePlayerChat, &event)
+		if event.Cancel {
+			return
+		}
+
 		client.server.BroadcastMessage(ColorDefault + "<" + client.NickName + "> " + ConvertColors(message))
 	}
 }
