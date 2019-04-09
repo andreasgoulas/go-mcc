@@ -23,6 +23,16 @@ import (
 	"Go-MCC/gomcc"
 )
 
+func parseCoord(arg string, curr float64) (float64, error) {
+	if strings.HasPrefix(arg, "~") {
+		value, err := strconv.Atoi(arg[1:])
+		return curr + float64(value), err
+	} else {
+		value, err := strconv.Atoi(arg)
+		return float64(value), err
+	}
+}
+
 var commandBack = gomcc.Command{
 	Name:        "back",
 	Description: "Return to your location before your last teleportation.",
@@ -82,16 +92,6 @@ var commandTp = gomcc.Command{
 	Description: "Teleport to another player.",
 	Permission:  "core.tp",
 	Handler:     handleTp,
-}
-
-func parseCoord(arg string, curr float64) (float64, error) {
-	if strings.HasPrefix(arg, "~") {
-		value, err := strconv.Atoi(arg[1:])
-		return curr + float64(value), err
-	} else {
-		value, err := strconv.Atoi(arg)
-		return float64(value), err
-	}
 }
 
 func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string) {

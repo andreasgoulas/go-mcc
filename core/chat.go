@@ -22,6 +22,13 @@ import (
 	"Go-MCC/gomcc"
 )
 
+func SendPm(message string, src, dst gomcc.CommandSender) {
+	message = gomcc.ConvertColors(message)
+	src.SendMessage("[me -> " + dst.Name() + "] " + message)
+	dst.SendMessage("[" + src.Name() + " -> me] " + message)
+	PlayerData(dst.Name()).LastSender = src.Name()
+}
+
 var commandMe = gomcc.Command{
 	Name:        "me",
 	Description: "Broadcast an action.",
@@ -35,7 +42,8 @@ func handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string
 		return
 	}
 
-	sender.Server().BroadcastMessage("* " + sender.Name() + " " + gomcc.ConvertColors(message))
+	message = gomcc.ConvertColors(message)
+	sender.Server().BroadcastMessage("* " + sender.Name() + " " + message)
 }
 
 var commandNick = gomcc.Command{
@@ -98,11 +106,7 @@ func handleR(sender gomcc.CommandSender, command *gomcc.Command, message string)
 		return
 	}
 
-	message = gomcc.ConvertColors(message)
-	sender.SendMessage("[me -> " + player.Name() + "] " + message)
-	player.SendMessage("[" + sender.Name() + " -> me] " + message)
-
-	PlayerData(player.Name()).LastSender = sender.Name()
+	SendPm(message, sender, player)
 }
 
 var commandSay = gomcc.Command{
@@ -141,9 +145,5 @@ func handleTell(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	message = gomcc.ConvertColors(args[1])
-	sender.SendMessage("[me -> " + player.Name() + "] " + message)
-	player.SendMessage("[" + sender.Name() + " -> me] " + message)
-
-	PlayerData(player.Name()).LastSender = sender.Name()
+	SendPm(args[1], sender, player)
 }

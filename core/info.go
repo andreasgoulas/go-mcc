@@ -25,6 +25,16 @@ import (
 	"Go-MCC/gomcc"
 )
 
+func fmtDuration(t time.Duration) string {
+	t = t.Round(time.Minute)
+	d := t / (24 * time.Hour)
+	t -= d * (24 * time.Hour)
+	h := t / time.Hour
+	t -= h * time.Hour
+	m := t / time.Minute
+	return fmt.Sprintf("%dd %dh %dm", d, h, m)
+}
+
 var commandCommands = gomcc.Command{
 	Name:        "commands",
 	Description: "List all commands.",
@@ -133,16 +143,6 @@ var commandSeen = gomcc.Command{
 	Description: "Check when a player was last online.",
 	Permission:  "core.seen",
 	Handler:     handleSeen,
-}
-
-func fmtDuration(t time.Duration) string {
-	t = t.Round(time.Minute)
-	d := t / (24 * time.Hour)
-	t -= d * (24 * time.Hour)
-	h := t / time.Hour
-	t -= h * time.Hour
-	m := t / time.Minute
-	return fmt.Sprintf("%dd %dh %dm", d, h, m)
 }
 
 func handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message string) {
