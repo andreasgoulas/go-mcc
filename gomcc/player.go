@@ -181,6 +181,14 @@ func (player *Player) SetClickDistance(value float64) {
 	}
 }
 
+func (player *Player) CanReach(x, y, z uint) bool {
+	loc := player.location
+	dx := math.Min(math.Abs(loc.X-float64(x)), math.Abs(loc.X-float64(x+1)))
+	dy := math.Min(math.Abs(loc.Y-float64(y)), math.Abs(loc.Y-float64(y+1)))
+	dz := math.Min(math.Abs(loc.Z-float64(z)), math.Abs(loc.Z-float64(z+1)))
+	return dx*dx+dy*dy+dz*dz <= player.clickDistance*player.clickDistance
+}
+
 func (player *Player) HeldBlock() BlockID {
 	return player.heldBlock
 }
@@ -623,29 +631,37 @@ func (player *Player) handle() {
 
 		id := buffer[0]
 		var size uint
-		switch id {
-		case packetTypeIdentification:
-			size = 131
-		case packetTypeSetBlockClient:
-			size = 9
-		case packetTypePlayerTeleport:
-			size = 10
-		case packetTypeMessage:
-			size = 66
-		case packetTypeExtInfo:
-			size = 67
-		case packetTypeExtEntry:
-			size = 69
-		case packetTypeCustomBlockSupportLevel:
-			size = 2
-		case packetTypePlayerClicked:
-			size = 15
-		case packetTypeTwoWayPing:
-			size = 4
+		switch player.state {
+		case stateLogin:
+			switch id {
+			case packetTypeIdentification:
+				size = 131
+			case packetTypeExtInfo:
+				size = 67
+			case packetTypeExtEntry:
+				size = 69
+			case packetTypeCustomBlockSupportLevel:
+				size = 2
+			}
 
-		default:
+		case stateGame:
+			switch id {
+			case packetTypeSetBlockClient:
+				size = 9
+			case packetTypePlayerTeleport:
+				size = 10
+			case packetTypeMessage:
+				size = 66
+			case packetTypePlayerClicked:
+				size = 15
+			case packetTypeTwoWayPing:
+				size = 4
+			}
+		}
+
+		if size == 0 {
 			player.Kick("Invalid Packet")
-			continue
+			break
 		}
 
 		buffer = buffer[:size]
@@ -703,13 +719,6 @@ func (player *Player) login() {
 		}
 	}
 
-	if player.cpe[CpeCustomBlocks] {
-		player.sendPacket(&packetCustomBlockSupportLevel{
-			packetTypeCustomBlockSupportLevel,
-			1,
-		})
-	}
-
 	joinEvent := EventPlayerJoin{player}
 	player.server.FireEvent(EventTypePlayerJoin, &joinEvent)
 
@@ -756,10 +765,6 @@ func (player *Player) verify(key []byte) bool {
 }
 
 func (player *Player) handleIdentification(reader io.Reader) {
-	if player.state != stateLogin {
-		return
-	}
-
 	packet := packetClientIdentification{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
@@ -811,10 +816,6 @@ func (player *Player) revertBlock(x, y, z uint) {
 }
 
 func (player *Player) handleSetBlock(reader io.Reader) {
-	if player.state != stateGame {
-		return
-	}
-
 	packet := packetSetBlockClient{}
 	binary.Read(reader, binary.BigEndian, &packet)
 	x, y, z := uint(packet.X), uint(packet.Y), uint(packet.Z)
@@ -825,14 +826,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 		return
 	}
 
-	px := player.location.X
-	py := player.location.Y
-	pz := player.location.Z
-
-	dx := math.Min(math.Abs(px-float64(x)), math.Abs(px-float64(x+1)))
-	dy := math.Min(math.Abs(py-float64(y)), math.Abs(py-float64(y+1)))
-	dz := math.Min(math.Abs(pz-float64(z)), math.Abs(pz-float64(z+1)))
-	if dx*dx+dy*dy+dz*dz > player.clickDistance*player.clickDistance {
+	if !player.CanReach(x, y, z) {
 		player.SendMessage("You can't build that far away.")
 		player.revertBlock(x, y, z)
 		return
@@ -880,10 +874,6 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 }
 
 func (player *Player) handlePlayerTeleport(reader io.Reader) {
-	if player.state != stateGame {
-		return
-	}
-
 	packet := packetPlayerTeleport{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
@@ -920,10 +910,6 @@ func (player *Player) handlePlayerTeleport(reader io.Reader) {
 }
 
 func (player *Player) handleMessage(reader io.Reader) {
-	if player.state != stateGame {
-		return
-	}
-
 	packet := packetMessage{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
@@ -954,10 +940,6 @@ func (player *Player) handleMessage(reader io.Reader) {
 }
 
 func (player *Player) handleExtInfo(reader io.Reader) {
-	if player.state != stateLogin {
-		return
-	}
-
 	packet := packetExtInfo{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
@@ -968,10 +950,6 @@ func (player *Player) handleExtInfo(reader io.Reader) {
 }
 
 func (player *Player) handleExtEntry(reader io.Reader) {
-	if player.state != stateLogin {
-		return
-	}
-
 	packet := packetExtEntry{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
@@ -986,7 +964,14 @@ func (player *Player) handleExtEntry(reader io.Reader) {
 
 	player.remExtensions--
 	if player.remExtensions == 0 {
-		player.login()
+		if player.cpe[CpeCustomBlocks] {
+			player.sendPacket(&packetCustomBlockSupportLevel{
+				packetTypeCustomBlockSupportLevel,
+				1,
+			})
+		} else {
+			player.login()
+		}
 	}
 }
 
@@ -997,13 +982,11 @@ func (player *Player) handleCustomBlockSupportLevel(reader io.Reader) {
 	if packet.SupportLevel <= 1 {
 		player.cpeBlockLevel = packet.SupportLevel
 	}
+
+	player.login()
 }
 
 func (player *Player) handlePlayerClicked(reader io.Reader) {
-	if player.state != stateGame {
-		return
-	}
-
 	packet := packetPlayerClicked{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
