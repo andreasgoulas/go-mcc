@@ -41,14 +41,15 @@ func newDatabase(path string) *Database {
 
 	_, err = db.Exec(`
 CREATE TABLE IF NOT EXISTS BanList(
-	Name TEXT NOT NULL PRIMARY KEY,
+	Name TEXT,
 	Type INTEGER,
 	Reason TEXT,
 	BannedBy TEXT,
-	Timestamp DATETIME);
+	Timestamp DATETIME,
+	PRIMARY KEY(Name, Type));
 
 CREATE TABLE IF NOT EXISTS Players(
-	Name TEXT NOT NULL PRIMARY KEY,
+	Name TEXT PRIMARY KEY,
 	Rank TEXT NOT NULL,
 	LastLogin DATETIME);
 
@@ -57,7 +58,8 @@ CREATE TABLE IF NOT EXISTS Ranks(
 
 CREATE TABLE IF NOT EXISTS Permissions(
 	Rank TEXT,
-	Permission TEXT);`)
+	Permission TEXT,
+	PRIMARY KEY(Rank, Permission));`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,20 +68,18 @@ CREATE TABLE IF NOT EXISTS Permissions(
 }
 
 func (db *Database) onLogin(name string) {
-	_, err := db.conn.Exec(`INSERT OR IGNORE INTO Players(Name, Rank) VALUES(?, "")`, name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = db.conn.Exec("UPDATE Players SET LastLogin = CURRENT_TIMESTAMP WHERE Name = ?", name)
+	_, err := db.conn.Exec(`
+INSERT OR IGNORE INTO Players(Name, Rank) VALUES(?, "");
+UPDATE Players SET LastLogin = CURRENT_TIMESTAMP WHERE Name = ?;`, name, name)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func (db *Database) Ban(banType int, name, reason, bannedBy string) {
-	_, err := db.conn.Exec(`INSERT OR IGNORE INTO BanList(Name, Type, Reason, BannedBy, Timestamp)
-		VALUES(?, ?, ?, ?, CURRENT_TIMESTAMP)`, name, banType, reason, bannedBy)
+	_, err := db.conn.Exec(`
+INSERT OR IGNORE INTO BanList(Name, Type, Reason, BannedBy, Timestamp)
+VALUES(?, ?, ?, ?, CURRENT_TIMESTAMP)`, name, banType, reason, bannedBy)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -100,6 +100,37 @@ func (db *Database) IsBanned(banType int, name string) (result bool, reason stri
 
 	result = true
 	return
+}
+
+func (db *Database) AddRank(rank string) {
+	_, err := db.conn.Exec("INSERT OR IGNORE INTO Ranks(Name) VALUES(?)", rank)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (db *Database) RemoveRank(rank, newRank string) {
+	_, err := db.conn.Exec(`
+UPDATE Players SET Rank = ? WHERE Rank = ?;
+DELETE FROM Permissions WHERE Rank = ?;
+DELETE FROM Ranks WHERE Rank = ?;`, newRank, rank, rank, rank)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (db *Database) AddPermission(rank, permission string) {
+	_, err := db.conn.Exec("INSERT INTO Permissions(Rank, Permission) VALUES(?, ?)", rank, permission)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (db *Database) RemovePermission(rank, permission string) {
+	_, err := db.conn.Exec("DELETE FROM Permissions WHERE Rank = ? AND Permission = ?", rank, permission)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (db *Database) SetRank(name, rank string) {

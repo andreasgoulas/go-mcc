@@ -168,6 +168,11 @@ func handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message str
 		return
 	}
 
+	if banned, _ := CoreDb.IsBanned(BanTypeName, args[0]); !banned {
+		sender.SendMessage("Player " + args[0] + " is not banned")
+		return
+	}
+
 	CoreDb.Unban(BanTypeName, args[0])
 	sender.SendMessage("Player " + args[0] + " unbanned")
 }
@@ -183,6 +188,11 @@ func handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message s
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <ip>")
+		return
+	}
+
+	if banned, _ := CoreDb.IsBanned(BanTypeIp, args[0]); !banned {
+		sender.SendMessage("IP " + args[0] + " is not banned")
 		return
 	}
 
