@@ -51,15 +51,7 @@ CREATE TABLE IF NOT EXISTS BanList(
 CREATE TABLE IF NOT EXISTS Players(
 	Name TEXT PRIMARY KEY,
 	Rank TEXT NOT NULL,
-	LastLogin DATETIME);
-
-CREATE TABLE IF NOT EXISTS Ranks(
-	Name TEXT PRIMARY KEY);
-
-CREATE TABLE IF NOT EXISTS Permissions(
-	Rank TEXT,
-	Permission TEXT,
-	PRIMARY KEY(Rank, Permission));`)
+	LastLogin DATETIME);`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,8 +61,8 @@ CREATE TABLE IF NOT EXISTS Permissions(
 
 func (db *Database) onLogin(name string) {
 	_, err := db.conn.Exec(`
-INSERT OR IGNORE INTO Players(Name, Rank) VALUES(?, "");
-UPDATE Players SET LastLogin = CURRENT_TIMESTAMP WHERE Name = ?;`, name, name)
+INSERT OR IGNORE INTO Players(Name, Rank) VALUES(?, ?);
+UPDATE Players SET LastLogin = CURRENT_TIMESTAMP WHERE Name = ?;`, name, CoreRanks.Default, name)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -102,37 +94,6 @@ func (db *Database) IsBanned(banType int, name string) (result bool, reason stri
 	return
 }
 
-func (db *Database) AddRank(rank string) {
-	_, err := db.conn.Exec("INSERT OR IGNORE INTO Ranks(Name) VALUES(?)", rank)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (db *Database) RemoveRank(rank, newRank string) {
-	_, err := db.conn.Exec(`
-UPDATE Players SET Rank = ? WHERE Rank = ?;
-DELETE FROM Permissions WHERE Rank = ?;
-DELETE FROM Ranks WHERE Rank = ?;`, newRank, rank, rank, rank)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (db *Database) AddPermission(rank, permission string) {
-	_, err := db.conn.Exec("INSERT INTO Permissions(Rank, Permission) VALUES(?, ?)", rank, permission)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (db *Database) RemovePermission(rank, permission string) {
-	_, err := db.conn.Exec("DELETE FROM Permissions WHERE Rank = ? AND Permission = ?", rank, permission)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 func (db *Database) SetRank(name, rank string) {
 	_, err := db.conn.Exec("UPDATE Players SET Rank = ? WHERE Name = ?", rank, name)
 	if err != nil {
@@ -147,40 +108,6 @@ func (db *Database) Rank(name string) (rank string) {
 	}
 
 	return
-}
-
-func (db *Database) RankExists(rank string) bool {
-	rows, _ := db.conn.Query("SELECT 1 FROM Ranks WHERE Name = ?", rank)
-	defer rows.Close()
-	return rows.Next()
-}
-
-func (db *Database) RankPermissions(rank string) (result []string) {
-	rows, err := db.conn.Query(`SELECT Permission FROM Permissions WHERE Rank == ?`, rank)
-	if err != nil {
-		return
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var perm string
-		if err := rows.Scan(&perm); err != nil {
-			log.Fatal(err)
-		}
-
-		result = append(result, perm)
-	}
-
-	return
-}
-
-func (db *Database) PlayerPermissions(name string) []string {
-	rank := db.Rank(name)
-	if len(rank) == 0 {
-		return nil
-	}
-
-	return db.RankPermissions(rank)
 }
 
 func (db *Database) LastLogin(name string) (lastLogin time.Time, found bool) {

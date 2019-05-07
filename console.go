@@ -18,7 +18,7 @@ package main
 
 import (
 	"bufio"
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -79,7 +79,7 @@ func (console *Console) Name() string {
 }
 
 func (console *Console) SendMessage(message string) {
-	fmt.Println(message)
+	log.Println(message)
 }
 
 func (console *Console) HasPermission(permission string) bool {

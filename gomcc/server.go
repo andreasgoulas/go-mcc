@@ -19,8 +19,8 @@ package gomcc
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net"
 	"net/http"
@@ -85,7 +85,7 @@ type Server struct {
 func NewServer(config *Config, storage LevelStorage) *Server {
 	listener, err := net.ListenTCP("tcp", &net.TCPAddr{Port: config.Port})
 	if err != nil {
-		fmt.Printf("Server Error: %s\n", err.Error())
+		log.Printf("Server Error: %s\n", err.Error())
 		return nil
 	}
 
@@ -105,7 +105,7 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 
 	mainLevel, err := server.LoadLevel(config.MainLevel)
 	if err != nil {
-		fmt.Printf("Server Error: Main level not found.\n")
+		log.Printf("Server Error: Main level not found.\n")
 
 		mainLevel = NewLevel(config.MainLevel, 128, 64, 128)
 		if mainLevel == nil {
@@ -193,7 +193,7 @@ func (server *Server) Stop() {
 }
 
 func (server *Server) BroadcastMessage(message string) {
-	fmt.Printf("%s\n", message)
+	log.Printf("%s\n", message)
 	server.ForEachPlayer(func(player *Player) {
 		player.SendMessage(message)
 	})
@@ -302,7 +302,7 @@ func (server *Server) SaveLevel(level *Level) {
 
 	err := server.storage.Save(level)
 	if err != nil {
-		fmt.Printf("Server Error: %s\n", err.Error())
+		log.Printf("Server Error: %s\n", err.Error())
 	}
 }
 
@@ -560,18 +560,18 @@ func (server *Server) sendHeartbeat() {
 
 	response, err := http.PostForm(server.Config.Heartbeat, form)
 	if err != nil {
-		fmt.Printf("Heartbeat Error: %s\n", err.Error())
+		log.Printf("Heartbeat Error: %s\n", err.Error())
 		return
 	}
 
 	if response.StatusCode != 200 {
-		fmt.Printf("Heartbeat Error: %s\n", response.Status)
+		log.Printf("Heartbeat Error: %s\n", response.Status)
 		return
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		fmt.Printf("Heartbeat Error: %s\n", err.Error())
+		log.Printf("Heartbeat Error: %s\n", err.Error())
 		return
 	}
 
@@ -587,7 +587,7 @@ func (server *Server) sendHeartbeat() {
 	}
 
 	if len(data.Errors) > 0 && len(data.Errors[0]) > 0 {
-		fmt.Printf("Heartbeat Error: %s\n", data.Errors[0][0])
+		log.Printf("Heartbeat Error: %s\n", data.Errors[0][0])
 		return
 	}
 

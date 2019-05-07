@@ -17,8 +17,21 @@
 package core
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
+
 	"Go-MCC/gomcc"
 )
+
+type Rank struct {
+	Permissions []string `json:"permissions"`
+}
+
+type RankConfig struct {
+	Ranks   map[string]Rank `json:"ranks"`
+	Default string          `json:"default"`
+}
 
 type playerData struct {
 	LastSender string
@@ -27,22 +40,40 @@ type playerData struct {
 	LastLocation gomcc.Location
 }
 
-var CoreDb *Database
-var playerTable map[string]*playerData
+var (
+	CoreDb      *Database
+	CoreRanks   RankConfig
+	CorePlayers map[string]*playerData
+)
+
+func loadRanks(path string) {
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(file, &CoreRanks)
+	if err != nil {
+		log.Printf("Rank Config Error: %s", err)
+	}
+
+	return
+}
 
 func PlayerData(name string) *playerData {
-	data, ok := playerTable[name]
+	data, ok := CorePlayers[name]
 	if !ok {
 		data = &playerData{}
-		playerTable[name] = data
+		CorePlayers[name] = data
 	}
 
 	return data
 }
 
 func Initialize(server *gomcc.Server) {
+	loadRanks("ranks.json")
 	CoreDb = newDatabase("core.sqlite")
-	playerTable = make(map[string]*playerData)
+	CorePlayers = make(map[string]*playerData)
 
 	server.RegisterCommand(&commandBack)
 	server.RegisterCommand(&commandBan)
@@ -102,5 +133,9 @@ func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
 	name := e.Player.Name()
 
 	CoreDb.onLogin(name)
-	e.Player.SetPermissions(CoreDb.PlayerPermissions(name))
+
+	rank, ok := CoreRanks.Ranks[CoreDb.Rank(name)]
+	if ok {
+		e.Player.SetPermissions(rank.Permissions)
+	}
 }

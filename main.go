@@ -18,8 +18,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"sync"
 
 	"Go-MCC/core"
@@ -43,13 +43,13 @@ func ReadConfig(path string) *gomcc.Config {
 	if err != nil {
 		file, err = json.MarshalIndent(DefaultConfig, "", "\t")
 		if err != nil {
-			fmt.Printf("Config Error: %s\n", err.Error())
+			log.Printf("Config Error: %s\n", err.Error())
 			return DefaultConfig
 		}
 
 		err = ioutil.WriteFile(path, file, 0644)
 		if err != nil {
-			fmt.Printf("Config Error: %s\n", err.Error())
+			log.Printf("Config Error: %s\n", err.Error())
 		}
 
 		return DefaultConfig
@@ -57,7 +57,7 @@ func ReadConfig(path string) *gomcc.Config {
 		config := &gomcc.Config{}
 		err = json.Unmarshal(file, config)
 		if err != nil {
-			fmt.Printf("Config Error: %s\n", err.Error())
+			log.Printf("Config Error: %s\n", err.Error())
 			config = DefaultConfig
 		}
 

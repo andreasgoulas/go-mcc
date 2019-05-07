@@ -138,15 +138,15 @@ func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		}
 
 	case 2:
-		if !CoreDb.RankExists(args[1]) {
+		rank, ok := CoreRanks.Ranks[args[1]]
+		if !ok {
 			sender.SendMessage("Rank " + args[1] + " does not exist")
 			return
 		}
 
 		CoreDb.SetRank(args[0], args[1])
-
 		if player := sender.Server().FindPlayer(args[0]); player != nil {
-			player.SetPermissions(CoreDb.PlayerPermissions(args[0]))
+			player.SetPermissions(rank.Permissions)
 		}
 
 	default:

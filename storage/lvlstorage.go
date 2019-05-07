@@ -46,30 +46,29 @@ func (storage *LvlStorage) getPath(name string) string {
 	return storage.directoryPath + name + ".lvl"
 }
 
-func (storage *LvlStorage) Load(name string) (*gomcc.Level, error) {
+func (storage *LvlStorage) Load(name string) (level *gomcc.Level, err error) {
 	file, err := os.Open(storage.getPath(name))
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer file.Close()
 
 	reader, err := gzip.NewReader(file)
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer reader.Close()
 
 	header := lvlHeader{}
-	err = binary.Read(reader, binary.BigEndian, &header)
-	if err != nil {
-		return nil, err
+	if err = binary.Read(reader, binary.BigEndian, &header); err != nil {
+		return
 	}
 
 	if header.Version != 1874 {
 		return nil, errors.New("lvlstorage: invalid format")
 	}
 
-	level := gomcc.NewLevel(name, uint(header.Width), uint(header.Height), uint(header.Length))
+	level = gomcc.NewLevel(name, uint(header.Width), uint(header.Height), uint(header.Length))
 	level.Spawn.X = float64(header.SpawnX) / 32
 	level.Spawn.Y = float64(header.SpawnY) / 32
 	level.Spawn.Z = float64(header.SpawnZ) / 32
@@ -90,20 +89,20 @@ func (storage *LvlStorage) Load(name string) (*gomcc.Level, error) {
 		}
 	}
 
-	return level, nil
+	return
 }
 
-func (storage *LvlStorage) Save(level *gomcc.Level) error {
+func (storage *LvlStorage) Save(level *gomcc.Level) (err error) {
 	file, err := os.Create(storage.getPath(level.Name()))
 	if err != nil {
-		return err
+		return
 	}
 
 	writer := gzip.NewWriter(file)
 	defer file.Close()
 	defer writer.Close()
 
-	err = binary.Write(writer, binary.BigEndian, &lvlHeader{
+	binary.Write(writer, binary.BigEndian, &lvlHeader{
 		1874,
 		uint16(level.Width()),
 		uint16(level.Height()),
@@ -115,9 +114,8 @@ func (storage *LvlStorage) Save(level *gomcc.Level) error {
 		byte(level.Spawn.Pitch * 256 / 360),
 		0, 0,
 	})
-
 	if err != nil {
-		return err
+		return
 	}
 
 	for y := uint(0); y < level.Height(); y++ {
@@ -125,14 +123,12 @@ func (storage *LvlStorage) Save(level *gomcc.Level) error {
 			for x := uint(0); x < level.Width(); x++ {
 				block := make([]byte, 1)
 				block[0] = byte(level.GetBlock(x, y, z))
-
-				_, err = writer.Write(block)
-				if err != nil {
-					return err
+				if _, err = writer.Write(block); err != nil {
+					return
 				}
 			}
 		}
 	}
 
-	return nil
+	return
 }
