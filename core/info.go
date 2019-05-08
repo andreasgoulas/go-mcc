@@ -159,7 +159,7 @@ func handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message stri
 
 	CorePlayers.Lock.RLock()
 	defer CorePlayers.Lock.RUnlock()
-	if data, ok := CorePlayers.Data[args[0]]; ok {
+	if data, ok := CorePlayers.Players[args[0]]; ok {
 		dt := time.Now().Sub(data.LastLogin)
 		sender.SendMessage("Player " + args[0] + " was last seen " + fmtDuration(dt) + " ago")
 	} else {

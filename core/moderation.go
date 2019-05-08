@@ -155,7 +155,7 @@ func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		CorePlayers.Lock.RLock()
 		defer CorePlayers.Lock.RUnlock()
 
-		if data, ok := CorePlayers.Data[args[0]]; ok {
+		if data, ok := CorePlayers.Players[args[0]]; ok {
 			sender.SendMessage("The rank of " + args[0] + " is " + data.Rank)
 		} else {
 			sender.SendMessage("Player " + args[0] + " not found")
@@ -165,7 +165,7 @@ func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		CorePlayers.Lock.Lock()
 		defer CorePlayers.Lock.Unlock()
 
-		if data, ok := CorePlayers.Data[args[0]]; ok {
+		if data, ok := CorePlayers.Players[args[0]]; ok {
 			CoreRanks.Lock.RLock()
 			defer CoreRanks.Lock.RUnlock()
 			if _, ok := CoreRanks.Ranks[args[1]]; !ok {

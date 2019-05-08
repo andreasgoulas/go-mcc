@@ -86,7 +86,7 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		defer CorePlayers.Lock.RUnlock()
 
 		player.Nickname = player.Name()
-		CorePlayers.Data[player.Name()].Nickname = ""
+		CorePlayers.Players[player.Name()].Nickname = ""
 		sender.SendMessage("Nick of " + args[0] + " reset")
 
 	case 2:
@@ -105,7 +105,7 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		defer CorePlayers.Lock.RUnlock()
 
 		player.Nickname = args[1]
-		CorePlayers.Data[player.Name()].Nickname = args[1]
+		CorePlayers.Players[player.Name()].Nickname = args[1]
 		sender.SendMessage("Nick of " + args[0] + " set to " + args[1])
 
 	default:
