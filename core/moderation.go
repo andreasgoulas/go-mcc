@@ -149,6 +149,8 @@ func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message stri
 			player.SetPermissions(rank.Permissions)
 		}
 
+		sender.SendMessage("Rank of " + args[0] + " set to " + args[1])
+
 	default:
 		sender.SendMessage("Usage: " + command.Name + " <player> <rank>")
 	}

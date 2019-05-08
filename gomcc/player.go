@@ -41,7 +41,7 @@ const (
 type Player struct {
 	*Entity
 
-	NickName string
+	Nickname string
 
 	conn  net.Conn
 	state uint32
@@ -780,7 +780,7 @@ func (player *Player) handleIdentification(reader io.Reader) {
 		return
 	}
 
-	player.NickName = player.name
+	player.Nickname = player.name
 	player.DisplayName = player.name
 	player.SkinName = player.name
 	player.listName = player.name
@@ -941,7 +941,7 @@ func (player *Player) handleMessage(reader io.Reader) {
 			return
 		}
 
-		message = fmt.Sprintf(event.Format, player.NickName, event.Message)
+		message = fmt.Sprintf(event.Format, player.Nickname, event.Message)
 		player.server.BroadcastMessage(message)
 	}
 }

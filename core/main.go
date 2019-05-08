@@ -135,7 +135,12 @@ func handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
 func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerJoin)
 	name := e.Player.Name()
+
 	CoreDb.onLogin(name)
+
+	if nick := CoreDb.Nickname(name); len(nick) != 0 {
+		e.Player.Nickname = nick
+	}
 
 	rank, ok := CoreRanks.Ranks[CoreDb.Rank(name)]
 	if ok {

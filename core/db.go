@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS BanList(
 
 CREATE TABLE IF NOT EXISTS Players(
 	Name TEXT PRIMARY KEY,
+	Nickname TEXT NOT NULL,
 	Rank TEXT NOT NULL,
 	LastLogin DATETIME);`)
 	if err != nil {
@@ -61,7 +62,7 @@ CREATE TABLE IF NOT EXISTS Players(
 
 func (db *Database) onLogin(name string) {
 	_, err := db.conn.Exec(`
-INSERT OR IGNORE INTO Players(Name, Rank) VALUES(?, ?);
+INSERT OR IGNORE INTO Players(Name, Nickname, Rank) VALUES(?, "", ?);
 UPDATE Players SET LastLogin = CURRENT_TIMESTAMP WHERE Name = ?;`, name, CoreRanks.Default, name)
 	if err != nil {
 		log.Fatal(err)
@@ -104,6 +105,22 @@ func (db *Database) SetRank(name, rank string) {
 func (db *Database) Rank(name string) (rank string) {
 	rows := db.conn.QueryRow("SELECT Rank FROM Players WHERE Name = ?", name)
 	if err := rows.Scan(&rank); err != sql.ErrNoRows && err != nil {
+		log.Fatal(err)
+	}
+
+	return
+}
+
+func (db *Database) SetNickname(name, nick string) {
+	_, err := db.conn.Exec("UPDATE Players SET Nickname = ? WHERE Name = ?", nick, name)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (db *Database) Nickname(name string) (nick string) {
+	rows := db.conn.QueryRow("SELECT Nickname FROM Players WHERE Name = ?", name)
+	if err := rows.Scan(&nick); err != sql.ErrNoRows && err != nil {
 		log.Fatal(err)
 	}
 

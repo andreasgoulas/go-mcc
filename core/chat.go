@@ -27,12 +27,12 @@ func SendPm(message string, src, dst gomcc.CommandSender) {
 	srcName := src.Name()
 	if player, ok := src.(*gomcc.Player); ok {
 		reply = true
-		srcName = player.NickName
+		srcName = player.Nickname
 	}
 
 	dstName := dst.Name()
 	if player, ok := dst.(*gomcc.Player); ok {
-		dstName = player.NickName
+		dstName = player.Nickname
 		if reply {
 			PlayerData(player.Name()).LastSender = src.Name()
 		}
@@ -57,7 +57,7 @@ func handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string
 
 	name := sender.Name()
 	if player, ok := sender.(*gomcc.Player); ok {
-		name = player.NickName
+		name = player.Nickname
 	}
 
 	sender.Server().BroadcastMessage("* " + name + " " + message)
@@ -80,7 +80,8 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 			return
 		}
 
-		player.NickName = player.Name()
+		player.Nickname = player.Name()
+		CoreDb.SetNickname(player.Name(), "")
 		sender.SendMessage("Nick of " + args[0] + " reset")
 
 	case 2:
@@ -95,7 +96,8 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 			return
 		}
 
-		player.NickName = args[1]
+		player.Nickname = args[1]
+		CoreDb.SetNickname(player.Name(), args[1])
 		sender.SendMessage("Nick of " + args[0] + " set to " + args[1])
 
 	default:
