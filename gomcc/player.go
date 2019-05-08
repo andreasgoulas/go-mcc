@@ -935,7 +935,7 @@ func (player *Player) handleMessage(reader io.Reader) {
 			ConvertColors(message),
 			"%s: &f%s",
 			false,
-                }
+		}
 		player.server.FireEvent(EventTypePlayerChat, &event)
 		if event.Cancel {
 			return

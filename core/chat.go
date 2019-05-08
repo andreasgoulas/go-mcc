@@ -23,9 +23,23 @@ import (
 )
 
 func SendPm(message string, src, dst gomcc.CommandSender) {
-	src.SendMessage("[me -> " + dst.Name() + "] " + message)
-	dst.SendMessage("[" + src.Name() + " -> me] " + message)
-	PlayerData(dst.Name()).LastSender = src.Name()
+	reply := false
+	srcName := src.Name()
+	if player, ok := src.(*gomcc.Player); ok {
+		reply = true
+		srcName = player.NickName
+	}
+
+	dstName := dst.Name()
+	if player, ok := dst.(*gomcc.Player); ok {
+		dstName = player.NickName
+		if reply {
+			PlayerData(player.Name()).LastSender = src.Name()
+		}
+	}
+
+	src.SendMessage("to " + dstName + ": &f" + message)
+	dst.SendMessage("from " + srcName + ": &f" + message)
 }
 
 var commandMe = gomcc.Command{
@@ -41,7 +55,12 @@ func handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string
 		return
 	}
 
-	sender.Server().BroadcastMessage("* " + sender.Name() + " " + message)
+	name := sender.Name()
+	if player, ok := sender.(*gomcc.Player); ok {
+		name = player.NickName
+	}
+
+	sender.Server().BroadcastMessage("* " + name + " " + message)
 }
 
 var commandNick = gomcc.Command{
@@ -94,6 +113,11 @@ var commandR = gomcc.Command{
 func handleR(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <message>")
+		return
+	}
+
+	if _, ok := sender.(*gomcc.Player); !ok {
+		sender.SendMessage("You are not a player")
 		return
 	}
 
