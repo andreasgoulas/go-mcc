@@ -71,6 +71,7 @@ type EventPlayerQuit struct {
 type EventPlayerChat struct {
 	Player  *Player
 	Message string
+	Format  string
 	Cancel  bool
 }
 

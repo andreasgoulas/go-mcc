@@ -18,6 +18,7 @@ package core
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 
@@ -26,6 +27,8 @@ import (
 
 type Rank struct {
 	Permissions []string `json:"permissions"`
+	Prefix      string   `json:"prefix"`
+	Suffix      string   `json:"suffix"`
 }
 
 type RankConfig struct {
@@ -108,6 +111,7 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterHandler(gomcc.EventTypePlayerPreLogin, handlePlayerPreLogin)
 	server.RegisterHandler(gomcc.EventTypePlayerLogin, handlePlayerLogin)
 	server.RegisterHandler(gomcc.EventTypePlayerJoin, handlePlayerJoin)
+	server.RegisterHandler(gomcc.EventTypePlayerChat, handlePlayerChat)
 }
 
 func handlePlayerPreLogin(eventType gomcc.EventType, event interface{}) {
@@ -131,11 +135,18 @@ func handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
 func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerJoin)
 	name := e.Player.Name()
-
 	CoreDb.onLogin(name)
 
 	rank, ok := CoreRanks.Ranks[CoreDb.Rank(name)]
 	if ok {
 		e.Player.SetPermissions(rank.Permissions)
+	}
+}
+
+func handlePlayerChat(eventType gomcc.EventType, event interface{}) {
+	e := event.(*gomcc.EventPlayerChat)
+	rank, ok := CoreRanks.Ranks[CoreDb.Rank(e.Player.Name())]
+	if ok {
+		e.Format = fmt.Sprintf("%s%%s%s: &f%%s", rank.Prefix, rank.Suffix)
 	}
 }

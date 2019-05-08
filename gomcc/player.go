@@ -22,6 +22,7 @@ import (
 	"compress/gzip"
 	"crypto/md5"
 	"encoding/binary"
+	"fmt"
 	"image/color"
 	"io"
 	"math"
@@ -929,13 +930,19 @@ func (player *Player) handleMessage(reader io.Reader) {
 	if message[0] == '/' {
 		player.server.ExecuteCommand(player, message[1:])
 	} else {
-		event := &EventPlayerChat{player, message, false}
+		event := EventPlayerChat{
+			player,
+			ConvertColors(message),
+			"%s: &f%s",
+			false,
+                }
 		player.server.FireEvent(EventTypePlayerChat, &event)
 		if event.Cancel {
 			return
 		}
 
-		player.server.BroadcastMessage(ColorDefault + "<" + player.NickName + "> " + ConvertColors(message))
+		message = fmt.Sprintf(event.Format, player.NickName, event.Message)
+		player.server.BroadcastMessage(message)
 	}
 }
 

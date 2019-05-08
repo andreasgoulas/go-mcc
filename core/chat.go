@@ -23,7 +23,6 @@ import (
 )
 
 func SendPm(message string, src, dst gomcc.CommandSender) {
-	message = gomcc.ConvertColors(message)
 	src.SendMessage("[me -> " + dst.Name() + "] " + message)
 	dst.SendMessage("[" + src.Name() + " -> me] " + message)
 	PlayerData(dst.Name()).LastSender = src.Name()
@@ -42,7 +41,6 @@ func handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string
 		return
 	}
 
-	message = gomcc.ConvertColors(message)
 	sender.Server().BroadcastMessage("* " + sender.Name() + " " + message)
 }
 
@@ -122,7 +120,7 @@ func handleSay(sender gomcc.CommandSender, command *gomcc.Command, message strin
 		return
 	}
 
-	sender.Server().BroadcastMessage(gomcc.ConvertColors(message))
+	sender.Server().BroadcastMessage(message)
 }
 
 var commandTell = gomcc.Command{
