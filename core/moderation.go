@@ -168,15 +168,15 @@ func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		if data, ok := CorePlayers.Data[args[0]]; ok {
 			CoreRanks.Lock.RLock()
 			defer CoreRanks.Lock.RUnlock()
-
-			if rank, ok := CoreRanks.Ranks[args[1]]; ok {
-				data.Rank = args[1]
-				sender.SendMessage("Rank of " + args[0] + " set to " + args[1])
-				if player := sender.Server().FindPlayer(args[0]); player != nil {
-					player.SetPermissions(rank.Permissions)
-				}
-			} else {
+			if _, ok := CoreRanks.Ranks[args[1]]; !ok {
 				sender.SendMessage("Rank " + args[1] + " not found")
+				return
+			}
+
+			data.Rank = args[1]
+			sender.SendMessage("Rank of " + args[0] + " set to " + args[1])
+			if player := sender.Server().FindPlayer(args[0]); player != nil {
+				CorePlayers.Online[args[0]].UpdatePermissions(player)
 			}
 		} else {
 			sender.SendMessage("Player " + args[0] + " not found")

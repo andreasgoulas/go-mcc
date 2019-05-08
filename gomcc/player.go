@@ -27,7 +27,7 @@ import (
 	"io"
 	"math"
 	"net"
-	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -46,8 +46,9 @@ type Player struct {
 	conn  net.Conn
 	state uint32
 
-	operator    bool
-	permissions [][]string
+	operator       bool
+	permGroupsLock sync.RWMutex
+	permGroups     []*PermissionGroup
 
 	cpe           [CpeCount]bool
 	remExtensions uint
@@ -68,41 +69,44 @@ func NewPlayer(conn net.Conn, server *Server) *Player {
 	}
 }
 
-func (player *Player) checkPermission(permission []string, template []string) bool {
-	lenP := len(permission)
-	lenT := len(template)
-	for i := 0; i < min(lenP, lenT); i++ {
-		if template[i] == "*" {
-			return true
-		} else if permission[i] != template[i] {
-			return false
+func (player *Player) AddPermissionGroup(group *PermissionGroup) {
+	player.permGroupsLock.Lock()
+	player.permGroups = append(player.permGroups, group)
+	player.permGroupsLock.Unlock()
+}
+
+func (player *Player) RemovePermissionGroup(group *PermissionGroup) {
+	player.permGroupsLock.RLock()
+	defer player.permGroupsLock.RUnlock()
+
+	index := -1
+	for i, g := range player.permGroups {
+		if g == group {
+			index = i
+			break
 		}
 	}
 
-	return lenP == lenT
+	if index == -1 {
+		return
+	}
+
+	player.permGroups[index] = player.permGroups[len(player.permGroups)-1]
+	player.permGroups[len(player.permGroups)-1] = nil
+	player.permGroups = player.permGroups[:len(player.permGroups)-1]
 }
 
 func (player *Player) HasPermission(permission string) bool {
-	if len(permission) == 0 {
-		return true
-	}
+	player.permGroupsLock.RLock()
+	defer player.permGroupsLock.RUnlock()
 
-	split := strings.Split(permission, ".")
-	for _, template := range player.permissions {
-		if player.checkPermission(split, template) {
+	for _, group := range player.permGroups {
+		if group.HasPermission(permission) {
 			return true
 		}
 	}
 
 	return false
-}
-
-func (player *Player) SetPermissions(permissions []string) {
-	player.permissions = nil
-	for _, permission := range permissions {
-		split := strings.Split(permission, ".")
-		player.permissions = append(player.permissions, split)
-	}
 }
 
 func (player *Player) HasExtension(extension uint) bool {

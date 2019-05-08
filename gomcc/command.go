@@ -16,6 +16,10 @@
 
 package gomcc
 
+import (
+	"strings"
+)
+
 const (
 	ColorBlack       = "&0"
 	ColorDarkBlue    = "&1"
@@ -87,4 +91,46 @@ type Command struct {
 	Description string
 	Permission  string
 	Handler     CommandHandler
+}
+
+type PermissionGroup struct {
+	permissions [][]string
+}
+
+func checkPermission(permission []string, template []string) bool {
+	lenP := len(permission)
+	lenT := len(template)
+	for i := 0; i < min(lenP, lenT); i++ {
+		if template[i] == "*" {
+			return true
+		} else if permission[i] != template[i] {
+			return false
+		}
+	}
+
+	return lenP == lenT
+}
+
+func (group *PermissionGroup) Clear() {
+	group.permissions = nil
+}
+
+func (group *PermissionGroup) AddPermission(permission string) {
+	split := strings.Split(permission, ".")
+	group.permissions = append(group.permissions, split)
+}
+
+func (group *PermissionGroup) HasPermission(permission string) bool {
+	if len(permission) == 0 {
+		return true
+	}
+
+	split := strings.Split(permission, ".")
+	for _, template := range group.permissions {
+		if checkPermission(split, template) {
+			return true
+		}
+	}
+
+	return false
 }

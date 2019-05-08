@@ -53,17 +53,41 @@ type BanManager struct {
 }
 
 type PlayerData struct {
-	Rank       string    `json:"rank"`
-	Nickname   string    `json:"nickname"`
-	FirstLogin time.Time `json:"first-login"`
-	LastLogin  time.Time `json:"last-login"`
+	Rank        string    `json:"rank"`
+	Nickname    string    `json:"nickname"`
+	FirstLogin  time.Time `json:"first-login"`
+	LastLogin   time.Time `json:"last-login"`
+	Permissions []string  `json:"permissions"`
 }
 
 type Player struct {
+	Data      *PlayerData
+	PermGroup *gomcc.PermissionGroup
+
 	LastSender string
 
 	LastLevel    *gomcc.Level
 	LastLocation gomcc.Location
+}
+
+func (player *Player) UpdatePermissions(p *gomcc.Player) {
+	if player.PermGroup == nil {
+		player.PermGroup = &gomcc.PermissionGroup{}
+		p.AddPermissionGroup(player.PermGroup)
+	}
+
+	player.PermGroup.Clear()
+	for _, perm := range player.Data.Permissions {
+		player.PermGroup.AddPermission(perm)
+	}
+
+	CoreRanks.Lock.RLock()
+	defer CoreRanks.Lock.RUnlock()
+	if rank, ok := CoreRanks.Ranks[player.Data.Rank]; ok {
+		for _, perm := range rank.Permissions {
+			player.PermGroup.AddPermission(perm)
+		}
+	}
 }
 
 type PlayerManager struct {
@@ -194,20 +218,22 @@ func handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
 }
 
 func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
-	CorePlayers.Lock.Lock()
-	defer CorePlayers.Lock.Unlock()
-
 	e := event.(*gomcc.EventPlayerJoin)
-
 	name := e.Player.Name()
+
+	CorePlayers.Lock.RLock()
 	data, ok := CorePlayers.Data[name]
+	CorePlayers.Lock.RUnlock()
+
 	if !ok {
+		CorePlayers.Lock.Lock()
 		data = &PlayerData{
 			Rank:       CoreRanks.Default,
 			Nickname:   "",
 			FirstLogin: time.Now(),
 		}
 		CorePlayers.Data[name] = data
+		CorePlayers.Lock.Unlock()
 	}
 
 	data.LastLogin = time.Now()
@@ -215,11 +241,9 @@ func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
 		e.Player.Nickname = data.Nickname
 	}
 
-	if rank, ok := CoreRanks.Ranks[data.Rank]; ok {
-		e.Player.SetPermissions(rank.Permissions)
-	}
-
-	CorePlayers.Online[name] = &Player{}
+	player := &Player{Data: data}
+	player.UpdatePermissions(e.Player)
+	CorePlayers.Online[name] = player
 }
 
 func handlePlayerQuit(eventType gomcc.EventType, event interface{}) {
@@ -234,8 +258,8 @@ func handlePlayerChat(eventType gomcc.EventType, event interface{}) {
 	CorePlayers.Lock.RLock()
 	defer CorePlayers.Lock.RUnlock()
 
-        CoreRanks.Lock.RLock()
-        defer CoreRanks.Lock.RUnlock()
+	CoreRanks.Lock.RLock()
+	defer CoreRanks.Lock.RUnlock()
 
 	e := event.(*gomcc.EventPlayerChat)
 	data := CorePlayers.Data[e.Player.Name()]
