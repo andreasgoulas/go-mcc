@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"sync"
+	"time"
 
 	"Go-MCC/gomcc"
 )
@@ -31,52 +33,88 @@ type Rank struct {
 	Suffix      string   `json:"suffix"`
 }
 
-type RankConfig struct {
+type RankManager struct {
+	Lock    sync.RWMutex    `json:"-"`
 	Ranks   map[string]Rank `json:"ranks"`
 	Default string          `json:"default"`
 }
 
-type playerData struct {
+type BanEntry struct {
+	Name      string    `json:"name"`
+	Reason    string    `json:"reason"`
+	BannedBy  string    `json:"banned-by"`
+	Timestamp time.Time `json::"timestamp"`
+}
+
+type BanManager struct {
+	Lock sync.RWMutex `json:"-"`
+	IP   []BanEntry   `json:"ip"`
+	Name []BanEntry   `json:"name"`
+}
+
+type PlayerData struct {
+	Rank       string    `json:"rank"`
+	Nickname   string    `json:"nickname"`
+	FirstLogin time.Time `json:"first-login"`
+	LastLogin  time.Time `json:"last-login"`
+}
+
+type Player struct {
 	LastSender string
 
 	LastLevel    *gomcc.Level
 	LastLocation gomcc.Location
 }
 
+type PlayerManager struct {
+	Lock   sync.RWMutex
+	Data   map[string]*PlayerData
+	Online map[string]*Player
+}
+
 var (
-	CoreDb      *Database
-	CoreRanks   RankConfig
-	CorePlayers map[string]*playerData
+	CoreRanks   RankManager
+	CoreBans    BanManager
+	CorePlayers PlayerManager
 )
 
-func loadRanks(path string) {
+func loadJson(path string, v interface{}) {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
 		return
 	}
 
-	err = json.Unmarshal(file, &CoreRanks)
+	if err := json.Unmarshal(file, v); err != nil {
+		log.Printf("loadJson: %s\n", err)
+	}
+}
+
+func saveJson(path string, v interface{}) {
+	data, err := json.MarshalIndent(v, "", "\t")
 	if err != nil {
-		log.Printf("Rank Config Error: %s", err)
+		log.Printf("saveJson: %s\n", err)
+		return
 	}
 
-	return
-}
-
-func PlayerData(name string) *playerData {
-	data, ok := CorePlayers[name]
-	if !ok {
-		data = &playerData{}
-		CorePlayers[name] = data
+	if err := ioutil.WriteFile(path, data, 0644); err != nil {
+		log.Printf("saveJson: %s\n", err)
 	}
-
-	return data
 }
 
-func Initialize(server *gomcc.Server) {
-	loadRanks("ranks.json")
-	CoreDb = newDatabase("core.sqlite")
-	CorePlayers = make(map[string]*playerData)
+func Enable(server *gomcc.Server) {
+	CoreRanks.Lock.Lock()
+	loadJson("ranks.json", &CoreRanks)
+	CoreRanks.Lock.Unlock()
+
+	CoreBans.Lock.Lock()
+	loadJson("bans.json", &CoreBans)
+	CoreBans.Lock.Unlock()
+
+	CorePlayers.Lock.Lock()
+	CorePlayers.Data = make(map[string]*PlayerData)
+	CorePlayers.Online = make(map[string]*Player)
+	loadJson("players.json", &CorePlayers.Data)
+	CorePlayers.Lock.Unlock()
 
 	server.RegisterCommand(&commandBack)
 	server.RegisterCommand(&commandBan)
@@ -111,47 +149,97 @@ func Initialize(server *gomcc.Server) {
 	server.RegisterHandler(gomcc.EventTypePlayerPreLogin, handlePlayerPreLogin)
 	server.RegisterHandler(gomcc.EventTypePlayerLogin, handlePlayerLogin)
 	server.RegisterHandler(gomcc.EventTypePlayerJoin, handlePlayerJoin)
+	server.RegisterHandler(gomcc.EventTypePlayerQuit, handlePlayerQuit)
 	server.RegisterHandler(gomcc.EventTypePlayerChat, handlePlayerChat)
 }
 
+func Disable(server *gomcc.Server) {
+	CoreBans.Lock.Lock()
+	saveJson("bans.json", &CoreBans)
+	CoreBans.Lock.Unlock()
+
+	CorePlayers.Lock.Lock()
+	saveJson("players.json", &CorePlayers.Data)
+	CorePlayers.Lock.Unlock()
+}
+
 func handlePlayerPreLogin(eventType gomcc.EventType, event interface{}) {
+	CoreBans.Lock.RLock()
+	defer CoreBans.Lock.RUnlock()
+
 	e := event.(*gomcc.EventPlayerPreLogin)
-	result, reason := CoreDb.IsBanned(BanTypeIp, e.Player.RemoteAddr())
-	if result {
-		e.Cancel = true
-		e.CancelReason = reason
+	addr := e.Player.RemoteAddr()
+	for _, entry := range CoreBans.IP {
+		if entry.Name == addr {
+			e.Cancel = true
+			e.CancelReason = entry.Reason
+			return
+		}
 	}
 }
 
 func handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
+	CoreBans.Lock.RLock()
+	defer CoreBans.Lock.RUnlock()
+
 	e := event.(*gomcc.EventPlayerLogin)
-	result, reason := CoreDb.IsBanned(BanTypeName, e.Player.Name())
-	if result {
-		e.Cancel = true
-		e.CancelReason = reason
+	name := e.Player.Name()
+	for _, entry := range CoreBans.Name {
+		if entry.Name == name {
+			e.Cancel = true
+			e.CancelReason = entry.Reason
+			return
+		}
 	}
 }
 
 func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
+	CorePlayers.Lock.Lock()
+	defer CorePlayers.Lock.Unlock()
+
 	e := event.(*gomcc.EventPlayerJoin)
+
 	name := e.Player.Name()
-
-	CoreDb.onLogin(name)
-
-	if nick := CoreDb.Nickname(name); len(nick) != 0 {
-		e.Player.Nickname = nick
+	data, ok := CorePlayers.Data[name]
+	if !ok {
+		data = &PlayerData{
+			Rank:       CoreRanks.Default,
+			Nickname:   "",
+			FirstLogin: time.Now(),
+		}
+		CorePlayers.Data[name] = data
 	}
 
-	rank, ok := CoreRanks.Ranks[CoreDb.Rank(name)]
-	if ok {
+	data.LastLogin = time.Now()
+	if len(data.Nickname) != 0 {
+		e.Player.Nickname = data.Nickname
+	}
+
+	if rank, ok := CoreRanks.Ranks[data.Rank]; ok {
 		e.Player.SetPermissions(rank.Permissions)
 	}
+
+	CorePlayers.Online[name] = &Player{}
+}
+
+func handlePlayerQuit(eventType gomcc.EventType, event interface{}) {
+	CorePlayers.Lock.Lock()
+	defer CorePlayers.Lock.Unlock()
+
+	e := event.(*gomcc.EventPlayerQuit)
+	delete(CorePlayers.Online, e.Player.Name())
 }
 
 func handlePlayerChat(eventType gomcc.EventType, event interface{}) {
+	CorePlayers.Lock.RLock()
+	defer CorePlayers.Lock.RUnlock()
+
+        CoreRanks.Lock.RLock()
+        defer CoreRanks.Lock.RUnlock()
+
 	e := event.(*gomcc.EventPlayerChat)
-	rank, ok := CoreRanks.Ranks[CoreDb.Rank(e.Player.Name())]
-	if ok {
+	data := CorePlayers.Data[e.Player.Name()]
+	if rank, ok := CoreRanks.Ranks[data.Rank]; ok {
 		e.Format = fmt.Sprintf("%s%%s%s: &f%%s", rank.Prefix, rank.Suffix)
 	}
 }

@@ -50,6 +50,12 @@ type Config struct {
 	MainLevel  string `json:"main-level"`
 }
 
+type Plugin struct {
+	Name      string
+	EnableFn  func(*Server)
+	DisableFn func(*Server)
+}
+
 type Server struct {
 	Config    *Config
 	MainLevel *Level
@@ -74,6 +80,9 @@ type Server struct {
 	players     []*Player
 	playersLock sync.RWMutex
 
+	plugins     []*Plugin
+	pluginsLock sync.RWMutex
+
 	listener net.Listener
 	stopChan chan bool
 
@@ -85,7 +94,6 @@ type Server struct {
 func NewServer(config *Config, storage LevelStorage) *Server {
 	listener, err := net.ListenTCP("tcp", &net.TCPAddr{Port: config.Port})
 	if err != nil {
-		log.Printf("Server Error: %s\n", err.Error())
 		return nil
 	}
 
@@ -94,9 +102,6 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 		commands: make(map[string]*Command),
 		handlers: make(map[EventType][]EventHandler),
 		storage:  storage,
-		levels:   []*Level{},
-		entities: []*Entity{},
-		players:  []*Player{},
 		listener: listener,
 		stopChan: make(chan bool),
 	}
@@ -105,7 +110,7 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 
 	mainLevel, err := server.LoadLevel(config.MainLevel)
 	if err != nil {
-		log.Printf("Server Error: Main level not found.\n")
+		log.Printf("Main level not found.\n")
 
 		mainLevel = NewLevel(config.MainLevel, 128, 64, 128)
 		if mainLevel == nil {
@@ -156,6 +161,12 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-server.stopChan:
+			server.updateTicker.Stop()
+			server.saveTicker.Stop()
+			if server.heartbeatTicker != nil {
+				server.heartbeatTicker.Stop()
+			}
+
 			server.playersLock.RLock()
 			players := make([]*Player, len(server.players))
 			copy(players, server.players)
@@ -165,13 +176,20 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 				player.Kick("Server shutting down!")
 			}
 
-			server.updateTicker.Stop()
-			server.saveTicker.Stop()
-			if server.heartbeatTicker != nil {
-				server.heartbeatTicker.Stop()
+			server.levelsLock.Lock()
+			for _, level := range server.levels {
+				server.SaveLevel(level)
 			}
+			server.levels = nil
+			server.levelsLock.Unlock()
 
-			server.UnloadAll()
+			server.pluginsLock.Lock()
+			for _, plugin := range server.plugins {
+				plugin.DisableFn(server)
+			}
+			server.plugins = nil
+			server.pluginsLock.Unlock()
+
 			wg.Done()
 			return
 
@@ -302,24 +320,13 @@ func (server *Server) SaveLevel(level *Level) {
 
 	err := server.storage.Save(level)
 	if err != nil {
-		log.Printf("Server Error: %s\n", err.Error())
+		log.Printf("SaveLevel: %s\n", err.Error())
 	}
 }
 
 func (server *Server) UnloadLevel(level *Level) {
 	server.SaveLevel(level)
 	server.RemoveLevel(level)
-}
-
-func (server *Server) UnloadAll() {
-	server.levelsLock.Lock()
-	levels := make([]*Level, len(server.levels))
-	copy(levels, server.levels)
-	server.levelsLock.Unlock()
-
-	for _, level := range levels {
-		server.UnloadLevel(level)
-	}
 }
 
 func (server *Server) AddEntity(entity *Entity) bool {
@@ -516,6 +523,14 @@ func (server *Server) FireEvent(eventType EventType, event interface{}) {
 	server.handlersLock.RUnlock()
 }
 
+func (server *Server) RegisterPlugin(plugin *Plugin) {
+	server.pluginsLock.Lock()
+	server.plugins = append(server.plugins, plugin)
+	server.pluginsLock.Unlock()
+
+	plugin.EnableFn(server)
+}
+
 func (server *Server) generateSalt() {
 	const charset = "abcdefghijklmnopqrstuvwxyz" +
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
@@ -560,18 +575,18 @@ func (server *Server) sendHeartbeat() {
 
 	response, err := http.PostForm(server.Config.Heartbeat, form)
 	if err != nil {
-		log.Printf("Heartbeat Error: %s\n", err.Error())
+		log.Printf("sendHeartbeat: %s\n", err.Error())
 		return
 	}
 
 	if response.StatusCode != 200 {
-		log.Printf("Heartbeat Error: %s\n", response.Status)
+		log.Printf("sendHeartbeat: %s\n", response.Status)
 		return
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Printf("Heartbeat Error: %s\n", err.Error())
+		log.Printf("sendHeartbeat: %s\n", err.Error())
 		return
 	}
 
@@ -587,7 +602,7 @@ func (server *Server) sendHeartbeat() {
 	}
 
 	if len(data.Errors) > 0 && len(data.Errors[0]) > 0 {
-		log.Printf("Heartbeat Error: %s\n", data.Errors[0][0])
+		log.Printf("sendHeartbeat: %s\n", data.Errors[0][0])
 		return
 	}
 

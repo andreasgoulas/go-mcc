@@ -157,12 +157,12 @@ func handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	lastLogin, found := CoreDb.LastLogin(args[0])
-	if !found {
+	CorePlayers.Lock.RLock()
+	defer CorePlayers.Lock.RUnlock()
+	if data, ok := CorePlayers.Data[args[0]]; ok {
+		dt := time.Now().Sub(data.LastLogin)
+		sender.SendMessage("Player " + args[0] + " was last seen " + fmtDuration(dt) + " ago")
+	} else {
 		sender.SendMessage("Player " + args[0] + " not found")
-		return
 	}
-
-	dt := time.Now().Sub(lastLogin)
-	sender.SendMessage("Player " + args[0] + " was last seen " + fmtDuration(dt) + " ago")
 }

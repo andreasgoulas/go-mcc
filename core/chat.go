@@ -34,7 +34,9 @@ func SendPm(message string, src, dst gomcc.CommandSender) {
 	if player, ok := dst.(*gomcc.Player); ok {
 		dstName = player.Nickname
 		if reply {
-			PlayerData(player.Name()).LastSender = src.Name()
+			CorePlayers.Lock.RLock()
+			defer CorePlayers.Lock.RUnlock()
+			CorePlayers.Online[player.Name()].LastSender = src.Name()
 		}
 	}
 
@@ -80,8 +82,11 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 			return
 		}
 
+		CorePlayers.Lock.RLock()
+		defer CorePlayers.Lock.RUnlock()
+
 		player.Nickname = player.Name()
-		CoreDb.SetNickname(player.Name(), "")
+		CorePlayers.Data[player.Name()].Nickname = ""
 		sender.SendMessage("Nick of " + args[0] + " reset")
 
 	case 2:
@@ -96,8 +101,11 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 			return
 		}
 
+		CorePlayers.Lock.RLock()
+		defer CorePlayers.Lock.RUnlock()
+
 		player.Nickname = args[1]
-		CoreDb.SetNickname(player.Name(), args[1])
+		CorePlayers.Data[player.Name()].Nickname = args[1]
 		sender.SendMessage("Nick of " + args[0] + " set to " + args[1])
 
 	default:
@@ -123,7 +131,7 @@ func handleR(sender gomcc.CommandSender, command *gomcc.Command, message string)
 		return
 	}
 
-	lastSender := PlayerData(sender.Name()).LastSender
+	lastSender := CorePlayers.Online[sender.Name()].LastSender
 	player := sender.Server().FindPlayer(lastSender)
 	if player == nil {
 		sender.SendMessage("Player not found")

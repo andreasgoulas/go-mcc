@@ -27,7 +27,7 @@ import (
 	"Go-MCC/storage"
 )
 
-var DefaultConfig = &gomcc.Config{
+var defaultConfig = &gomcc.Config{
 	Port:       25565,
 	Name:       "Go-MCC",
 	MOTD:       "Welcome!",
@@ -38,27 +38,26 @@ var DefaultConfig = &gomcc.Config{
 	MainLevel:  "main",
 }
 
-func ReadConfig(path string) *gomcc.Config {
+func readConfig(path string) *gomcc.Config {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
-		file, err = json.MarshalIndent(DefaultConfig, "", "\t")
+		data, err := json.MarshalIndent(defaultConfig, "", "\t")
 		if err != nil {
-			log.Printf("Config Error: %s\n", err.Error())
-			return DefaultConfig
+			log.Printf("readConfig: %s\n", err)
+			return defaultConfig
 		}
 
-		err = ioutil.WriteFile(path, file, 0644)
-		if err != nil {
-			log.Printf("Config Error: %s\n", err.Error())
+		if err := ioutil.WriteFile(path, data, 0644); err != nil {
+			log.Printf("readConfig: %s\n", err)
 		}
 
-		return DefaultConfig
+		return defaultConfig
 	} else {
 		config := &gomcc.Config{}
 		err = json.Unmarshal(file, config)
 		if err != nil {
-			log.Printf("Config Error: %s\n", err.Error())
-			config = DefaultConfig
+			log.Printf("readConfig: %s\n", err)
+			config = defaultConfig
 		}
 
 		return config
@@ -66,14 +65,14 @@ func ReadConfig(path string) *gomcc.Config {
 }
 
 func main() {
-	config := ReadConfig("server.properties")
+	config := readConfig("server.properties")
 	lvlstorage := storage.NewLvlStorage("levels/")
 	server := gomcc.NewServer(config, lvlstorage)
 	if server == nil {
 		return
 	}
 
-	core.Initialize(server)
+	server.RegisterPlugin(&gomcc.Plugin{"core", core.Enable, core.Disable})
 
 	wg := &sync.WaitGroup{}
 	go server.Run(wg)

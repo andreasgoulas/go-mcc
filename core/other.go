@@ -52,7 +52,10 @@ func handleBack(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	data := PlayerData(sender.Name())
+	CorePlayers.Lock.RLock()
+	defer CorePlayers.Lock.RUnlock()
+
+	data := CorePlayers.Online[sender.Name()]
 	if data.LastLevel == nil {
 		sender.SendMessage("Location not found")
 		return
@@ -145,7 +148,10 @@ func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 		return
 	}
 
-	data := PlayerData(sender.Name())
+	CorePlayers.Lock.RLock()
+	defer CorePlayers.Lock.RUnlock()
+
+	data := CorePlayers.Online[player.Name()]
 	data.LastLevel = lastLevel
 	data.LastLocation = lastLocation
 }
