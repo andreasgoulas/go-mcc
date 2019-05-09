@@ -133,29 +133,24 @@ func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
-		CorePlayers.Lock.RLock()
-		defer CorePlayers.Lock.RUnlock()
-
-		if data, ok := CorePlayers.Players[args[0]]; ok {
-			sender.SendMessage("The rank of " + args[0] + " is " + data.Rank)
+		if player := CorePlayers.OfflinePlayer(args[0]); player != nil {
+			sender.SendMessage("The rank of " + args[0] + " is " + player.Rank)
 		} else {
 			sender.SendMessage("Player " + args[0] + " not found")
 		}
 
 	case 2:
-		CorePlayers.Lock.Lock()
-		defer CorePlayers.Lock.Unlock()
-
-		if data, ok := CorePlayers.Players[args[0]]; ok {
-			if _, ok := CoreRanks.Rank(args[1]); !ok {
+		if player := CorePlayers.OfflinePlayer(args[0]); player != nil {
+			if CoreRanks.Rank(args[1]) == nil {
 				sender.SendMessage("Rank " + args[1] + " not found")
 				return
 			}
 
-			data.Rank = args[1]
+			player.Rank = args[1]
 			sender.SendMessage("Rank of " + args[0] + " set to " + args[1])
-			if player := sender.Server().FindPlayer(args[0]); player != nil {
-				CorePlayers.Online[args[0]].UpdatePermissions(player)
+
+			if player := CorePlayers.Player(args[0]); player != nil {
+				player.UpdatePermissions()
 			}
 		} else {
 			sender.SendMessage("Player " + args[0] + " not found")

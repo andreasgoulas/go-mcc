@@ -52,17 +52,14 @@ func handleBack(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	CorePlayers.Lock.RLock()
-	defer CorePlayers.Lock.RUnlock()
-
-	data := CorePlayers.Online[sender.Name()]
-	if data.LastLevel == nil {
+	cplayer := CorePlayers.Player(sender.Name())
+	if cplayer.LastLevel == nil {
 		sender.SendMessage("Location not found")
 		return
 	}
 
-	player.TeleportLevel(data.LastLevel)
-	player.Teleport(data.LastLocation)
+	player.TeleportLevel(cplayer.LastLevel)
+	player.Teleport(cplayer.LastLocation)
 }
 
 var commandSkin = gomcc.Command{
@@ -148,12 +145,9 @@ func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 		return
 	}
 
-	CorePlayers.Lock.RLock()
-	defer CorePlayers.Lock.RUnlock()
-
-	data := CorePlayers.Online[player.Name()]
-	data.LastLevel = lastLevel
-	data.LastLocation = lastLocation
+	cplayer := CorePlayers.Player(player.Name())
+	cplayer.LastLevel = lastLevel
+	cplayer.LastLocation = lastLocation
 }
 
 var commandSummon = gomcc.Command{

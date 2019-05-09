@@ -97,11 +97,11 @@ func (manager *BanManager) Load(path string) {
 }
 
 func (manager *BanManager) Save(path string) {
-	manager.IP.Lock.Lock()
-	defer manager.IP.Lock.Unlock()
+	manager.IP.Lock.RLock()
+	defer manager.IP.Lock.RUnlock()
 
-	manager.Name.Lock.Lock()
-	defer manager.Name.Lock.Unlock()
+	manager.Name.Lock.RLock()
+	defer manager.Name.Lock.RUnlock()
 
 	saveJson(path, manager)
 }

@@ -39,14 +39,13 @@ func (manager *RankManager) Load(path string) {
 }
 
 func (manager *RankManager) Save(path string) {
-	manager.Lock.Lock()
+	manager.Lock.RLock()
 	saveJson(path, manager)
-	manager.Lock.Unlock()
+	manager.Lock.RUnlock()
 }
 
-func (manager *RankManager) Rank(name string) (rank *Rank, ok bool) {
+func (manager *RankManager) Rank(name string) *Rank {
 	manager.Lock.Lock()
 	defer manager.Lock.Unlock()
-	rank, ok = manager.Ranks[name]
-	return
+	return manager.Ranks[name]
 }

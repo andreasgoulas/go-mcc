@@ -34,9 +34,7 @@ func SendPm(message string, src, dst gomcc.CommandSender) {
 	if player, ok := dst.(*gomcc.Player); ok {
 		dstName = player.Nickname
 		if reply {
-			CorePlayers.Lock.RLock()
-			defer CorePlayers.Lock.RUnlock()
-			CorePlayers.Online[player.Name()].LastSender = src.Name()
+			CorePlayers.Player(player.Name()).LastSender = src.Name()
 		}
 	}
 
@@ -131,7 +129,7 @@ func handleR(sender gomcc.CommandSender, command *gomcc.Command, message string)
 		return
 	}
 
-	lastSender := CorePlayers.Online[sender.Name()].LastSender
+	lastSender := CorePlayers.Player(sender.Name()).LastSender
 	player := sender.Server().FindPlayer(lastSender)
 	if player == nil {
 		sender.SendMessage("Player not found")
