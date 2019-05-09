@@ -27,18 +27,6 @@ import (
 	"Go-MCC/gomcc"
 )
 
-type Rank struct {
-	Permissions []string `json:"permissions"`
-	Prefix      string   `json:"prefix"`
-	Suffix      string   `json:"suffix"`
-}
-
-type RankManager struct {
-	Lock    sync.RWMutex    `json:"-"`
-	Ranks   map[string]Rank `json:"ranks"`
-	Default string          `json:"default"`
-}
-
 type OfflinePlayer struct {
 	Rank        string    `json:"rank"`
 	Nickname    string    `json:"nickname"`
@@ -114,10 +102,7 @@ func saveJson(path string, v interface{}) {
 
 func Enable(server *gomcc.Server) {
 	CoreBans.Load("bans.json")
-
-	CoreRanks.Lock.Lock()
-	loadJson("ranks.json", &CoreRanks)
-	CoreRanks.Lock.Unlock()
+	CoreRanks.Load("ranks.json")
 
 	CorePlayers.Lock.Lock()
 	CorePlayers.Players = make(map[string]*OfflinePlayer)
@@ -231,13 +216,10 @@ func handlePlayerChat(eventType gomcc.EventType, event interface{}) {
 	CorePlayers.Lock.RLock()
 	defer CorePlayers.Lock.RUnlock()
 
-	CoreRanks.Lock.RLock()
-	defer CoreRanks.Lock.RUnlock()
-
 	e := event.(*gomcc.EventPlayerChat)
 	name := e.Player.Name()
 	data := CorePlayers.Players[name]
-	if rank, ok := CoreRanks.Ranks[data.Rank]; ok {
+	if rank, ok := CoreRanks.Rank(data.Rank); ok {
 		e.Format = fmt.Sprintf("%s%%s%s: &f%%s", rank.Prefix, rank.Suffix)
 	}
 }
