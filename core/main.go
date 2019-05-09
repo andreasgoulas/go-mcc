@@ -262,7 +262,8 @@ func handlePlayerChat(eventType gomcc.EventType, event interface{}) {
 	defer CoreRanks.Lock.RUnlock()
 
 	e := event.(*gomcc.EventPlayerChat)
-	data := CorePlayers.Players[e.Player.Name()]
+	name := e.Player.Name()
+	data := CorePlayers.Players[name]
 	if rank, ok := CoreRanks.Ranks[data.Rank]; ok {
 		e.Format = fmt.Sprintf("%s%%s%s: &f%%s", rank.Prefix, rank.Suffix)
 	}

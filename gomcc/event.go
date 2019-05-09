@@ -70,6 +70,7 @@ type EventPlayerQuit struct {
 
 type EventPlayerChat struct {
 	Player  *Player
+	Targets []*Player
 	Message string
 	Format  string
 	Cancel  bool

@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"image/color"
 	"io"
+	"log"
 	"math"
 	"net"
 	"sync"
@@ -934,8 +935,14 @@ func (player *Player) handleMessage(reader io.Reader) {
 	if message[0] == '/' {
 		player.server.ExecuteCommand(player, message[1:])
 	} else {
+		player.server.playersLock.RLock()
+		players := make([]*Player, len(player.server.players))
+		copy(players, player.server.players)
+		player.server.playersLock.RUnlock()
+
 		event := EventPlayerChat{
 			player,
+			players,
 			ConvertColors(message),
 			"%s: &f%s",
 			false,
@@ -946,7 +953,11 @@ func (player *Player) handleMessage(reader io.Reader) {
 		}
 
 		message = fmt.Sprintf(event.Format, player.Nickname, event.Message)
-		player.server.BroadcastMessage(message)
+
+		log.Printf(message)
+		for _, player := range event.Targets {
+			player.SendMessage(message)
+		}
 	}
 }
 
