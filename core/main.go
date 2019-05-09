@@ -39,19 +39,6 @@ type RankManager struct {
 	Default string          `json:"default"`
 }
 
-type BanEntry struct {
-	Name      string    `json:"name"`
-	Reason    string    `json:"reason"`
-	BannedBy  string    `json:"banned-by"`
-	Timestamp time.Time `json::"timestamp"`
-}
-
-type BanManager struct {
-	Lock sync.RWMutex `json:"-"`
-	IP   []BanEntry   `json:"ip"`
-	Name []BanEntry   `json:"name"`
-}
-
 type OfflinePlayer struct {
 	Rank        string    `json:"rank"`
 	Nickname    string    `json:"nickname"`
@@ -126,13 +113,11 @@ func saveJson(path string, v interface{}) {
 }
 
 func Enable(server *gomcc.Server) {
+	CoreBans.Load("bans.json")
+
 	CoreRanks.Lock.Lock()
 	loadJson("ranks.json", &CoreRanks)
 	CoreRanks.Lock.Unlock()
-
-	CoreBans.Lock.Lock()
-	loadJson("bans.json", &CoreBans)
-	CoreBans.Lock.Unlock()
 
 	CorePlayers.Lock.Lock()
 	CorePlayers.Players = make(map[string]*OfflinePlayer)
@@ -178,9 +163,7 @@ func Enable(server *gomcc.Server) {
 }
 
 func Disable(server *gomcc.Server) {
-	CoreBans.Lock.Lock()
-	saveJson("bans.json", &CoreBans)
-	CoreBans.Lock.Unlock()
+	CoreBans.Save("bans.json")
 
 	CorePlayers.Lock.Lock()
 	saveJson("players.json", &CorePlayers.Players)
@@ -188,32 +171,22 @@ func Disable(server *gomcc.Server) {
 }
 
 func handlePlayerPreLogin(eventType gomcc.EventType, event interface{}) {
-	CoreBans.Lock.RLock()
-	defer CoreBans.Lock.RUnlock()
-
 	e := event.(*gomcc.EventPlayerPreLogin)
 	addr := e.Player.RemoteAddr()
-	for _, entry := range CoreBans.IP {
-		if entry.Name == addr {
-			e.Cancel = true
-			e.CancelReason = entry.Reason
-			return
-		}
+	if entry := CoreBans.IP.IsBanned(addr); entry != nil {
+		e.Cancel = true
+		e.CancelReason = entry.Reason
+		return
 	}
 }
 
 func handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
-	CoreBans.Lock.RLock()
-	defer CoreBans.Lock.RUnlock()
-
 	e := event.(*gomcc.EventPlayerLogin)
 	name := e.Player.Name()
-	for _, entry := range CoreBans.Name {
-		if entry.Name == name {
-			e.Cancel = true
-			e.CancelReason = entry.Reason
-			return
-		}
+	if entry := CoreBans.Name.IsBanned(name); entry != nil {
+		e.Cancel = true
+		e.CancelReason = entry.Reason
+		return
 	}
 }
 

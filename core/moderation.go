@@ -19,7 +19,6 @@ package core
 import (
 	"net"
 	"strings"
-	"time"
 
 	"Go-MCC/gomcc"
 )
@@ -48,23 +47,14 @@ func handleBan(sender gomcc.CommandSender, command *gomcc.Command, message strin
 		return
 	}
 
-	CoreBans.Lock.Lock()
-	defer CoreBans.Lock.Unlock()
-
-	for _, entry := range CoreBans.Name {
-		if entry.Name == args[0] {
-			sender.SendMessage("Player " + args[0] + " is already banned")
-			return
+	if CoreBans.Name.Ban(args[0], reason, sender.Name()) {
+		sender.SendMessage("Player " + args[0] + " banned")
+		player := sender.Server().FindPlayer(args[0])
+		if player != nil {
+			player.Kick(reason)
 		}
-	}
-
-	entry := BanEntry{args[0], reason, sender.Name(), time.Now()}
-	CoreBans.Name = append(CoreBans.Name, entry)
-	sender.SendMessage("Player " + args[0] + " banned")
-
-	player := sender.Server().FindPlayer(args[0])
-	if player != nil {
-		player.Kick(reason)
+	} else {
+		sender.SendMessage("Player " + args[0] + " is already banned")
 	}
 }
 
@@ -92,25 +82,16 @@ func handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message str
 		return
 	}
 
-	CoreBans.Lock.Lock()
-	defer CoreBans.Lock.Unlock()
-
-	for _, entry := range CoreBans.IP {
-		if entry.Name == args[0] {
-			sender.SendMessage("IP " + args[0] + " is already banned")
-			return
-		}
+	if CoreBans.IP.Ban(args[0], reason, sender.Name()) {
+		sender.SendMessage("IP " + args[0] + " banned")
+		sender.Server().ForEachPlayer(func(player *gomcc.Player) {
+			if player.RemoteAddr() == args[0] {
+				player.Kick(reason)
+			}
+		})
+	} else {
+		sender.SendMessage("IP " + args[0] + " is already banned")
 	}
-
-	entry := BanEntry{args[0], reason, sender.Name(), time.Now()}
-	CoreBans.IP = append(CoreBans.IP, entry)
-	sender.SendMessage("IP " + args[0] + " banned")
-
-	sender.Server().ForEachPlayer(func(player *gomcc.Player) {
-		if player.RemoteAddr() == args[0] {
-			player.Kick(reason)
-		}
-	})
 }
 
 var commandKick = gomcc.Command{
@@ -201,24 +182,11 @@ func handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message str
 		return
 	}
 
-	CoreBans.Lock.Lock()
-	defer CoreBans.Lock.Unlock()
-
-	index := -1
-	for i, entry := range CoreBans.Name {
-		if entry.Name == args[0] {
-			index = i
-			break
-		}
-	}
-
-	if index == -1 {
+	if CoreBans.Name.Unban(args[0]) {
+		sender.SendMessage("Player " + args[0] + " unbanned")
+	} else {
 		sender.SendMessage("Player " + args[0] + " is not banned")
-		return
 	}
-
-	CoreBans.Name = append(CoreBans.Name[:index], CoreBans.Name[index+1:]...)
-	sender.SendMessage("Player " + args[0] + " unbanned")
 }
 
 var commandUnbanIp = gomcc.Command{
@@ -235,22 +203,9 @@ func handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message s
 		return
 	}
 
-	CoreBans.Lock.Lock()
-	defer CoreBans.Lock.Unlock()
-
-	index := -1
-	for i, entry := range CoreBans.IP {
-		if entry.Name == args[0] {
-			index = i
-			break
-		}
-	}
-
-	if index == -1 {
+	if CoreBans.IP.Unban(args[0]) {
+		sender.SendMessage("IP " + args[0] + " unbanned")
+	} else {
 		sender.SendMessage("IP " + args[0] + " is not banned")
-		return
 	}
-
-	CoreBans.IP = append(CoreBans.IP[:index], CoreBans.IP[index+1:]...)
-	sender.SendMessage("IP " + args[0] + " unbanned")
 }
