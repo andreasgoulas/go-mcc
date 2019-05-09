@@ -17,29 +17,103 @@
 package core
 
 import (
+	"sort"
 	"strings"
 
 	"Go-MCC/gomcc"
 )
 
 func SendPm(message string, src, dst gomcc.CommandSender) {
-	reply := false
+	var psrc, pdst bool
+
 	srcName := src.Name()
-	if player, ok := src.(*gomcc.Player); ok {
-		reply = true
+	player, psrc := src.(*gomcc.Player)
+	if psrc {
 		srcName = player.Nickname
 	}
 
 	dstName := dst.Name()
-	if player, ok := dst.(*gomcc.Player); ok {
+	player, pdst = dst.(*gomcc.Player)
+	if pdst {
 		dstName = player.Nickname
-		if reply {
-			CorePlayers.Player(player.Name()).LastSender = src.Name()
-		}
+	}
+
+	if psrc && pdst {
+		CorePlayers.Player(dst.Name()).LastSender = src.Name()
 	}
 
 	src.SendMessage("to " + dstName + ": &f" + message)
+	if pdst && CorePlayers.Player(dst.Name()).IsIgnored(src.Name()) {
+		return
+	}
+
 	dst.SendMessage("from " + srcName + ": &f" + message)
+}
+
+func Broadcast(src gomcc.CommandSender, message string) {
+	src.Server().ForEachPlayer(func(player *gomcc.Player) {
+		if !CorePlayers.Player(player.Name()).IsIgnored(src.Name()) {
+			player.SendMessage(message)
+		}
+	})
+}
+
+var commandIgnore = gomcc.Command{
+	Name:        "ignore",
+	Description: "Ignore chat from a player",
+	Permission:  "core.ignore",
+	Handler:     handleIgnore,
+}
+
+func handleIgnore(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	if _, ok := sender.(*gomcc.Player); !ok {
+		sender.SendMessage("You are not a player")
+		return
+	}
+
+	args := strings.Fields(message)
+	switch len(args) {
+	case 0:
+		cplayer := CorePlayers.Player(sender.Name())
+		if len(cplayer.Ignore) == 0 {
+			sender.SendMessage("You are not ignoring anyone")
+			return
+		}
+
+		var players []string
+		for _, player := range cplayer.Ignore {
+			players = append(players, player)
+		}
+
+		sort.Strings(players)
+		sender.SendMessage(strings.Join(players, ", "))
+
+	case 1:
+		if !gomcc.IsValidName(args[0]) {
+			sender.SendMessage(args[0] + " is not a valid name")
+			return
+		}
+
+		if args[0] == sender.Name() {
+			sender.SendMessage("You cannot ignore yourself")
+			return
+		}
+
+		cplayer := CorePlayers.Player(sender.Name())
+		for i, player := range cplayer.Ignore {
+			if player == args[0] {
+				cplayer.Ignore = append(cplayer.Ignore[:i], cplayer.Ignore[i+1:]...)
+				sender.SendMessage("You are no longer ignoring " + args[0])
+				return
+			}
+		}
+
+		cplayer.Ignore = append(cplayer.Ignore, args[0])
+		sender.SendMessage("You are ignoring " + args[0])
+
+	default:
+		sender.SendMessage("Usage: " + command.Name + " <player>")
+	}
 }
 
 var commandMe = gomcc.Command{
@@ -60,7 +134,7 @@ func handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string
 		name = player.Nickname
 	}
 
-	sender.Server().BroadcastMessage("* " + name + " " + message)
+	Broadcast(sender, "* "+name+" "+message)
 }
 
 var commandNick = gomcc.Command{
@@ -119,13 +193,13 @@ var commandR = gomcc.Command{
 }
 
 func handleR(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <message>")
+	if _, ok := sender.(*gomcc.Player); !ok {
+		sender.SendMessage("You are not a player")
 		return
 	}
 
-	if _, ok := sender.(*gomcc.Player); !ok {
-		sender.SendMessage("You are not a player")
+	if len(message) == 0 {
+		sender.SendMessage("Usage: " + command.Name + " <message>")
 		return
 	}
 

@@ -43,7 +43,7 @@ func handleBan(sender gomcc.CommandSender, command *gomcc.Command, message strin
 	}
 
 	if !gomcc.IsValidName(args[0]) {
-		sender.SendMessage(args[1] + " is not a valid name")
+		sender.SendMessage(args[0] + " is not a valid name")
 		return
 	}
 

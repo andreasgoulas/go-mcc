@@ -66,6 +66,7 @@ func Enable(server *gomcc.Server) {
 	server.RegisterCommand(&commandCopyLvl)
 	server.RegisterCommand(&commandGoto)
 	server.RegisterCommand(&commandHelp)
+	server.RegisterCommand(&commandIgnore)
 	server.RegisterCommand(&commandKick)
 	server.RegisterCommand(&commandLevels)
 	server.RegisterCommand(&commandLoad)
@@ -138,5 +139,11 @@ func handlePlayerChat(eventType gomcc.EventType, event interface{}) {
 	player := CorePlayers.Player(name)
 	if rank := CoreRanks.Rank(player.Rank); rank != nil {
 		e.Format = fmt.Sprintf("%s%%s%s: &f%%s", rank.Prefix, rank.Suffix)
+	}
+
+	for i := len(e.Targets) - 1; i >= 0; i-- {
+		if CorePlayers.Player(e.Targets[i].Name()).IsIgnored(name) {
+			e.Targets = append(e.Targets[:i], e.Targets[i+1:]...)
+		}
 	}
 }

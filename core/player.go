@@ -29,6 +29,17 @@ type OfflinePlayer struct {
 	LastLogin   time.Time `json:"last-login"`
 	Nickname    string    `json:"nickname,omitempty"`
 	Permissions []string  `json:"permissions,omitempty"`
+	Ignore      []string  `json:"ignore,omitempty"`
+}
+
+func (player *OfflinePlayer) IsIgnored(name string) bool {
+	for _, p := range player.Ignore {
+		if p == name {
+			return true
+		}
+	}
+
+	return false
 }
 
 type Player struct {
