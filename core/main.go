@@ -72,6 +72,7 @@ func Enable(server *gomcc.Server) {
 	server.RegisterCommand(&commandLoad)
 	server.RegisterCommand(&commandMain)
 	server.RegisterCommand(&commandMe)
+	server.RegisterCommand(&commandMute)
 	server.RegisterCommand(&commandNewLvl)
 	server.RegisterCommand(&commandNick)
 	server.RegisterCommand(&commandPlayers)
@@ -137,6 +138,12 @@ func handlePlayerChat(eventType gomcc.EventType, event interface{}) {
 	name := e.Player.Name()
 
 	player := CorePlayers.Player(name)
+	if player.Mute {
+		e.Player.SendMessage("You are muted")
+		e.Cancel = true
+		return
+	}
+
 	if rank := CoreRanks.Rank(player.Rank); rank != nil {
 		e.Format = fmt.Sprintf("%s%%s%s: &f%%s", rank.Prefix, rank.Suffix)
 	}

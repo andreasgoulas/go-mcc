@@ -30,6 +30,7 @@ type OfflinePlayer struct {
 	Nickname    string    `json:"nickname,omitempty"`
 	Permissions []string  `json:"permissions,omitempty"`
 	Ignore      []string  `json:"ignore,omitempty"`
+	Mute        bool      `json:"mute"`
 }
 
 func (player *OfflinePlayer) IsIgnored(name string) bool {

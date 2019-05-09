@@ -29,6 +29,11 @@ func SendPm(message string, src, dst gomcc.CommandSender) {
 	srcName := src.Name()
 	player, psrc := src.(*gomcc.Player)
 	if psrc {
+		if CorePlayers.Player(src.Name()).Mute {
+			src.SendMessage("You are muted")
+			return
+		}
+
 		srcName = player.Nickname
 	}
 
@@ -131,10 +136,38 @@ func handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string
 
 	name := sender.Name()
 	if player, ok := sender.(*gomcc.Player); ok {
+		if CorePlayers.Player(name).Mute {
+			sender.SendMessage("You are muted")
+			return
+		}
+
 		name = player.Nickname
 	}
 
 	Broadcast(sender, "* "+name+" "+message)
+}
+
+var commandMute = gomcc.Command{
+	Name:        "mute",
+	Description: "Mute a player.",
+	Permission:  "core.mute",
+	Handler:     handleMute,
+}
+
+func handleMute(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	args := strings.Fields(message)
+	if len(args) != 1 {
+		sender.SendMessage("Usage: " + command.Name + " <player>")
+		return
+	}
+
+	cplayer := CorePlayers.OfflinePlayer(args[0])
+	cplayer.Mute = !cplayer.Mute
+	if cplayer.Mute {
+		sender.SendMessage("Player " + args[0] + " muted")
+	} else {
+		sender.SendMessage("Player " + args[0] + " unmuted")
+	}
 }
 
 var commandNick = gomcc.Command{
