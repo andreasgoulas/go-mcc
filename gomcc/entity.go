@@ -20,12 +20,6 @@ import (
 	"math"
 )
 
-// A Location represents the location of an entity in a world.
-// Yaw and Pitch are specified in degrees.
-type Location struct {
-	X, Y, Z, Yaw, Pitch float64
-}
-
 const (
 	ModelChicken   = "chicken"
 	ModelCreeper   = "creeper"
@@ -42,6 +36,11 @@ const (
 	ModelChibi     = "chibi"
 )
 
+type EntityProps struct {
+	RotX, RotY, RotZ       float64
+	ScaleX, ScaleY, ScaleZ float64
+}
+
 type Entity struct {
 	server *Server
 	player *Player
@@ -49,6 +48,7 @@ type Entity struct {
 	id    byte
 	name  string
 	model string
+	props EntityProps
 
 	DisplayName string
 	SkinName    string
@@ -66,8 +66,9 @@ func NewEntity(name string, server *Server) *Entity {
 	return &Entity{
 		server:      server,
 		id:          0xff,
-		model:       ModelHumanoid,
 		name:        name,
+		model:       ModelHumanoid,
+		props:       EntityProps{ScaleX: 1.0, ScaleY: 1.0, ScaleZ: 1.0},
 		DisplayName: name,
 		SkinName:    name,
 		listName:    name,
@@ -99,6 +100,23 @@ func (entity *Entity) SetModel(model string) {
 	if entity.level != nil {
 		entity.level.ForEachPlayer(func(player *Player) {
 			player.sendChangeModel(entity)
+		})
+	}
+}
+
+func (entity *Entity) EntityProps() EntityProps {
+	return entity.props
+}
+
+func (entity *Entity) SetEntityProps(props EntityProps) {
+	if props == entity.props {
+		return
+	}
+
+	entity.props = props
+	if entity.level != nil {
+		entity.level.ForEachPlayer(func(player *Player) {
+			player.sendEntityProps(entity)
 		})
 	}
 }

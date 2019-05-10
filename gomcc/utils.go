@@ -21,6 +21,12 @@ import (
 	"unicode"
 )
 
+// A Location represents the location of an entity in a world.
+// Yaw and Pitch are specified in degrees.
+type Location struct {
+	X, Y, Z, Yaw, Pitch float64
+}
+
 type BlockPos struct {
 	X, Y, Z uint
 }

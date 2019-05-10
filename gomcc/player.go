@@ -408,6 +408,8 @@ func (player *Player) sendSpawn(entity *Entity) {
 	if entity.model != ModelHumanoid {
 		player.sendChangeModel(entity)
 	}
+
+	player.sendEntityProps(entity)
 }
 
 func (player *Player) sendDespawn(entity *Entity) {
@@ -565,10 +567,10 @@ func (player *Player) sendTexturePack(texturePack string) {
 	})
 }
 
-func (player *Player) sendEnvProp(id byte, value int) {
+func (player *Player) sendEnvProp(prop byte, value int) {
 	player.sendPacket(&packetSetMapEnvProperty{
 		packetTypeSetMapEnvProperty,
-		id, int32(value),
+		prop, int32(value),
 	})
 }
 
@@ -592,6 +594,31 @@ func (player *Player) sendEnvConfig(env EnvConfig) {
 	} else {
 		player.sendEnvProp(8, 0)
 	}
+}
+
+func (player *Player) sendEntityProp(entity *Entity, prop byte, value int) {
+	id := entity.id
+	if id == player.id {
+		id = 0xff
+	}
+
+	player.sendPacket(&packetSetEntityProperty{
+		packetTypeSetEntityProperty,
+		id, prop, int32(value),
+	})
+}
+
+func (player *Player) sendEntityProps(entity *Entity) {
+	if player.state != stateGame || !player.cpe[CpeEntityProperty] {
+		return
+	}
+
+	player.sendEntityProp(entity, 0, int(entity.props.RotX))
+	player.sendEntityProp(entity, 1, int(entity.props.RotY))
+	player.sendEntityProp(entity, 2, int(entity.props.RotZ))
+	player.sendEntityProp(entity, 3, int(1000*entity.props.ScaleX))
+	player.sendEntityProp(entity, 4, int(1000*entity.props.ScaleY))
+	player.sendEntityProp(entity, 5, int(1000*entity.props.ScaleZ))
 }
 
 func (player *Player) sendHackConfig(hackConfig HackConfig) {

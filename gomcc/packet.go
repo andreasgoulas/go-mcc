@@ -35,6 +35,7 @@ const (
 	CpePlayerClick
 	CpeBulkBlockUpdate
 	CpeEnvMapAspect
+	CpeEntityProperty
 	CpeTwoWayPing
 	CpeInstantMOTD
 	CpeFastMap
@@ -60,6 +61,7 @@ var Extensions = [CpeCount]struct {
 	{"PlayerClick", 1},
 	{"BulkBlockUpdate", 1},
 	{"EnvMapAspect", 1},
+	{"EntityProperty", 1},
 	{"TwoWayPing", 1},
 	{"InstantMOTD", 1},
 	{"FastMap", 1},
@@ -100,6 +102,7 @@ const (
 	packetTypeBulkBlockUpdate         = 0x26
 	packetTypeSetMapEnvUrl            = 0x28
 	packetTypeSetMapEnvProperty       = 0x29
+	packetTypeSetEntityProperty       = 0x2a
 	packetTypeTwoWayPing              = 0x2b
 )
 
@@ -321,6 +324,13 @@ type packetSetMapEnvUrl struct {
 
 type packetSetMapEnvProperty struct {
 	PacketID byte
+	Type     byte
+	Value    int32
+}
+
+type packetSetEntityProperty struct {
+	PacketID byte
+	EntityID byte
 	Type     byte
 	Value    int32
 }

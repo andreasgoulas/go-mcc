@@ -40,10 +40,10 @@ func NewConsole(server *gomcc.Server, waitGroup *sync.WaitGroup) *Console {
 	}
 
 	server.RegisterCommand(&gomcc.Command{
-		"stop",
-		"Stop the server.",
-		"stop",
-		console.handleStop,
+		Name:        "stop",
+		Description: "Stop the server.",
+		Permission:  "stop",
+		Handler:     console.handleStop,
 	})
 
 	signal.Notify(console.signal, os.Interrupt)
