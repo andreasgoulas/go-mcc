@@ -85,7 +85,7 @@ func (manager *PlayerManager) Player(name string) *Player {
 	return manager.Players[name]
 }
 
-func (manager *PlayerManager) Add(player *gomcc.Player) (cplayer *Player, first bool) {
+func (manager *PlayerManager) Add(player *gomcc.Player) (cplayer *Player, ok bool) {
 	name := player.Name()
 
 	manager.Lock.RLock()

@@ -319,8 +319,8 @@ func (plugin *CorePlugin) handlePlayerLogin(eventType gomcc.EventType, event int
 
 func (plugin *CorePlugin) handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerJoin)
-	cplayer, first := plugin.Players.Add(e.Player)
-	if first {
+	cplayer, ok := plugin.Players.Add(e.Player)
+	if !ok {
 		cplayer.FirstLogin = time.Now()
 		cplayer.Rank = plugin.Ranks.Default
 	}
