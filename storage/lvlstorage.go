@@ -22,7 +22,7 @@ import (
 	"errors"
 	"os"
 
-	"Go-MCC/gomcc"
+	"github.com/structinf/Go-MCC/gomcc"
 )
 
 type lvlHeader struct {

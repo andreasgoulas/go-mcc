@@ -14,22 +14,22 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package main
 
 import (
 	"sort"
 	"strings"
 
-	"Go-MCC/gomcc"
+	"github.com/structinf/Go-MCC/gomcc"
 )
 
-func SendPm(message string, src, dst gomcc.CommandSender) {
+func (plugin *CorePlugin) PrivateMessage(message string, src, dst gomcc.CommandSender) {
 	var psrc, pdst bool
 
 	srcName := src.Name()
 	player, psrc := src.(*gomcc.Player)
 	if psrc {
-		if CorePlayers.Player(src.Name()).Mute {
+		if plugin.Players.Player(src.Name()).Mute {
 			src.SendMessage("You are muted")
 			return
 		}
@@ -44,33 +44,26 @@ func SendPm(message string, src, dst gomcc.CommandSender) {
 	}
 
 	if psrc && pdst {
-		CorePlayers.Player(dst.Name()).LastSender = src.Name()
+		plugin.Players.Player(dst.Name()).LastSender = src.Name()
 	}
 
 	src.SendMessage("to " + dstName + ": &f" + message)
-	if pdst && CorePlayers.Player(dst.Name()).IsIgnored(src.Name()) {
+	if pdst && plugin.Players.Player(dst.Name()).IsIgnored(src.Name()) {
 		return
 	}
 
 	dst.SendMessage("from " + srcName + ": &f" + message)
 }
 
-func Broadcast(src gomcc.CommandSender, message string) {
+func (plugin *CorePlugin) BroadcastMessage(src gomcc.CommandSender, message string) {
 	src.Server().ForEachPlayer(func(player *gomcc.Player) {
-		if !CorePlayers.Player(player.Name()).IsIgnored(src.Name()) {
+		if !plugin.Players.Player(player.Name()).IsIgnored(src.Name()) {
 			player.SendMessage(message)
 		}
 	})
 }
 
-var commandIgnore = gomcc.Command{
-	Name:        "ignore",
-	Description: "Ignore chat from a player",
-	Permission:  "core.ignore",
-	Handler:     handleIgnore,
-}
-
-func handleIgnore(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleIgnore(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if _, ok := sender.(*gomcc.Player); !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -79,7 +72,7 @@ func handleIgnore(sender gomcc.CommandSender, command *gomcc.Command, message st
 	args := strings.Fields(message)
 	switch len(args) {
 	case 0:
-		cplayer := CorePlayers.Player(sender.Name())
+		cplayer := plugin.Players.Player(sender.Name())
 		if len(cplayer.Ignore) == 0 {
 			sender.SendMessage("You are not ignoring anyone")
 			return
@@ -104,7 +97,7 @@ func handleIgnore(sender gomcc.CommandSender, command *gomcc.Command, message st
 			return
 		}
 
-		cplayer := CorePlayers.Player(sender.Name())
+		cplayer := plugin.Players.Player(sender.Name())
 		for i, player := range cplayer.Ignore {
 			if player == args[0] {
 				cplayer.Ignore = append(cplayer.Ignore[:i], cplayer.Ignore[i+1:]...)
@@ -121,14 +114,7 @@ func handleIgnore(sender gomcc.CommandSender, command *gomcc.Command, message st
 	}
 }
 
-var commandMe = gomcc.Command{
-	Name:        "me",
-	Description: "Broadcast an action.",
-	Permission:  "core.me",
-	Handler:     handleMe,
-}
-
-func handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <action>")
 		return
@@ -136,7 +122,7 @@ func handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string
 
 	name := sender.Name()
 	if player, ok := sender.(*gomcc.Player); ok {
-		if CorePlayers.Player(name).Mute {
+		if plugin.Players.Player(name).Mute {
 			sender.SendMessage("You are muted")
 			return
 		}
@@ -144,24 +130,17 @@ func handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string
 		name = player.Nickname
 	}
 
-	Broadcast(sender, "* "+name+" "+message)
+	plugin.BroadcastMessage(sender, "* "+name+" "+message)
 }
 
-var commandMute = gomcc.Command{
-	Name:        "mute",
-	Description: "Mute a player.",
-	Permission:  "core.mute",
-	Handler:     handleMute,
-}
-
-func handleMute(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleMute(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <player>")
 		return
 	}
 
-	cplayer := CorePlayers.OfflinePlayer(args[0])
+	cplayer := plugin.Players.OfflinePlayer(args[0])
 	cplayer.Mute = !cplayer.Mute
 	if cplayer.Mute {
 		sender.SendMessage("Player " + args[0] + " muted")
@@ -170,14 +149,7 @@ func handleMute(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	}
 }
 
-var commandNick = gomcc.Command{
-	Name:        "nick",
-	Description: "Set the nickname of a player",
-	Permission:  "core.nick",
-	Handler:     handleNick,
-}
-
-func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleNick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
@@ -187,11 +159,8 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 			return
 		}
 
-		CorePlayers.Lock.RLock()
-		defer CorePlayers.Lock.RUnlock()
-
 		player.Nickname = player.Name()
-		CorePlayers.Players[player.Name()].Nickname = ""
+		plugin.Players.Player(player.Name()).Nickname = ""
 		sender.SendMessage("Nick of " + args[0] + " reset")
 
 	case 2:
@@ -206,11 +175,8 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 			return
 		}
 
-		CorePlayers.Lock.RLock()
-		defer CorePlayers.Lock.RUnlock()
-
 		player.Nickname = args[1]
-		CorePlayers.Players[player.Name()].Nickname = args[1]
+		plugin.Players.Player(player.Name()).Nickname = args[1]
 		sender.SendMessage("Nick of " + args[0] + " set to " + args[1])
 
 	default:
@@ -218,14 +184,7 @@ func handleNick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	}
 }
 
-var commandR = gomcc.Command{
-	Name:        "r",
-	Description: "Reply to the last message.",
-	Permission:  "core.r",
-	Handler:     handleR,
-}
-
-func handleR(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleR(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if _, ok := sender.(*gomcc.Player); !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -236,24 +195,17 @@ func handleR(sender gomcc.CommandSender, command *gomcc.Command, message string)
 		return
 	}
 
-	lastSender := CorePlayers.Player(sender.Name()).LastSender
+	lastSender := plugin.Players.Player(sender.Name()).LastSender
 	player := sender.Server().FindPlayer(lastSender)
 	if player == nil {
 		sender.SendMessage("Player not found")
 		return
 	}
 
-	SendPm(message, sender, player)
+	plugin.PrivateMessage(message, sender, player)
 }
 
-var commandSay = gomcc.Command{
-	Name:        "say",
-	Description: "Broadcast a message.",
-	Permission:  "core.say",
-	Handler:     handleSay,
-}
-
-func handleSay(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleSay(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <message>")
 		return
@@ -262,14 +214,7 @@ func handleSay(sender gomcc.CommandSender, command *gomcc.Command, message strin
 	sender.Server().BroadcastMessage(message)
 }
 
-var commandTell = gomcc.Command{
-	Name:        "tell",
-	Description: "Send a private message to a player.",
-	Permission:  "core.tell",
-	Handler:     handleTell,
-}
-
-func handleTell(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleTell(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.SplitN(message, " ", 2)
 	if len(args) < 2 {
 		sender.SendMessage("Usage: " + command.Name + " <player> <message>")
@@ -282,5 +227,5 @@ func handleTell(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	SendPm(args[1], sender, player)
+	plugin.PrivateMessage(args[1], sender, player)
 }

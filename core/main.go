@@ -14,21 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package main
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"time"
 
-	"Go-MCC/gomcc"
-)
-
-var (
-	CoreRanks   RankManager
-	CoreBans    BanManager
-	CorePlayers PlayerManager
+	"github.com/structinf/Go-MCC/gomcc"
 )
 
 func loadJson(path string, v interface{}) {
@@ -54,102 +49,312 @@ func saveJson(path string, v interface{}) {
 	}
 }
 
-func Enable(server *gomcc.Server) {
-	CoreBans.Load("bans.json")
-	CoreRanks.Load("ranks.json")
-	CorePlayers.Load("players.json")
-
-	server.RegisterCommand(&commandBack)
-	server.RegisterCommand(&commandBan)
-	server.RegisterCommand(&commandBanIp)
-	server.RegisterCommand(&commandCommands)
-	server.RegisterCommand(&commandCopyLvl)
-	server.RegisterCommand(&commandGoto)
-	server.RegisterCommand(&commandHelp)
-	server.RegisterCommand(&commandIgnore)
-	server.RegisterCommand(&commandKick)
-	server.RegisterCommand(&commandLevels)
-	server.RegisterCommand(&commandLoad)
-	server.RegisterCommand(&commandMain)
-	server.RegisterCommand(&commandMe)
-	server.RegisterCommand(&commandMute)
-	server.RegisterCommand(&commandNewLvl)
-	server.RegisterCommand(&commandNick)
-	server.RegisterCommand(&commandPlayers)
-	server.RegisterCommand(&commandR)
-	server.RegisterCommand(&commandRank)
-	server.RegisterCommand(&commandSave)
-	server.RegisterCommand(&commandSay)
-	server.RegisterCommand(&commandSeen)
-	server.RegisterCommand(&commandSetSpawn)
-	server.RegisterCommand(&commandSkin)
-	server.RegisterCommand(&commandSpawn)
-	server.RegisterCommand(&commandSummon)
-	server.RegisterCommand(&commandTell)
-	server.RegisterCommand(&commandTp)
-	server.RegisterCommand(&commandUnban)
-	server.RegisterCommand(&commandUnbanIp)
-	server.RegisterCommand(&commandUnload)
-
-	server.RegisterHandler(gomcc.EventTypePlayerPreLogin, handlePlayerPreLogin)
-	server.RegisterHandler(gomcc.EventTypePlayerLogin, handlePlayerLogin)
-	server.RegisterHandler(gomcc.EventTypePlayerJoin, handlePlayerJoin)
-	server.RegisterHandler(gomcc.EventTypePlayerQuit, handlePlayerQuit)
-	server.RegisterHandler(gomcc.EventTypePlayerChat, handlePlayerChat)
+type CorePlugin struct {
+	Ranks   RankManager
+	Bans    BanManager
+	Players PlayerManager
 }
 
-func Disable(server *gomcc.Server) {
-	CoreBans.Save("bans.json")
-	CorePlayers.Save("players.json")
+func Initialize() gomcc.Plugin {
+	return &CorePlugin{}
 }
 
-func handlePlayerPreLogin(eventType gomcc.EventType, event interface{}) {
+func (plugin *CorePlugin) Name() string {
+	return "Core"
+}
+
+func (plugin *CorePlugin) Enable(server *gomcc.Server) {
+	plugin.Bans.Load("bans.json")
+	plugin.Ranks.Load("ranks.json")
+	plugin.Players.Load("players.json")
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "back",
+		Description: "Return to your location before your last teleportation.",
+		Permission:  "core.back",
+		Handler:     plugin.handleBack,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "ban",
+		Description: "Ban a player from the server.",
+		Permission:  "core.ban",
+		Handler:     plugin.handleBan,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "banip",
+		Description: "Ban an IP address from the server.",
+		Permission:  "core.banip",
+		Handler:     plugin.handleBanIp,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "commands",
+		Description: "List all commands.",
+		Permission:  "core.commands",
+		Handler:     plugin.handleCommands,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "copylvl",
+		Description: "Copy a level.",
+		Permission:  "core.copylvl",
+		Handler:     plugin.handleCopyLvl,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "goto",
+		Description: "Move to another level.",
+		Permission:  "core.goto",
+		Handler:     plugin.handleGoto,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "help",
+		Description: "Describe a command.",
+		Permission:  "core.help",
+		Handler:     plugin.handleHelp,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "ignore",
+		Description: "Ignore chat from a player",
+		Permission:  "core.ignore",
+		Handler:     plugin.handleIgnore,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "kick",
+		Description: "Kick a player from the server.",
+		Permission:  "core.kick",
+		Handler:     plugin.handleKick,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "levels",
+		Description: "List all loaded levels.",
+		Permission:  "core.levels",
+		Handler:     plugin.handleLevels,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "load",
+		Description: "Load a level.",
+		Permission:  "core.load",
+		Handler:     plugin.handleLoad,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "main",
+		Description: "Set the main level.",
+		Permission:  "core.main",
+		Handler:     plugin.handleMain,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "me",
+		Description: "Broadcast an action.",
+		Permission:  "core.me",
+		Handler:     plugin.handleMe,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "mute",
+		Description: "Mute a player.",
+		Permission:  "core.mute",
+		Handler:     plugin.handleMute,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "newlvl",
+		Description: "Create a new level.",
+		Permission:  "core.newlvl",
+		Handler:     plugin.handleNewLvl,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "nick",
+		Description: "Set the nickname of a player",
+		Permission:  "core.nick",
+		Handler:     plugin.handleNick,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "players",
+		Description: "List all players.",
+		Permission:  "core.players",
+		Handler:     plugin.handlePlayers,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "r",
+		Description: "Reply to the last message.",
+		Permission:  "core.r",
+		Handler:     plugin.handleR,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "rank",
+		Description: "Set the rank of a player.",
+		Permission:  "core.rank",
+		Handler:     plugin.handleRank,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "save",
+		Description: "Save a level.",
+		Permission:  "core.save",
+		Handler:     plugin.handleSave,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "say",
+		Description: "Broadcast a message.",
+		Permission:  "core.say",
+		Handler:     plugin.handleSay,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "seen",
+		Description: "Check when a player was last online.",
+		Permission:  "core.seen",
+		Handler:     plugin.handleSeen,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "setspawn",
+		Description: "Set the spawn location of the level to your location.",
+		Permission:  "core.setspawn",
+		Handler:     plugin.handleSetSpawn,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "skin",
+		Description: "Set the skin of a player.",
+		Permission:  "core.skin",
+		Handler:     plugin.handleSkin,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "spawn",
+		Description: "Teleport to the spawn location of the level.",
+		Permission:  "core.spawn",
+		Handler:     plugin.handleSpawn,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "summon",
+		Description: "Summon a player to your location.",
+		Permission:  "core.summon",
+		Handler:     plugin.handleSummon,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "unload",
+		Description: "Unload a level.",
+		Permission:  "core.unload",
+		Handler:     plugin.handleUnload,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "tell",
+		Description: "Send a private message to a player.",
+		Permission:  "core.tell",
+		Handler:     plugin.handleTell,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "tp",
+		Description: "Teleport to another player.",
+		Permission:  "core.tp",
+		Handler:     plugin.handleTp,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "unban",
+		Description: "Remove the ban for a player.",
+		Permission:  "core.unban",
+		Handler:     plugin.handleUnban,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
+		Name:        "unbanip",
+		Description: "Remove the ban for an IP address.",
+		Permission:  "core.unbanip",
+		Handler:     plugin.handleUnbanIp,
+	})
+
+	server.RegisterHandler(gomcc.EventTypePlayerPreLogin, plugin.handlePlayerPreLogin)
+	server.RegisterHandler(gomcc.EventTypePlayerLogin, plugin.handlePlayerLogin)
+	server.RegisterHandler(gomcc.EventTypePlayerJoin, plugin.handlePlayerJoin)
+	server.RegisterHandler(gomcc.EventTypePlayerQuit, plugin.handlePlayerQuit)
+	server.RegisterHandler(gomcc.EventTypePlayerChat, plugin.handlePlayerChat)
+}
+
+func (plugin *CorePlugin) Disable(server *gomcc.Server) {
+	plugin.Bans.Save("bans.json")
+	plugin.Players.Save("players.json")
+}
+
+func (plugin *CorePlugin) handlePlayerPreLogin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerPreLogin)
 	addr := e.Player.RemoteAddr()
-	if entry := CoreBans.IP.IsBanned(addr); entry != nil {
+	if entry := plugin.Bans.IP.IsBanned(addr); entry != nil {
 		e.Cancel = true
 		e.CancelReason = entry.Reason
 		return
 	}
 }
 
-func handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
+func (plugin *CorePlugin) handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerLogin)
 	name := e.Player.Name()
-	if entry := CoreBans.Name.IsBanned(name); entry != nil {
+	if entry := plugin.Bans.Name.IsBanned(name); entry != nil {
 		e.Cancel = true
 		e.CancelReason = entry.Reason
 		return
 	}
 }
 
-func handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
+func (plugin *CorePlugin) handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerJoin)
-	CorePlayers.OnJoin(e.Player, CoreRanks.Default)
+	cplayer, first := plugin.Players.Add(e.Player)
+	if first {
+		cplayer.FirstLogin = time.Now()
+		cplayer.Rank = plugin.Ranks.Default
+	}
+
+	cplayer.LastLogin = time.Now()
+	if len(cplayer.Nickname) != 0 {
+		e.Player.Nickname = cplayer.Nickname
+	}
+
+	plugin.Ranks.Update(cplayer)
 }
 
-func handlePlayerQuit(eventType gomcc.EventType, event interface{}) {
+func (plugin *CorePlugin) handlePlayerQuit(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerQuit)
-	CorePlayers.OnQuit(e.Player)
+	plugin.Players.Remove(e.Player)
 }
 
-func handlePlayerChat(eventType gomcc.EventType, event interface{}) {
+func (plugin *CorePlugin) handlePlayerChat(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerChat)
 	name := e.Player.Name()
 
-	player := CorePlayers.Player(name)
+	player := plugin.Players.Player(name)
 	if player.Mute {
 		e.Player.SendMessage("You are muted")
 		e.Cancel = true
 		return
 	}
 
-	if rank := CoreRanks.Rank(player.Rank); rank != nil {
+	if rank := plugin.Ranks.Rank(player.Rank); rank != nil {
 		e.Format = fmt.Sprintf("%s%%s%s: &f%%s", rank.Prefix, rank.Suffix)
 	}
 
 	for i := len(e.Targets) - 1; i >= 0; i-- {
-		if CorePlayers.Player(e.Targets[i].Name()).IsIgnored(name) {
+		if plugin.Players.Player(e.Targets[i].Name()).IsIgnored(name) {
 			e.Targets = append(e.Targets[:i], e.Targets[i+1:]...)
 		}
 	}

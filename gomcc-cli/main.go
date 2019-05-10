@@ -20,11 +20,11 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"plugin"
 	"sync"
 
-	"Go-MCC/core"
-	"Go-MCC/gomcc"
-	"Go-MCC/storage"
+	"github.com/structinf/Go-MCC/gomcc"
+	"github.com/structinf/Go-MCC/storage"
 )
 
 var defaultConfig = &gomcc.Config{
@@ -64,6 +64,39 @@ func readConfig(path string) *gomcc.Config {
 	}
 }
 
+func loadPlugins(path string, server *gomcc.Server) {
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		lib, err := plugin.Open(path + file.Name())
+		if err != nil {
+			log.Printf("loadPlugins: %s\n", err)
+			continue
+		}
+
+		sym, err := lib.Lookup("Initialize")
+		if err != nil {
+			log.Printf("loadPlugins: %s\n", err)
+			continue
+		}
+
+		initFn, ok := sym.(func() gomcc.Plugin)
+		if !ok {
+			continue
+		}
+
+		plug := initFn()
+		server.RegisterPlugin(plug)
+	}
+}
+
 func main() {
 	config := readConfig("server.properties")
 	lvlstorage := storage.NewLvlStorage("levels/")
@@ -72,7 +105,7 @@ func main() {
 		return
 	}
 
-	server.RegisterPlugin(&gomcc.Plugin{"core", core.Enable, core.Disable})
+	loadPlugins("plugins/", server)
 
 	wg := &sync.WaitGroup{}
 	go server.Run(wg)

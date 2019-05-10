@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package main
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"Go-MCC/gomcc"
+	"github.com/structinf/Go-MCC/gomcc"
 )
 
 func fmtDuration(t time.Duration) string {
@@ -35,14 +35,7 @@ func fmtDuration(t time.Duration) string {
 	return fmt.Sprintf("%dd %dh %dm", d, h, m)
 }
 
-var commandCommands = gomcc.Command{
-	Name:        "commands",
-	Description: "List all commands.",
-	Permission:  "core.commands",
-	Handler:     handleCommands,
-}
-
-func handleCommands(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleCommands(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) != 0 {
 		sender.SendMessage("Usage: " + command.Name)
 		return
@@ -57,14 +50,7 @@ func handleCommands(sender gomcc.CommandSender, command *gomcc.Command, message 
 	sender.SendMessage(strings.Join(cmds, ", "))
 }
 
-var commandHelp = gomcc.Command{
-	Name:        "help",
-	Description: "Describe a command.",
-	Permission:  "core.help",
-	Handler:     handleHelp,
-}
-
-func handleHelp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleHelp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <command>")
@@ -80,14 +66,7 @@ func handleHelp(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	sender.SendMessage(cmd.Description)
 }
 
-var commandLevels = gomcc.Command{
-	Name:        "levels",
-	Description: "List all loaded levels.",
-	Permission:  "core.levels",
-	Handler:     handleLevels,
-}
-
-func handleLevels(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleLevels(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) != 0 {
 		sender.SendMessage("Usage: " + command.Name)
 		return
@@ -102,14 +81,7 @@ func handleLevels(sender gomcc.CommandSender, command *gomcc.Command, message st
 	sender.SendMessage(strings.Join(levels, ", "))
 }
 
-var commandPlayers = gomcc.Command{
-	Name:        "players",
-	Description: "List all players.",
-	Permission:  "core.players",
-	Handler:     handlePlayers,
-}
-
-func handlePlayers(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handlePlayers(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	var players []string
 	args := strings.Fields(message)
 	switch len(args) {
@@ -138,29 +110,20 @@ func handlePlayers(sender gomcc.CommandSender, command *gomcc.Command, message s
 	sender.SendMessage(strings.Join(players, ", "))
 }
 
-var commandSeen = gomcc.Command{
-	Name:        "seen",
-	Description: "Check when a player was last online.",
-	Permission:  "core.seen",
-	Handler:     handleSeen,
-}
-
-func handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <player>")
 		return
 	}
 
-	if player := sender.Server().FindPlayer(args[0]); player != nil {
+	if sender.Server().FindPlayer(args[0]) != nil {
 		sender.SendMessage("Player " + args[0] + " is currently online")
 		return
 	}
 
-	CorePlayers.Lock.RLock()
-	defer CorePlayers.Lock.RUnlock()
-	if data, ok := CorePlayers.Players[args[0]]; ok {
-		dt := time.Now().Sub(data.LastLogin)
+	if cplayer := plugin.Players.OfflinePlayer(args[0]); cplayer != nil {
+		dt := time.Now().Sub(cplayer.LastLogin)
 		sender.SendMessage("Player " + args[0] + " was last seen " + fmtDuration(dt) + " ago")
 	} else {
 		sender.SendMessage("Player " + args[0] + " not found")

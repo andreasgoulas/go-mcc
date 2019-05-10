@@ -14,10 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package main
 
 import (
 	"sync"
+
+	"github.com/structinf/Go-MCC/gomcc"
 )
 
 type Rank struct {
@@ -48,4 +50,22 @@ func (manager *RankManager) Rank(name string) *Rank {
 	manager.Lock.Lock()
 	defer manager.Lock.Unlock()
 	return manager.Ranks[name]
+}
+
+func (manager *RankManager) Update(player *Player) {
+	if player.PermGroup == nil {
+		player.PermGroup = &gomcc.PermissionGroup{}
+		player.Player.AddPermissionGroup(player.PermGroup)
+	}
+
+	player.PermGroup.Clear()
+	for _, perm := range player.Permissions {
+		player.PermGroup.AddPermission(perm)
+	}
+
+	if rank := manager.Rank(player.Rank); rank != nil {
+		for _, perm := range rank.Permissions {
+			player.PermGroup.AddPermission(perm)
+		}
+	}
 }

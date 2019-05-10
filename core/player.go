@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package main
 
 import (
 	"sync"
 	"time"
 
-	"Go-MCC/gomcc"
+	"github.com/structinf/Go-MCC/gomcc"
 )
 
 type OfflinePlayer struct {
@@ -54,26 +54,6 @@ type Player struct {
 	LastLocation gomcc.Location
 }
 
-func (player *Player) UpdatePermissions() {
-	if player.PermGroup == nil {
-		player.PermGroup = &gomcc.PermissionGroup{}
-		player.Player.AddPermissionGroup(player.PermGroup)
-	}
-
-	player.PermGroup.Clear()
-	for _, perm := range player.Permissions {
-		player.PermGroup.AddPermission(perm)
-	}
-
-	CoreRanks.Lock.RLock()
-	defer CoreRanks.Lock.RUnlock()
-	if rank, ok := CoreRanks.Ranks[player.Rank]; ok {
-		for _, perm := range rank.Permissions {
-			player.PermGroup.AddPermission(perm)
-		}
-	}
-}
-
 type PlayerManager struct {
 	Lock           sync.RWMutex
 	Players        map[string]*Player
@@ -105,7 +85,7 @@ func (manager *PlayerManager) Player(name string) *Player {
 	return manager.Players[name]
 }
 
-func (manager *PlayerManager) OnJoin(player *gomcc.Player, defaultRank string) {
+func (manager *PlayerManager) Add(player *gomcc.Player) (cplayer *Player, first bool) {
 	name := player.Name()
 
 	manager.Lock.RLock()
@@ -114,29 +94,20 @@ func (manager *PlayerManager) OnJoin(player *gomcc.Player, defaultRank string) {
 
 	if !ok {
 		manager.Lock.Lock()
-		data = &OfflinePlayer{
-			Rank:       defaultRank,
-			Nickname:   "",
-			FirstLogin: time.Now(),
-		}
+		data = &OfflinePlayer{}
 		manager.OfflinePlayers[name] = data
 		manager.Lock.Unlock()
 	}
 
-	data.LastLogin = time.Now()
-	if len(data.Nickname) != 0 {
-		player.Nickname = data.Nickname
-	}
-
-	cplayer := &Player{OfflinePlayer: data, Player: player}
-	cplayer.UpdatePermissions()
-
 	manager.Lock.Lock()
+	cplayer = &Player{OfflinePlayer: data, Player: player}
 	manager.Players[name] = cplayer
 	manager.Lock.Unlock()
+
+	return
 }
 
-func (manager *PlayerManager) OnQuit(player *gomcc.Player) {
+func (manager *PlayerManager) Remove(player *gomcc.Player) {
 	manager.Lock.Lock()
 	delete(manager.Players, player.Name())
 	manager.Lock.Unlock()

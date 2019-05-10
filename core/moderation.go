@@ -14,23 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package main
 
 import (
 	"net"
 	"strings"
 
-	"Go-MCC/gomcc"
+	"github.com/structinf/Go-MCC/gomcc"
 )
 
-var commandBan = gomcc.Command{
-	Name:        "ban",
-	Description: "Ban a player from the server.",
-	Permission:  "core.ban",
-	Handler:     handleBan,
-}
-
-func handleBan(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleBan(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <player> <reason>")
 		return
@@ -47,7 +40,7 @@ func handleBan(sender gomcc.CommandSender, command *gomcc.Command, message strin
 		return
 	}
 
-	if CoreBans.Name.Ban(args[0], reason, sender.Name()) {
+	if plugin.Bans.Name.Ban(args[0], reason, sender.Name()) {
 		sender.SendMessage("Player " + args[0] + " banned")
 		player := sender.Server().FindPlayer(args[0])
 		if player != nil {
@@ -58,14 +51,7 @@ func handleBan(sender gomcc.CommandSender, command *gomcc.Command, message strin
 	}
 }
 
-var commandBanIp = gomcc.Command{
-	Name:        "banip",
-	Description: "Ban an IP address from the server.",
-	Permission:  "core.banip",
-	Handler:     handleBanIp,
-}
-
-func handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <ip> <reason>")
 		return
@@ -82,7 +68,7 @@ func handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message str
 		return
 	}
 
-	if CoreBans.IP.Ban(args[0], reason, sender.Name()) {
+	if plugin.Bans.IP.Ban(args[0], reason, sender.Name()) {
 		sender.SendMessage("IP " + args[0] + " banned")
 		sender.Server().ForEachPlayer(func(player *gomcc.Player) {
 			if player.RemoteAddr() == args[0] {
@@ -94,14 +80,7 @@ func handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message str
 	}
 }
 
-var commandKick = gomcc.Command{
-	Name:        "kick",
-	Description: "Kick a player from the server.",
-	Permission:  "core.kick",
-	Handler:     handleKick,
-}
-
-func handleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <player> <reason>")
 		return
@@ -122,26 +101,19 @@ func handleKick(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	player.Kick(reason)
 }
 
-var commandRank = gomcc.Command{
-	Name:        "rank",
-	Description: "Set the rank of a player.",
-	Permission:  "core.rank",
-	Handler:     handleRank,
-}
-
-func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleRank(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
-		if player := CorePlayers.OfflinePlayer(args[0]); player != nil {
+		if player := plugin.Players.OfflinePlayer(args[0]); player != nil {
 			sender.SendMessage("The rank of " + args[0] + " is " + player.Rank)
 		} else {
 			sender.SendMessage("Player " + args[0] + " not found")
 		}
 
 	case 2:
-		if player := CorePlayers.OfflinePlayer(args[0]); player != nil {
-			if CoreRanks.Rank(args[1]) == nil {
+		if player := plugin.Players.OfflinePlayer(args[0]); player != nil {
+			if plugin.Ranks.Rank(args[1]) == nil {
 				sender.SendMessage("Rank " + args[1] + " not found")
 				return
 			}
@@ -149,8 +121,8 @@ func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message stri
 			player.Rank = args[1]
 			sender.SendMessage("Rank of " + args[0] + " set to " + args[1])
 
-			if player := CorePlayers.Player(args[0]); player != nil {
-				player.UpdatePermissions()
+			if player := plugin.Players.Player(args[0]); player != nil {
+				plugin.Ranks.Update(player)
 			}
 		} else {
 			sender.SendMessage("Player " + args[0] + " not found")
@@ -161,42 +133,28 @@ func handleRank(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	}
 }
 
-var commandUnban = gomcc.Command{
-	Name:        "unban",
-	Description: "Remove the ban for a player.",
-	Permission:  "core.unban",
-	Handler:     handleUnban,
-}
-
-func handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <player>")
 		return
 	}
 
-	if CoreBans.Name.Unban(args[0]) {
+	if plugin.Bans.Name.Unban(args[0]) {
 		sender.SendMessage("Player " + args[0] + " unbanned")
 	} else {
 		sender.SendMessage("Player " + args[0] + " is not banned")
 	}
 }
 
-var commandUnbanIp = gomcc.Command{
-	Name:        "unbanip",
-	Description: "Remove the ban for an IP address.",
-	Permission:  "core.unbanip",
-	Handler:     handleUnbanIp,
-}
-
-func handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <ip>")
 		return
 	}
 
-	if CoreBans.IP.Unban(args[0]) {
+	if plugin.Bans.IP.Unban(args[0]) {
 		sender.SendMessage("IP " + args[0] + " unbanned")
 	} else {
 		sender.SendMessage("IP " + args[0] + " is not banned")

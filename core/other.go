@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package main
 
 import (
 	"strconv"
 	"strings"
 
-	"Go-MCC/gomcc"
+	"github.com/structinf/Go-MCC/gomcc"
 )
 
 func parseCoord(arg string, curr float64) (float64, error) {
@@ -33,14 +33,7 @@ func parseCoord(arg string, curr float64) (float64, error) {
 	}
 }
 
-var commandBack = gomcc.Command{
-	Name:        "back",
-	Description: "Return to your location before your last teleportation.",
-	Permission:  "core.back",
-	Handler:     handleBack,
-}
-
-func handleBack(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleBack(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -52,7 +45,7 @@ func handleBack(sender gomcc.CommandSender, command *gomcc.Command, message stri
 		return
 	}
 
-	cplayer := CorePlayers.Player(sender.Name())
+	cplayer := plugin.Players.Player(sender.Name())
 	if cplayer.LastLevel == nil {
 		sender.SendMessage("Location not found")
 		return
@@ -62,14 +55,7 @@ func handleBack(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	player.Teleport(cplayer.LastLocation)
 }
 
-var commandSkin = gomcc.Command{
-	Name:        "skin",
-	Description: "Set the skin of a player.",
-	Permission:  "core.skin",
-	Handler:     handleSkin,
-}
-
-func handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 2 {
 		sender.SendMessage("Usage: " + command.Name + " <player> <skin>")
@@ -87,14 +73,7 @@ func handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message stri
 	sender.SendMessage("Skin of " + args[0] + " set to " + args[1])
 }
 
-var commandTp = gomcc.Command{
-	Name:        "tp",
-	Description: "Teleport to another player.",
-	Permission:  "core.tp",
-	Handler:     handleTp,
-}
-
-func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -145,19 +124,12 @@ func handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string
 		return
 	}
 
-	cplayer := CorePlayers.Player(player.Name())
+	cplayer := plugin.Players.Player(player.Name())
 	cplayer.LastLevel = lastLevel
 	cplayer.LastLocation = lastLocation
 }
 
-var commandSummon = gomcc.Command{
-	Name:        "summon",
-	Description: "Summon a player to your location.",
-	Permission:  "core.summon",
-	Handler:     handleSummon,
-}
-
-func handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *CorePlugin) handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")

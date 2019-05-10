@@ -31,9 +31,9 @@ import (
 	"time"
 )
 
-const ServerSoftware = "Go-MCC"
-
 const (
+	ServerSoftware = "Go-MCC"
+
 	UpdateInterval    = 100 * time.Millisecond
 	HeartbeatInterval = 45 * time.Second
 	SaveInterval      = 5 * time.Minute
@@ -50,10 +50,10 @@ type Config struct {
 	MainLevel  string `json:"main-level"`
 }
 
-type Plugin struct {
-	Name      string
-	EnableFn  func(*Server)
-	DisableFn func(*Server)
+type Plugin interface {
+	Name() string
+	Enable(*Server)
+	Disable(*Server)
 }
 
 type Server struct {
@@ -80,7 +80,7 @@ type Server struct {
 	players     []*Player
 	playersLock sync.RWMutex
 
-	plugins     []*Plugin
+	plugins     []Plugin
 	pluginsLock sync.RWMutex
 
 	listener net.Listener
@@ -185,7 +185,7 @@ func (server *Server) Run(wg *sync.WaitGroup) {
 
 			server.pluginsLock.Lock()
 			for _, plugin := range server.plugins {
-				plugin.DisableFn(server)
+				plugin.Disable(server)
 			}
 			server.plugins = nil
 			server.pluginsLock.Unlock()
@@ -523,12 +523,12 @@ func (server *Server) FireEvent(eventType EventType, event interface{}) {
 	server.handlersLock.RUnlock()
 }
 
-func (server *Server) RegisterPlugin(plugin *Plugin) {
+func (server *Server) RegisterPlugin(plugin Plugin) {
 	server.pluginsLock.Lock()
 	server.plugins = append(server.plugins, plugin)
 	server.pluginsLock.Unlock()
 
-	plugin.EnableFn(server)
+	plugin.Enable(server)
 }
 
 func (server *Server) generateSalt() {
