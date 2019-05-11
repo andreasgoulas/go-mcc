@@ -223,25 +223,25 @@ func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
 
 func (level *Level) SendWeather() {
 	level.ForEachPlayer(func(player *Player) {
-		player.sendWeather(level.Weather)
+		player.sendWeather(level)
 	})
 }
 
 func (level *Level) SendTexturePack(texturePack string) {
 	level.ForEachPlayer(func(player *Player) {
-		player.sendTexturePack(level.TexturePack)
+		player.sendTexturePack(level)
 	})
 }
 
 func (level *Level) SendEnvConfig(mask uint32) {
 	level.ForEachPlayer(func(player *Player) {
-		player.sendEnvConfig(level.EnvConfig, mask)
+		player.sendEnvConfig(level, mask)
 	})
 }
 
 func (level *Level) SendHackConfig() {
 	level.ForEachPlayer(func(player *Player) {
-		player.sendHackConfig(level.HackConfig)
+		player.sendHackConfig(level)
 	})
 }
 
@@ -261,7 +261,7 @@ func (level *Level) SendMOTD() {
 type BlockBuffer struct {
 	level   *Level
 	count   uint
-	indices [256]uint
+	indices [256]int32
 	blocks  [256]BlockID
 }
 
@@ -270,7 +270,7 @@ func MakeBlockBuffer(level *Level) BlockBuffer {
 }
 
 func (buffer *BlockBuffer) Set(x, y, z uint, block BlockID) {
-	buffer.indices[buffer.count] = buffer.level.Index(x, y, z)
+	buffer.indices[buffer.count] = int32(buffer.level.Index(x, y, z))
 	buffer.blocks[buffer.count] = block
 	buffer.count++
 	if buffer.count >= 256 {
@@ -285,26 +285,22 @@ func (buffer *BlockBuffer) Flush() {
 	}
 
 	buffer.level.ForEachPlayer(func(player *Player) {
+		var blocks [256]byte
+		for i := uint(0); i < buffer.count; i++ {
+			blocks[i] = byte(player.convertBlock(buffer.blocks[i]))
+		}
+
+		var packet Packet
 		if player.cpe[CpeBulkBlockUpdate] {
-			packet := &packetBulkBlockUpdate{
-				packetTypeBulkBlockUpdate,
-				byte(buffer.count),
-				[256]int32{},
-				[256]byte{},
-			}
-
-			for i := uint(0); i < buffer.count; i++ {
-				packet.Indices[i] = int32(buffer.indices[i])
-				packet.Blocks[i] = player.convertBlock(buffer.blocks[i])
-			}
-
-			player.sendPacket(packet)
+			packet.bulkBlockUpdate(buffer.indices[:], blocks[:buffer.count])
 		} else {
 			for i := uint(0); i < buffer.count; i++ {
-				x, y, z := buffer.level.Position(buffer.indices[i])
-				player.sendBlockChange(x, y, z, buffer.blocks[i])
+				x, y, z := buffer.level.Position(uint(buffer.indices[i]))
+				packet.setBlock(x, y, z, BlockID(blocks[i]))
 			}
 		}
+
+		player.sendPacket(packet)
 	})
 
 	buffer.count = 0

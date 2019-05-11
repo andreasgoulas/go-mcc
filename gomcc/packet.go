@@ -18,6 +18,8 @@ package gomcc
 
 import (
 	"bytes"
+	"encoding/binary"
+	"image/color"
 	"strings"
 )
 
@@ -44,10 +46,12 @@ const (
 	CpeCount = CpeMax + 1
 )
 
-var Extensions = [CpeCount]struct {
+type ExtEntry struct {
 	Name    string
 	Version int
-}{
+}
+
+var Extensions = [CpeCount]ExtEntry{
 	{"ClickDistance", 1},
 	{"CustomBlocks", 1},
 	{"HeldBlock", 1},
@@ -75,15 +79,15 @@ const (
 	packetTypeLevelFinalize             = 0x04
 	packetTypeSetBlockClient            = 0x05
 	packetTypeSetBlock                  = 0x06
-	packetTypeSpawnPlayer               = 0x07
+	packetTypeAddEntity                 = 0x07
 	packetTypePlayerTeleport            = 0x08
 	packetTypePositionOrientationUpdate = 0x09
 	packetTypePositionUpdate            = 0x0a
 	packetTypeOrientationUpdate         = 0x0b
-	packetTypeDespawnPlayer             = 0x0c
+	packetTypeRemoveEntity              = 0x0c
 	packetTypeMessage                   = 0x0d
-	packetTypeDisconnect                = 0x0e
-	packetTypeUpdateUserType            = 0x0f
+	packetTypeKick                      = 0x0e
+	packetTypeSetPermission             = 0x0f
 
 	packetTypeExtInfo                 = 0x10
 	packetTypeExtEntry                = 0x11
@@ -106,241 +110,6 @@ const (
 	packetTypeTwoWayPing              = 0x2b
 )
 
-type packetClientIdentification struct {
-	PacketID        byte
-	ProtocolVersion byte
-	Name            [64]byte
-	VerificationKey [64]byte
-	Type            byte
-}
-
-type packetServerIdentification struct {
-	PacketID        byte
-	ProtocolVersion byte
-	Name            [64]byte
-	MOTD            [64]byte
-	UserType        byte
-}
-
-type packetPing struct {
-	PacketID byte
-}
-
-type packetLevelInitialize struct {
-	PacketID byte
-}
-
-type packetLevelInitializeExt struct {
-	PacketID byte
-	Size     int32
-}
-
-type packetLevelDataChunk struct {
-	PacketID        byte
-	ChunkLength     int16
-	ChunkData       [1024]byte
-	PercentComplete byte
-}
-
-type packetLevelFinalize struct {
-	PacketID byte
-	X, Y, Z  int16
-}
-
-type packetSetBlockClient struct {
-	PacketID  byte
-	X, Y, Z   int16
-	Mode      byte
-	BlockType byte
-}
-
-type packetSetBlock struct {
-	PacketID  byte
-	X, Y, Z   int16
-	BlockType byte
-}
-
-type packetSpawnPlayer struct {
-	PacketID   byte
-	PlayerID   byte
-	Name       [64]byte
-	X, Y, Z    int16
-	Yaw, Pitch byte
-}
-
-type packetPlayerTeleport struct {
-	PacketID   byte
-	PlayerID   byte
-	X, Y, Z    int16
-	Yaw, Pitch byte
-}
-
-type packetPositionOrientationUpdate struct {
-	PacketID   byte
-	PlayerID   byte
-	X, Y, Z    byte
-	Yaw, Pitch byte
-}
-
-type packetPositionUpdate struct {
-	PacketID byte
-	PlayerID byte
-	X, Y, Z  byte
-}
-
-type packetOrientationUpdate struct {
-	PacketID   byte
-	PlayerID   byte
-	Yaw, Pitch byte
-}
-
-type packetDespawnPlayer struct {
-	PacketID byte
-	PlayerID byte
-}
-
-type packetMessage struct {
-	PacketID byte
-	PlayerID byte
-	Message  [64]byte
-}
-
-type packetDisconnect struct {
-	PacketID byte
-	Reason   [64]byte
-}
-
-type packetUpdateUserType struct {
-	PacketID byte
-	UserType byte
-}
-
-type packetExtInfo struct {
-	PacketID       byte
-	AppName        [64]byte
-	ExtensionCount int16
-}
-
-type packetExtEntry struct {
-	PacketID byte
-	ExtName  [64]byte
-	Version  int32
-}
-
-type packetSetClickDistance struct {
-	PacketID byte
-	Distance int16
-}
-
-type packetCustomBlockSupportLevel struct {
-	PacketID     byte
-	SupportLevel byte
-}
-
-type packetHoldThis struct {
-	PacketID      byte
-	BlockToHold   byte
-	PreventChange byte
-}
-
-type packetExtAddPlayerName struct {
-	PacketID   byte
-	NameID     int16
-	PlayerName [64]byte
-	ListName   [64]byte
-	GroupName  [64]byte
-	GroupRank  byte
-}
-
-type packetExtRemovePlayerName struct {
-	PacketID byte
-	NameID   int16
-}
-
-type packetMakeSelection struct {
-	PacketID               byte
-	SelectionID            byte
-	Label                  [64]byte
-	StartX, StartY, StartZ int16
-	EndX, EndY, Endz       int16
-	R, G, B, Opacity       int16
-}
-
-type packetRemoveSelection struct {
-	PacketID    byte
-	SelectionID byte
-}
-
-type packetChangeModel struct {
-	PacketID  byte
-	EntityID  byte
-	ModelName [64]byte
-}
-
-type packetEnvSetWeatherType struct {
-	PacketID    byte
-	WeatherType byte
-}
-
-type packetHackControl struct {
-	PacketID        byte
-	Flying          byte
-	NoClip          byte
-	Speeding        byte
-	SpawnControl    byte
-	ThirdPersonView byte
-	JumpHeight      int16
-}
-
-type packetExtAddEntity2 struct {
-	PacketID    byte
-	EntityID    byte
-	DisplayName [64]byte
-	skinName    [64]byte
-	X, Y, Z     int16
-	Yaw, Pitch  byte
-}
-
-type packetPlayerClicked struct {
-	PacketID               byte
-	Button, Action         byte
-	Yaw, Pitch             int16
-	TargetID               byte
-	BlockX, BlockY, BlockZ int16
-	BlockFace              byte
-}
-
-type packetBulkBlockUpdate struct {
-	PacketID byte
-	Count    byte
-	Indices  [256]int32
-	Blocks   [256]byte
-}
-
-type packetSetMapEnvUrl struct {
-	PacketID       byte
-	TexturePackURL [64]byte
-}
-
-type packetSetMapEnvProperty struct {
-	PacketID byte
-	Type     byte
-	Value    int32
-}
-
-type packetSetEntityProperty struct {
-	PacketID byte
-	EntityID byte
-	Type     byte
-	Value    int32
-}
-
-type packetTwoWayPing struct {
-	PacketID  byte
-	Direction byte
-	Data      int16
-}
-
 func padString(str string) [64]byte {
 	var result [64]byte
 	copy(result[:], str)
@@ -353,4 +122,451 @@ func padString(str string) [64]byte {
 
 func trimString(str [64]byte) string {
 	return strings.TrimRight(string(str[:]), " ")
+}
+
+type Packet struct {
+	buf bytes.Buffer
+}
+
+func (packet *Packet) motd(player *Player, motd string) {
+	userType := byte(0x00)
+	if player.operator {
+		userType = 0x64
+	}
+
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID        byte
+		ProtocolVersion byte
+		Name            [64]byte
+		MOTD            [64]byte
+		UserType        byte
+	}{
+		packetTypeIdentification,
+		0x07,
+		padString(player.server.Config.Name),
+		padString(motd),
+		userType,
+	})
+}
+
+func (packet *Packet) ping() {
+	packet.buf.WriteByte(packetTypePing)
+}
+
+func (packet *Packet) levelInitialize() {
+	packet.buf.WriteByte(packetTypeLevelInitialize)
+}
+
+func (packet *Packet) levelInitializeExt(size uint) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID byte
+		Size     int32
+	}{packetTypeLevelInitialize, int32(size)})
+}
+
+func (packet *Packet) levelDataChunk(blocks []byte, percent byte) {
+	data := struct {
+		PacketID        byte
+		ChunkLength     int16
+		ChunkData       [1024]byte
+		PercentComplete byte
+	}{
+		packetTypeLevelDataChunk,
+		int16(len(blocks)),
+		[1024]byte{},
+		percent,
+	}
+
+	copy(data.ChunkData[:], blocks)
+	binary.Write(&packet.buf, binary.BigEndian, data)
+}
+
+func (packet *Packet) levelFinalize(x, y, z uint) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID byte
+		X, Y, Z  int16
+	}{packetTypeLevelFinalize, int16(x), int16(y), int16(z)})
+}
+
+func (packet *Packet) setBlock(x, y, z uint, block BlockID) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID  byte
+		X, Y, Z   int16
+		BlockType byte
+	}{packetTypeSetBlock, int16(x), int16(y), int16(z), byte(block)})
+}
+
+func (packet *Packet) addEntity(entity *Entity, self bool) {
+	id := entity.id
+	if self {
+		id = 0xff
+	}
+
+	location := entity.location
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID   byte
+		PlayerID   byte
+		Name       [64]byte
+		X, Y, Z    int16
+		Yaw, Pitch byte
+	}{
+		packetTypeAddEntity,
+		id,
+		padString(entity.DisplayName),
+		int16(location.X * 32),
+		int16(location.Y * 32),
+		int16(location.Z * 32),
+		byte(location.Yaw * 256 / 360),
+		byte(location.Pitch * 256 / 360),
+	})
+}
+
+func (packet *Packet) teleport(entity *Entity, self bool) {
+	id := entity.id
+	if self {
+		id = 0xff
+	}
+
+	location := entity.location
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID   byte
+		PlayerID   byte
+		X, Y, Z    int16
+		Yaw, Pitch byte
+	}{
+		packetTypePlayerTeleport,
+		id,
+		int16(location.X * 32),
+		int16(location.Y * 32),
+		int16(location.Z * 32),
+		byte(location.Yaw * 256 / 360),
+		byte(location.Pitch * 256 / 360),
+	})
+}
+
+func (packet *Packet) positionOrientationUpdate(entity *Entity) {
+	location := entity.location
+	lastLocation := entity.lastLocation
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID   byte
+		PlayerID   byte
+		X, Y, Z    byte
+		Yaw, Pitch byte
+	}{
+		packetTypePositionOrientationUpdate,
+		entity.id,
+		byte((location.X - lastLocation.X) * 32),
+		byte((location.Y - lastLocation.Y) * 32),
+		byte((location.Z - lastLocation.Z) * 32),
+		byte(location.Yaw * 256 / 360),
+		byte(location.Pitch * 256 / 360),
+	})
+}
+
+func (packet *Packet) positionUpdate(entity *Entity) {
+	location := entity.location
+	lastLocation := entity.lastLocation
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID byte
+		PlayerID byte
+		X, Y, Z  byte
+	}{
+		packetTypePositionUpdate,
+		entity.id,
+		byte((location.X - lastLocation.X) * 32),
+		byte((location.Y - lastLocation.Y) * 32),
+		byte((location.Z - lastLocation.Z) * 32),
+	})
+}
+
+func (packet *Packet) orientationUpdate(entity *Entity) {
+	location := entity.location
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID   byte
+		PlayerID   byte
+		Yaw, Pitch byte
+	}{
+		packetTypeOrientationUpdate,
+		entity.id,
+		byte(location.Yaw * 256 / 360),
+		byte(location.Pitch * 256 / 360),
+	})
+}
+
+func (packet *Packet) removeEntity(entity *Entity, self bool) {
+	id := entity.id
+	if self {
+		id = 0xff
+	}
+
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID byte
+		PlayerID byte
+	}{packetTypeRemoveEntity, id})
+}
+
+func (packet *Packet) message(msgType int, message string) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID byte
+		PlayerID byte
+		Message  [64]byte
+	}{packetTypeMessage, byte(msgType), padString(message)})
+}
+
+func (packet *Packet) kick(reason string) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID byte
+		Reason   [64]byte
+	}{packetTypeKick, padString(reason)})
+}
+
+func (packet *Packet) userType(player *Player) {
+	userType := byte(0x00)
+	if player.operator {
+		userType = 0x64
+	}
+
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID byte
+		UserType byte
+	}{packetTypeSetPermission, userType})
+}
+
+func (packet *Packet) extInfo() {
+	binary.Write(&packet.buf, binary.BigEndian, struct {
+		PacketID       byte
+		AppName        [64]byte
+		ExtensionCount int16
+	}{packetTypeExtInfo, padString(ServerSoftware), int16(len(Extensions))})
+}
+
+func (packet *Packet) extEntry(entry *ExtEntry) {
+	binary.Write(&packet.buf, binary.BigEndian, struct {
+		PacketID byte
+		ExtName  [64]byte
+		Version  int32
+	}{packetTypeExtEntry, padString(entry.Name), int32(entry.Version)})
+}
+
+func (packet *Packet) clickDistance(player *Player) {
+	binary.Write(&packet.buf, binary.BigEndian, struct {
+		PacketID byte
+		Distance int16
+	}{packetTypeSetClickDistance, int16(player.clickDistance * 32)})
+}
+
+func (packet *Packet) customBlockSupportLevel(level byte) {
+	binary.Write(&packet.buf, binary.BigEndian, struct {
+		PacketID     byte
+		SupportLevel byte
+	}{packetTypeCustomBlockSupportLevel, level})
+}
+
+func (packet *Packet) holdThis(block BlockID, lock bool) {
+	preventChange := byte(0)
+	if lock {
+		preventChange = 1
+	}
+
+	binary.Write(&packet.buf, binary.BigEndian, struct {
+		PacketID      byte
+		BlockToHold   byte
+		PreventChange byte
+	}{packetTypeHoldThis, byte(block), preventChange})
+}
+
+func (packet *Packet) extAddPlayerName(entity *Entity, self bool) {
+	id := int16(entity.id)
+	if self {
+		id = 0xff
+	}
+
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID   byte
+		NameID     int16
+		PlayerName [64]byte
+		ListName   [64]byte
+		GroupName  [64]byte
+		GroupRank  byte
+	}{
+		packetTypeExtAddPlayerName,
+		id,
+		padString(entity.name),
+		padString(entity.ListName),
+		padString(entity.GroupName),
+		entity.GroupRank,
+	})
+}
+
+func (packet *Packet) extRemovePlayerName(entity *Entity, self bool) {
+	id := int16(entity.id)
+	if self {
+		id = 0xff
+	}
+
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID byte
+		NameID   int16
+	}{packetTypeExtRemovePlayerName, id})
+}
+
+func (packet *Packet) makeSelection(id int, label string, box AABB, color color.RGBA) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID               byte
+		SelectionID            byte
+		Label                  [64]byte
+		StartX, StartY, StartZ int16
+		EndX, EndY, Endz       int16
+		R, G, B, Opacity       int16
+	}{
+		packetTypeMakeSelection,
+		byte(id),
+		padString(label),
+		int16(box.Min.X), int16(box.Min.Y), int16(box.Min.Z),
+		int16(box.Max.X), int16(box.Max.Y), int16(box.Max.Z),
+		int16(color.R), int16(color.G), int16(color.B), int16(color.A),
+	})
+}
+
+func (packet *Packet) removeSelection(id int) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID    byte
+		SelectionID byte
+	}{packetTypeRemoveSelection, byte(id)})
+}
+
+func (packet *Packet) changeModel(entity *Entity, self bool) {
+	id := entity.id
+	if self {
+		id = 0xff
+	}
+
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID  byte
+		EntityID  byte
+		ModelName [64]byte
+	}{packetTypeChangeModel, id, padString(entity.Model)})
+}
+
+func (packet *Packet) envWeatherType(level *Level) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID    byte
+		WeatherType byte
+	}{packetTypeEnvSetWeatherType, byte(level.Weather)})
+}
+
+func (packet *Packet) hackControl(config *HackConfig) {
+	data := struct {
+		PacketID        byte
+		Flying          byte
+		NoClip          byte
+		Speeding        byte
+		SpawnControl    byte
+		ThirdPersonView byte
+		JumpHeight      int16
+	}{
+		packetTypeHackControl,
+		0, 0, 0, 0, 0,
+		int16(config.JumpHeight),
+	}
+
+	if config.Flying {
+		data.Flying = 1
+	}
+	if config.NoClip {
+		data.NoClip = 1
+	}
+	if config.Speeding {
+		data.Speeding = 1
+	}
+	if config.SpawnControl {
+		data.SpawnControl = 1
+	}
+	if config.ThirdPersonView {
+		data.ThirdPersonView = 1
+	}
+
+	binary.Write(&packet.buf, binary.BigEndian, &data)
+}
+
+func (packet *Packet) extAddEntity2(entity *Entity, self bool) {
+	id := entity.id
+	if self {
+		id = 0xff
+	}
+
+	location := entity.location
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID    byte
+		EntityID    byte
+		DisplayName [64]byte
+		skinName    [64]byte
+		X, Y, Z     int16
+		Yaw, Pitch  byte
+	}{
+		packetTypeExtAddEntity2,
+		id,
+		padString(entity.DisplayName),
+		padString(entity.SkinName),
+		int16(location.X * 32),
+		int16(location.Y * 32),
+		int16(location.Z * 32),
+		byte(location.Yaw * 256 / 360),
+		byte(location.Pitch * 256 / 360),
+	})
+}
+
+func (packet *Packet) bulkBlockUpdate(indices []int32, blocks []byte) {
+	data := struct {
+		PacketID byte
+		Count    byte
+		Indices  [256]int32
+		Blocks   [256]byte
+	}{
+		packetTypeBulkBlockUpdate,
+		byte(len(indices)),
+		[256]int32{},
+		[256]byte{},
+	}
+
+	copy(data.Indices[:], indices)
+	copy(data.Blocks[:], blocks)
+	binary.Write(&packet.buf, binary.BigEndian, &data)
+}
+
+func (packet *Packet) mapEnvUrl(level *Level) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID       byte
+		TexturePackURL [64]byte
+	}{packetTypeSetMapEnvUrl, padString(level.TexturePack)})
+}
+
+func (packet *Packet) mapEnvProperty(id byte, value int32) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID byte
+		Type     byte
+		Value    int32
+	}{packetTypeSetMapEnvProperty, id, value})
+}
+
+func (packet *Packet) entityProperty(entity *Entity, self bool, prop byte, value int32) {
+	id := entity.id
+	if self {
+		id = 0xff
+	}
+
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID byte
+		EntityID byte
+		Type     byte
+		Value    int32
+	}{packetTypeSetEntityProperty, id, prop, value})
+}
+
+func (packet *Packet) twoWayPing(dir byte, data int16) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID  byte
+		Direction byte
+		Data      int16
+	}{packetTypeTwoWayPing, dir, data})
 }

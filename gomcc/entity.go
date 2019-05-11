@@ -200,42 +200,15 @@ func (entity *Entity) update() {
 		teleport = true
 	}
 
-	var packet interface{}
+	var packet Packet
 	if teleport {
-		packet = &packetPlayerTeleport{
-			packetTypePlayerTeleport,
-			entity.id,
-			int16(entity.location.X * 32),
-			int16(entity.location.Y * 32),
-			int16(entity.location.Z * 32),
-			byte(entity.location.Yaw * 256 / 360),
-			byte(entity.location.Pitch * 256 / 360),
-		}
+		packet.teleport(entity, false)
 	} else if positionDirty && rotationDirty {
-		packet = &packetPositionOrientationUpdate{
-			packetTypePositionOrientationUpdate,
-			entity.id,
-			byte((entity.location.X - entity.lastLocation.X) * 32),
-			byte((entity.location.Y - entity.lastLocation.Y) * 32),
-			byte((entity.location.Z - entity.lastLocation.Z) * 32),
-			byte(entity.location.Yaw * 256 / 360),
-			byte(entity.location.Pitch * 256 / 360),
-		}
+		packet.positionOrientationUpdate(entity)
 	} else if positionDirty {
-		packet = &packetPositionUpdate{
-			packetTypePositionUpdate,
-			entity.id,
-			byte((entity.location.X - entity.lastLocation.X) * 32),
-			byte((entity.location.Y - entity.lastLocation.Y) * 32),
-			byte((entity.location.Z - entity.lastLocation.Z) * 32),
-		}
+		packet.positionUpdate(entity)
 	} else if rotationDirty {
-		packet = &packetOrientationUpdate{
-			packetTypeOrientationUpdate,
-			entity.id,
-			byte(entity.location.Yaw * 256 / 360),
-			byte(entity.location.Pitch * 256 / 360),
-		}
+		packet.orientationUpdate(entity)
 	} else {
 		return
 	}
