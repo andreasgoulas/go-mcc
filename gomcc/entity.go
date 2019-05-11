@@ -163,10 +163,11 @@ func (entity *Entity) TeleportLevel(level *Level) {
 	if level != nil {
 		entity.location = level.Spawn
 		entity.lastLocation = level.Spawn
-		entity.spawn(level)
 		if entity.player != nil {
 			entity.player.spawnLevel(level)
 		}
+
+		entity.spawn(level)
 	}
 
 	entity.level = level
@@ -200,9 +201,10 @@ func (entity *Entity) update() {
 		teleport = true
 	}
 
-	var packet Packet
+	var packet, packetExt Packet
 	if teleport {
-		packet.teleport(entity, false)
+		packet.teleport(entity, false, false)
+		packetExt.teleport(entity, false, true)
 	} else if positionDirty && rotationDirty {
 		packet.positionOrientationUpdate(entity)
 	} else if positionDirty {
@@ -216,7 +218,11 @@ func (entity *Entity) update() {
 	entity.lastLocation = entity.location
 	entity.level.ForEachPlayer(func(player *Player) {
 		if player.Entity != entity {
-			player.sendPacket(packet)
+			if teleport && player.cpe[CpeExtEntityPositions] {
+				player.sendPacket(packetExt)
+			} else {
+				player.sendPacket(packet)
+			}
 		}
 	})
 }

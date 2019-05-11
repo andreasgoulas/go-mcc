@@ -74,7 +74,7 @@ type Level struct {
 	Spawn Location
 
 	width, height, length uint
-	blocks                []BlockID
+	Blocks                []BlockID
 
 	Weather     WeatherType
 	TexturePack string
@@ -97,7 +97,7 @@ func NewLevel(name string, width, height, length uint) *Level {
 		width:   width,
 		height:  height,
 		length:  length,
-		blocks:  make([]BlockID, width*height*length),
+		Blocks:  make([]BlockID, width*height*length),
 		Weather: WeatherSunny,
 		EnvConfig: EnvConfig{
 			SideBlock:       BlockBedrock,
@@ -127,8 +127,8 @@ func (level *Level) Clone(name string) *Level {
 		return nil
 	}
 
-	blocks := make([]BlockID, len(level.blocks))
-	copy(blocks, level.blocks)
+	blocks := make([]BlockID, len(level.Blocks))
+	copy(blocks, level.Blocks)
 
 	return &Level{
 		name:       name,
@@ -136,7 +136,7 @@ func (level *Level) Clone(name string) *Level {
 		width:      level.width,
 		height:     level.height,
 		length:     level.length,
-		blocks:     blocks,
+		Blocks:     blocks,
 		Weather:    level.Weather,
 		EnvConfig:  level.EnvConfig,
 		HackConfig: level.HackConfig,
@@ -180,7 +180,7 @@ func (level *Level) Position(index uint) (x, y, z uint) {
 
 func (level *Level) GetBlock(x, y, z uint) BlockID {
 	if x < level.width && y < level.height && z < level.length {
-		return level.blocks[level.Index(x, y, z)]
+		return level.Blocks[level.Index(x, y, z)]
 	}
 
 	return BlockAir
@@ -212,7 +212,7 @@ func (level *Level) ForEachPlayer(fn func(*Player)) {
 
 func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
 	if x < level.width && y < level.height && z < level.length {
-		level.blocks[level.Index(x, y, z)] = block
+		level.Blocks[level.Index(x, y, z)] = block
 		if broadcast {
 			level.ForEachPlayer(func(player *Player) {
 				player.sendBlockChange(x, y, z, block)
@@ -281,7 +281,7 @@ func (buffer *BlockBuffer) Set(x, y, z uint, block BlockID) {
 func (buffer *BlockBuffer) Flush() {
 	for i := uint(0); i < buffer.count; i++ {
 		index := buffer.indices[i]
-		buffer.level.blocks[index] = buffer.blocks[i]
+		buffer.level.Blocks[index] = buffer.blocks[i]
 	}
 
 	buffer.level.ForEachPlayer(func(player *Player) {

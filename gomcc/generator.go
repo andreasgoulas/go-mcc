@@ -31,7 +31,7 @@ type FlatGenerator struct {
 }
 
 func newFlatGenerator(args ...string) Generator {
-	grassHeight := 0
+	grassHeight := -1
 	if len(args) > 0 {
 		grassHeight, _ = strconv.Atoi(args[0])
 	}

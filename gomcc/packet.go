@@ -38,6 +38,7 @@ const (
 	CpeBulkBlockUpdate
 	CpeEnvMapAspect
 	CpeEntityProperty
+	CpeExtEntityPositions
 	CpeTwoWayPing
 	CpeInstantMOTD
 	CpeFastMap
@@ -66,6 +67,7 @@ var Extensions = [CpeCount]ExtEntry{
 	{"BulkBlockUpdate", 1},
 	{"EnvMapAspect", 1},
 	{"EntityProperty", 1},
+	{"ExtEntityPositions", 1},
 	{"TwoWayPing", 1},
 	{"InstantMOTD", 1},
 	{"FastMap", 1},
@@ -126,6 +128,22 @@ func trimString(str [64]byte) string {
 
 type Packet struct {
 	buf bytes.Buffer
+}
+
+func (packet *Packet) position(location Location, extPos bool) {
+	if extPos {
+		binary.Write(&packet.buf, binary.BigEndian, &struct{ X, Y, Z int32 }{
+			int32(location.X * 32),
+			int32(location.Y * 32),
+			int32(location.Z * 32),
+		})
+	} else {
+		binary.Write(&packet.buf, binary.BigEndian, &struct{ X, Y, Z int16 }{
+			int16(location.X * 32),
+			int16(location.Y * 32),
+			int16(location.Z * 32),
+		})
+	}
 }
 
 func (packet *Packet) motd(player *Player, motd string) {
@@ -196,7 +214,7 @@ func (packet *Packet) setBlock(x, y, z uint, block BlockID) {
 	}{packetTypeSetBlock, int16(x), int16(y), int16(z), byte(block)})
 }
 
-func (packet *Packet) addEntity(entity *Entity, self bool) {
+func (packet *Packet) addEntity(entity *Entity, self bool, extPos bool) {
 	id := entity.id
 	if self {
 		id = 0xff
@@ -204,24 +222,19 @@ func (packet *Packet) addEntity(entity *Entity, self bool) {
 
 	location := entity.location
 	binary.Write(&packet.buf, binary.BigEndian, &struct {
-		PacketID   byte
-		PlayerID   byte
-		Name       [64]byte
-		X, Y, Z    int16
-		Yaw, Pitch byte
-	}{
-		packetTypeAddEntity,
-		id,
-		padString(entity.DisplayName),
-		int16(location.X * 32),
-		int16(location.Y * 32),
-		int16(location.Z * 32),
+		PacketID byte
+		PlayerID byte
+		Name     [64]byte
+	}{packetTypeAddEntity, id, padString(entity.DisplayName)})
+
+	packet.position(location, extPos)
+	binary.Write(&packet.buf, binary.BigEndian, &struct{ Yaw, Pitch byte }{
 		byte(location.Yaw * 256 / 360),
 		byte(location.Pitch * 256 / 360),
 	})
 }
 
-func (packet *Packet) teleport(entity *Entity, self bool) {
+func (packet *Packet) teleport(entity *Entity, self bool, extPos bool) {
 	id := entity.id
 	if self {
 		id = 0xff
@@ -229,16 +242,12 @@ func (packet *Packet) teleport(entity *Entity, self bool) {
 
 	location := entity.location
 	binary.Write(&packet.buf, binary.BigEndian, &struct {
-		PacketID   byte
-		PlayerID   byte
-		X, Y, Z    int16
-		Yaw, Pitch byte
-	}{
-		packetTypePlayerTeleport,
-		id,
-		int16(location.X * 32),
-		int16(location.Y * 32),
-		int16(location.Z * 32),
+		PacketID byte
+		PlayerID byte
+	}{packetTypePlayerTeleport, id})
+
+	packet.position(location, extPos)
+	binary.Write(&packet.buf, binary.BigEndian, &struct{ Yaw, Pitch byte }{
 		byte(location.Yaw * 256 / 360),
 		byte(location.Pitch * 256 / 360),
 	})
@@ -464,11 +473,7 @@ func (packet *Packet) hackControl(config *HackConfig) {
 		SpawnControl    byte
 		ThirdPersonView byte
 		JumpHeight      int16
-	}{
-		packetTypeHackControl,
-		0, 0, 0, 0, 0,
-		int16(config.JumpHeight),
-	}
+	}{packetTypeHackControl, 0, 0, 0, 0, 0, int16(config.JumpHeight)}
 
 	if config.Flying {
 		data.Flying = 1
@@ -489,7 +494,7 @@ func (packet *Packet) hackControl(config *HackConfig) {
 	binary.Write(&packet.buf, binary.BigEndian, &data)
 }
 
-func (packet *Packet) extAddEntity2(entity *Entity, self bool) {
+func (packet *Packet) extAddEntity2(entity *Entity, self bool, extPos bool) {
 	id := entity.id
 	if self {
 		id = 0xff
@@ -500,17 +505,16 @@ func (packet *Packet) extAddEntity2(entity *Entity, self bool) {
 		PacketID    byte
 		EntityID    byte
 		DisplayName [64]byte
-		skinName    [64]byte
-		X, Y, Z     int16
-		Yaw, Pitch  byte
+		SkinName    [64]byte
 	}{
 		packetTypeExtAddEntity2,
 		id,
 		padString(entity.DisplayName),
 		padString(entity.SkinName),
-		int16(location.X * 32),
-		int16(location.Y * 32),
-		int16(location.Z * 32),
+	})
+
+	packet.position(location, extPos)
+	binary.Write(&packet.buf, binary.BigEndian, &struct{ Yaw, Pitch byte }{
 		byte(location.Yaw * 256 / 360),
 		byte(location.Pitch * 256 / 360),
 	})
@@ -569,4 +573,43 @@ func (packet *Packet) twoWayPing(dir byte, data int16) {
 		Direction byte
 		Data      int16
 	}{packetTypeTwoWayPing, dir, data})
+}
+
+type levelStream struct {
+	player  *Player
+	buf     [1024]byte
+	index   int
+	percent byte
+}
+
+func (stream *levelStream) send() {
+	var packet Packet
+	packet.levelDataChunk(stream.buf[:stream.index], stream.percent)
+	stream.player.sendPacket(packet)
+	stream.index = 0
+}
+
+func (stream *levelStream) Close() {
+	if stream.index > 0 {
+		stream.send()
+	}
+}
+
+func (stream *levelStream) Write(p []byte) (int, error) {
+	offset := 0
+	count := len(p)
+	for count > 0 {
+		size := min(1024-stream.index, count)
+		copy(stream.buf[stream.index:], p[offset:offset+size])
+
+		stream.index += size
+		offset += size
+		count -= size
+
+		if stream.index == 1024 {
+			stream.send()
+		}
+	}
+
+	return len(p), nil
 }

@@ -277,15 +277,21 @@ func (player *Player) sendLevel(level *Level) {
 
 	player.sendMOTD(level)
 
-	var buffer bytes.Buffer
+	var conv [BlockCountCPE]byte
+	for i := 0; i < BlockCountCPE; i++ {
+		conv[i] = byte(player.convertBlock(BlockID(i)))
+	}
+
+	stream := levelStream{player: player}
 	if player.cpe[CpeFastMap] {
 		var packet Packet
 		packet.levelInitializeExt(level.Volume())
 		player.sendPacket(packet)
 
-		writer, _ := flate.NewWriter(&buffer, -1)
-		for _, block := range level.blocks {
-			writer.Write([]byte{byte(player.convertBlock(block))})
+		writer, _ := flate.NewWriter(&stream, -1)
+		for i, block := range level.Blocks {
+			stream.percent = byte(i * 100 / len(level.Blocks))
+			writer.Write([]byte{conv[block]})
 		}
 		writer.Close()
 	} else {
@@ -293,27 +299,15 @@ func (player *Player) sendLevel(level *Level) {
 		packet.levelInitialize()
 		player.sendPacket(packet)
 
-		writer := gzip.NewWriter(&buffer)
+		writer := gzip.NewWriter(&stream)
 		binary.Write(writer, binary.BigEndian, int32(level.Volume()))
-		for _, block := range level.blocks {
-			writer.Write([]byte{byte(player.convertBlock(block))})
+		for i, block := range level.Blocks {
+			stream.percent = byte(i * 100 / len(level.Blocks))
+			writer.Write([]byte{conv[block]})
 		}
 		writer.Close()
 	}
-
-	data := buffer.Bytes()
-	packets := int(math.Ceil(float64(len(data)) / 1024))
-	for i := 0; i < packets; i++ {
-		offset := 1024 * i
-		size := len(data) - offset
-		if size > 1024 {
-			size = 1024
-		}
-
-		var packet Packet
-		packet.levelDataChunk(data[offset:offset+size], byte(i*100/packets))
-		player.sendPacket(packet)
-	}
+	stream.Close()
 
 	player.sendWeather(level)
 	player.sendTexturePack(level)
@@ -331,10 +325,12 @@ func (player *Player) sendSpawn(entity *Entity) {
 	}
 
 	var packet Packet
+	self := entity.id == player.id
+	extPos := player.cpe[CpeExtEntityPositions]
 	if player.cpe[CpeExtPlayerList] {
-		packet.extAddEntity2(entity, entity.id == player.id)
+		packet.extAddEntity2(entity, self, extPos)
 	} else {
-		packet.addEntity(entity, entity.id == player.id)
+		packet.addEntity(entity, self, extPos)
 	}
 
 	player.sendPacket(packet)
@@ -372,7 +368,8 @@ func (player *Player) despawnLevel(level *Level) {
 func (player *Player) sendTeleport(entity *Entity) {
 	if player.state == stateGame {
 		var packet Packet
-		packet.teleport(entity, entity.id == player.id)
+		extPos := player.cpe[CpeExtEntityPositions]
+		packet.teleport(entity, entity.id == player.id, extPos)
 		player.sendPacket(packet)
 	}
 }
@@ -549,7 +546,11 @@ func (player *Player) handle() {
 			case packetTypeSetBlockClient:
 				size = 9
 			case packetTypePlayerTeleport:
-				size = 10
+				if player.cpe[CpeExtEntityPositions] {
+					size = 16
+				} else {
+					size = 10
+				}
 			case packetTypeMessage:
 				size = 66
 			case packetTypePlayerClicked:
@@ -578,7 +579,7 @@ func (player *Player) handle() {
 		case packetTypeSetBlockClient:
 			player.handleSetBlock(reader)
 		case packetTypePlayerTeleport:
-			player.handlePlayerTeleport(reader)
+			player.handleTeleport(reader)
 		case packetTypeMessage:
 			player.handleMessage(reader)
 		case packetTypeExtInfo:
@@ -786,34 +787,37 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 	}
 }
 
-func (player *Player) handlePlayerTeleport(reader io.Reader) {
-	packet := struct {
-		PacketID   byte
-		PlayerID   byte
-		X, Y, Z    int16
-		Yaw, Pitch byte
-	}{}
-	binary.Read(reader, binary.BigEndian, &packet)
+func (player *Player) handleTeleport(reader io.Reader) {
+	packet0 := struct{ PacketID, PlayerID byte }{}
+	binary.Read(reader, binary.BigEndian, &packet0)
 
-	if player.level == nil {
-		return
+	location := Location{}
+	if player.cpe[CpeExtEntityPositions] {
+		packet1 := struct{ X, Y, Z int32 }{}
+		binary.Read(reader, binary.BigEndian, &packet1)
+		location.X = float64(packet1.X) / 32
+		location.Y = float64(packet1.Y) / 32
+		location.Z = float64(packet1.Z) / 32
+	} else {
+		packet1 := struct{ X, Y, Z int16 }{}
+		binary.Read(reader, binary.BigEndian, &packet1)
+		location.X = float64(packet1.X) / 32
+		location.Y = float64(packet1.Y) / 32
+		location.Z = float64(packet1.Z) / 32
 	}
+
+	packet2 := struct{ Yaw, Pitch byte }{}
+	binary.Read(reader, binary.BigEndian, &packet2)
+	location.Yaw = float64(packet2.Yaw) * 360 / 256
+	location.Pitch = float64(packet2.Pitch) * 360 / 256
 
 	if player.cpe[CpeHeldBlock] {
-		player.heldBlock = BlockID(packet.PlayerID)
-	} else if packet.PlayerID != 0xff {
+		player.heldBlock = BlockID(packet0.PlayerID)
+	} else if packet0.PlayerID != 0xff {
 		return
 	}
 
-	location := Location{
-		float64(packet.X) / 32,
-		float64(packet.Y) / 32,
-		float64(packet.Z) / 32,
-		float64(packet.Yaw) * 360 / 256,
-		float64(packet.Pitch) * 360 / 256,
-	}
-
-	if location == player.location {
+	if player.level == nil || location == player.location {
 		return
 	}
 
@@ -921,10 +925,7 @@ func (player *Player) handleExtEntry(reader io.Reader) {
 }
 
 func (player *Player) handleCustomBlockSupportLevel(reader io.Reader) {
-	packet := struct {
-		PacketID     byte
-		SupportLevel byte
-	}{}
+	packet := struct{ PacketID, SupportLevel byte }{}
 	binary.Read(reader, binary.BigEndian, &packet)
 	if packet.SupportLevel <= 1 {
 		player.cpeBlockLevel = packet.SupportLevel

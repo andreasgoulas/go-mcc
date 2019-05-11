@@ -20,6 +20,7 @@ import (
 	"compress/gzip"
 	"encoding/binary"
 	"errors"
+	"io"
 	"os"
 
 	"github.com/structinf/Go-MCC/gomcc"
@@ -75,18 +76,13 @@ func (storage *LvlStorage) Load(name string) (level *gomcc.Level, err error) {
 	level.Spawn.Yaw = float64(header.SpawnYaw) * 360 / 256
 	level.Spawn.Pitch = float64(header.SpawnPitch) * 360 / 256
 
-	for y := uint(0); y < level.Height(); y++ {
-		for z := uint(0); z < level.Length(); z++ {
-			for x := uint(0); x < level.Width(); x++ {
-				block := make([]byte, 1)
-				n, err := reader.Read(block)
-				if n != len(block) && err != nil {
-					return nil, err
-				}
+	blocks := make([]byte, level.Volume())
+	if _, err = io.ReadFull(reader, blocks); err != nil {
+		return nil, err
+	}
 
-				level.SetBlock(x, y, z, gomcc.BlockID(block[0]), false)
-			}
-		}
+	for i, block := range blocks {
+		level.Blocks[i] = gomcc.BlockID(block)
 	}
 
 	return
@@ -118,17 +114,11 @@ func (storage *LvlStorage) Save(level *gomcc.Level) (err error) {
 		return
 	}
 
-	for y := uint(0); y < level.Height(); y++ {
-		for z := uint(0); z < level.Length(); z++ {
-			for x := uint(0); x < level.Width(); x++ {
-				block := make([]byte, 1)
-				block[0] = byte(level.GetBlock(x, y, z))
-				if _, err = writer.Write(block); err != nil {
-					return
-				}
-			}
-		}
+	blocks := make([]byte, len(level.Blocks))
+	for i, block := range level.Blocks {
+		blocks[i] = byte(block)
 	}
 
+	_, err = writer.Write(blocks)
 	return
 }
