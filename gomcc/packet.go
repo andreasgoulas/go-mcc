@@ -206,12 +206,12 @@ func (packet *Packet) levelFinalize(x, y, z uint) {
 	}{packetTypeLevelFinalize, int16(x), int16(y), int16(z)})
 }
 
-func (packet *Packet) setBlock(x, y, z uint, block BlockID) {
+func (packet *Packet) setBlock(x, y, z uint, block byte) {
 	binary.Write(&packet.buf, binary.BigEndian, &struct {
 		PacketID  byte
 		X, Y, Z   int16
 		BlockType byte
-	}{packetTypeSetBlock, int16(x), int16(y), int16(z), byte(block)})
+	}{packetTypeSetBlock, int16(x), int16(y), int16(z), block})
 }
 
 func (packet *Packet) addEntity(entity *Entity, self bool, extPos bool) {
@@ -371,7 +371,7 @@ func (packet *Packet) customBlockSupportLevel(level byte) {
 	}{packetTypeCustomBlockSupportLevel, level})
 }
 
-func (packet *Packet) holdThis(block BlockID, lock bool) {
+func (packet *Packet) holdThis(block byte, lock bool) {
 	preventChange := byte(0)
 	if lock {
 		preventChange = 1
@@ -381,7 +381,7 @@ func (packet *Packet) holdThis(block BlockID, lock bool) {
 		PacketID      byte
 		BlockToHold   byte
 		PreventChange byte
-	}{packetTypeHoldThis, byte(block), preventChange})
+	}{packetTypeHoldThis, block, preventChange})
 }
 
 func (packet *Packet) extAddPlayerName(entity *Entity, self bool) {
@@ -419,7 +419,7 @@ func (packet *Packet) extRemovePlayerName(entity *Entity, self bool) {
 	}{packetTypeExtRemovePlayerName, id})
 }
 
-func (packet *Packet) makeSelection(id int, label string, box AABB, color color.RGBA) {
+func (packet *Packet) makeSelection(id byte, label string, box AABB, color color.RGBA) {
 	binary.Write(&packet.buf, binary.BigEndian, &struct {
 		PacketID               byte
 		SelectionID            byte
@@ -429,7 +429,7 @@ func (packet *Packet) makeSelection(id int, label string, box AABB, color color.
 		R, G, B, Opacity       int16
 	}{
 		packetTypeMakeSelection,
-		byte(id),
+		id,
 		padString(label),
 		int16(box.Min.X), int16(box.Min.Y), int16(box.Min.Z),
 		int16(box.Max.X), int16(box.Max.Y), int16(box.Max.Z),
@@ -437,11 +437,11 @@ func (packet *Packet) makeSelection(id int, label string, box AABB, color color.
 	})
 }
 
-func (packet *Packet) removeSelection(id int) {
+func (packet *Packet) removeSelection(id byte) {
 	binary.Write(&packet.buf, binary.BigEndian, &struct {
 		PacketID    byte
 		SelectionID byte
-	}{packetTypeRemoveSelection, byte(id)})
+	}{packetTypeRemoveSelection, id})
 }
 
 func (packet *Packet) changeModel(entity *Entity, self bool) {

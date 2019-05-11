@@ -75,14 +75,8 @@ func (storage *LvlStorage) Load(name string) (level *gomcc.Level, err error) {
 	level.Spawn.Z = float64(header.SpawnZ) / 32
 	level.Spawn.Yaw = float64(header.SpawnYaw) * 360 / 256
 	level.Spawn.Pitch = float64(header.SpawnPitch) * 360 / 256
-
-	blocks := make([]byte, level.Volume())
-	if _, err = io.ReadFull(reader, blocks); err != nil {
+	if _, err = io.ReadFull(reader, level.Blocks); err != nil {
 		return nil, err
-	}
-
-	for i, block := range blocks {
-		level.Blocks[i] = gomcc.BlockID(block)
 	}
 
 	return
@@ -114,11 +108,6 @@ func (storage *LvlStorage) Save(level *gomcc.Level) (err error) {
 		return
 	}
 
-	blocks := make([]byte, len(level.Blocks))
-	for i, block := range level.Blocks {
-		blocks[i] = byte(block)
-	}
-
-	_, err = writer.Write(blocks)
+	_, err = writer.Write(level.Blocks)
 	return
 }

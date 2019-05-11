@@ -56,7 +56,7 @@ type Player struct {
 	message       string
 	cpeBlockLevel byte
 	clickDistance float64
-	heldBlock     BlockID
+	heldBlock     byte
 
 	pingTicker *time.Ticker
 }
@@ -187,11 +187,11 @@ func (player *Player) CanReach(x, y, z uint) bool {
 	return dx*dx+dy*dy+dz*dz <= player.clickDistance*player.clickDistance
 }
 
-func (player *Player) HeldBlock() BlockID {
+func (player *Player) HeldBlock() byte {
 	return player.heldBlock
 }
 
-func (player *Player) SetHeldBlock(block BlockID, lock bool) {
+func (player *Player) SetHeldBlock(block byte, lock bool) {
 	if player.state == stateGame && player.cpe[CpeHeldBlock] {
 		var packet Packet
 		packet.holdThis(player.convertBlock(block), lock)
@@ -199,7 +199,7 @@ func (player *Player) SetHeldBlock(block BlockID, lock bool) {
 	}
 }
 
-func (player *Player) SetSelection(id int, label string, box AABB, color color.RGBA) {
+func (player *Player) SetSelection(id byte, label string, box AABB, color color.RGBA) {
 	if player.state == stateGame && player.cpe[CpeSelectionCuboid] {
 		var packet Packet
 		packet.makeSelection(id, label, box, color)
@@ -207,7 +207,7 @@ func (player *Player) SetSelection(id int, label string, box AABB, color color.R
 	}
 }
 
-func (player *Player) ResetSelection(id int) {
+func (player *Player) ResetSelection(id byte) {
 	if player.state == stateGame && player.cpe[CpeSelectionCuboid] {
 		var packet Packet
 		packet.removeSelection(id)
@@ -251,7 +251,7 @@ func (player *Player) sendPacket(packet Packet) {
 	}
 }
 
-func (player *Player) convertBlock(block BlockID) BlockID {
+func (player *Player) convertBlock(block byte) byte {
 	if player.cpeBlockLevel < 1 {
 		return FallbackBlock(block)
 	}
@@ -278,8 +278,8 @@ func (player *Player) sendLevel(level *Level) {
 	player.sendMOTD(level)
 
 	var conv [BlockCountCPE]byte
-	for i := 0; i < BlockCountCPE; i++ {
-		conv[i] = byte(player.convertBlock(BlockID(i)))
+	for i := byte(0); i < BlockCountCPE; i++ {
+		conv[i] = player.convertBlock(i)
 	}
 
 	stream := levelStream{player: player}
@@ -374,7 +374,7 @@ func (player *Player) sendTeleport(entity *Entity) {
 	}
 }
 
-func (player *Player) sendBlockChange(x, y, z uint, block BlockID) {
+func (player *Player) sendBlockChange(x, y, z uint, block byte) {
 	if player.state == stateGame {
 		var packet Packet
 		packet.setBlock(x, y, z, player.convertBlock(block))
@@ -733,7 +733,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 	}{}
 	binary.Read(reader, binary.BigEndian, &packet)
 	x, y, z := uint(packet.X), uint(packet.Y), uint(packet.Z)
-	block := BlockID(packet.BlockType)
+	block := packet.BlockType
 
 	level := player.level
 	if x >= level.width || y >= level.height || z >= level.length {
@@ -812,7 +812,7 @@ func (player *Player) handleTeleport(reader io.Reader) {
 	location.Pitch = float64(packet2.Pitch) * 360 / 256
 
 	if player.cpe[CpeHeldBlock] {
-		player.heldBlock = BlockID(packet0.PlayerID)
+		player.heldBlock = packet0.PlayerID
 	} else if packet0.PlayerID != 0xff {
 		return
 	}

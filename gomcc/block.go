@@ -16,9 +16,6 @@
 
 package gomcc
 
-// A BlockID specifies the type of a block.
-type BlockID byte
-
 const (
 	BlockAir         = 0
 	BlockStone       = 1
@@ -106,8 +103,8 @@ const (
 	BlockFaceMax = BlockFaceNegZ
 )
 
-// FallbackBlock converts a CPE BlockID to a similar vanilla-compatible one.
-func FallbackBlock(block BlockID) BlockID {
+// FallbackBlock converts a CPE block to a similar vanilla-compatible one.
+func FallbackBlock(block byte) byte {
 	switch block {
 	case BlockCobblestoneSlab:
 		return BlockSlab

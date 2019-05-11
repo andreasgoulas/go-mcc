@@ -30,8 +30,8 @@ const (
 )
 
 type EnvConfig struct {
-	SideBlock       BlockID
-	EdgeBlock       BlockID
+	SideBlock       byte
+	EdgeBlock       byte
 	EdgeHeight      uint
 	CloudHeight     uint
 	MaxViewDistance uint
@@ -74,7 +74,7 @@ type Level struct {
 	Spawn Location
 
 	width, height, length uint
-	Blocks                []BlockID
+	Blocks                []byte
 
 	Weather     WeatherType
 	TexturePack string
@@ -97,7 +97,7 @@ func NewLevel(name string, width, height, length uint) *Level {
 		width:   width,
 		height:  height,
 		length:  length,
-		Blocks:  make([]BlockID, width*height*length),
+		Blocks:  make([]byte, width*height*length),
 		Weather: WeatherSunny,
 		EnvConfig: EnvConfig{
 			SideBlock:       BlockBedrock,
@@ -127,7 +127,7 @@ func (level *Level) Clone(name string) *Level {
 		return nil
 	}
 
-	blocks := make([]BlockID, len(level.Blocks))
+	blocks := make([]byte, len(level.Blocks))
 	copy(blocks, level.Blocks)
 
 	return &Level{
@@ -178,7 +178,7 @@ func (level *Level) Position(index uint) (x, y, z uint) {
 	return
 }
 
-func (level *Level) GetBlock(x, y, z uint) BlockID {
+func (level *Level) GetBlock(x, y, z uint) byte {
 	if x < level.width && y < level.height && z < level.length {
 		return level.Blocks[level.Index(x, y, z)]
 	}
@@ -210,7 +210,7 @@ func (level *Level) ForEachPlayer(fn func(*Player)) {
 	})
 }
 
-func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
+func (level *Level) SetBlock(x, y, z uint, block byte, broadcast bool) {
 	if x < level.width && y < level.height && z < level.length {
 		level.Blocks[level.Index(x, y, z)] = block
 		if broadcast {
@@ -262,14 +262,14 @@ type BlockBuffer struct {
 	level   *Level
 	count   uint
 	indices [256]int32
-	blocks  [256]BlockID
+	blocks  [256]byte
 }
 
 func MakeBlockBuffer(level *Level) BlockBuffer {
 	return BlockBuffer{level: level}
 }
 
-func (buffer *BlockBuffer) Set(x, y, z uint, block BlockID) {
+func (buffer *BlockBuffer) Set(x, y, z uint, block byte) {
 	buffer.indices[buffer.count] = int32(buffer.level.Index(x, y, z))
 	buffer.blocks[buffer.count] = block
 	buffer.count++
@@ -287,7 +287,7 @@ func (buffer *BlockBuffer) Flush() {
 	buffer.level.ForEachPlayer(func(player *Player) {
 		var blocks [256]byte
 		for i := uint(0); i < buffer.count; i++ {
-			blocks[i] = byte(player.convertBlock(buffer.blocks[i]))
+			blocks[i] = player.convertBlock(buffer.blocks[i])
 		}
 
 		var packet Packet
@@ -296,7 +296,7 @@ func (buffer *BlockBuffer) Flush() {
 		} else {
 			for i := uint(0); i < buffer.count; i++ {
 				x, y, z := buffer.level.Position(uint(buffer.indices[i]))
-				packet.setBlock(x, y, z, BlockID(blocks[i]))
+				packet.setBlock(x, y, z, blocks[i])
 			}
 		}
 

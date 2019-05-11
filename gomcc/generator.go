@@ -26,8 +26,8 @@ type Generator interface {
 
 type FlatGenerator struct {
 	GrassHeight  int
-	SurfaceBlock BlockID
-	SoilBlock    BlockID
+	SurfaceBlock byte
+	SoilBlock    byte
 }
 
 func newFlatGenerator(args ...string) Generator {

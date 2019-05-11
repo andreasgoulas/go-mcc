@@ -99,7 +99,7 @@ type EventEntityMove struct {
 type EventBlockPlace struct {
 	Player  *Player
 	Level   *Level
-	Block   BlockID
+	Block   byte
 	X, Y, Z uint
 	Cancel  bool
 }
@@ -107,7 +107,7 @@ type EventBlockPlace struct {
 type EventBlockBreak struct {
 	Player  *Player
 	Level   *Level
-	Block   BlockID
+	Block   byte
 	X, Y, Z uint
 	Cancel  bool
 }
