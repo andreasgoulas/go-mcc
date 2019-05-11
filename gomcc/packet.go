@@ -595,15 +595,16 @@ func (packet *Packet) twoWayPing(dir byte, data int16) {
 
 type levelStream struct {
 	player  *Player
+	packet  Packet
 	buf     [1024]byte
 	index   int
 	percent byte
 }
 
 func (stream *levelStream) send() {
-	var packet Packet
-	packet.levelDataChunk(stream.buf[:stream.index], stream.percent)
-	stream.player.sendPacket(packet)
+	stream.packet.levelDataChunk(stream.buf[:stream.index], stream.percent)
+	stream.player.sendPacket(stream.packet)
+	stream.packet.buf.Reset()
 	stream.index = 0
 }
 

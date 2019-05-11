@@ -92,7 +92,9 @@ type Level struct {
 	Spawn Location
 
 	width, height, length uint
-	Blocks                []byte
+
+	Blocks []byte
+	dirty  bool
 
 	Weather     WeatherType
 	TexturePack string
@@ -116,6 +118,7 @@ func NewLevel(name string, width, height, length uint) *Level {
 		height:  height,
 		length:  length,
 		Blocks:  make([]byte, width*height*length),
+		dirty:   false,
 		Weather: WeatherSunny,
 		EnvConfig: EnvConfig{
 			SideBlock:       BlockBedrock,
@@ -235,6 +238,7 @@ func (level *Level) ForEachPlayer(fn func(*Player)) {
 
 func (level *Level) SetBlock(x, y, z uint, block byte, broadcast bool) {
 	if x < level.width && y < level.height && z < level.length {
+		level.dirty = true
 		level.Blocks[level.Index(x, y, z)] = block
 		if broadcast {
 			level.ForEachPlayer(func(player *Player) {
@@ -307,6 +311,7 @@ func (buffer *BlockBuffer) Flush() {
 		buffer.level.Blocks[index] = buffer.blocks[i]
 	}
 
+	buffer.level.dirty = true
 	buffer.level.ForEachPlayer(func(player *Player) {
 		var blocks [256]byte
 		for i := uint(0); i < buffer.count; i++ {

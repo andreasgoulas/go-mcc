@@ -311,7 +311,7 @@ func (server *Server) LoadLevel(name string) (*Level, error) {
 }
 
 func (server *Server) SaveLevel(level *Level) {
-	if server.storage == nil {
+	if server.storage == nil || !level.dirty {
 		return
 	}
 
