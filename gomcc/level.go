@@ -16,6 +16,10 @@
 
 package gomcc
 
+import (
+	"image/color"
+)
+
 type LevelStorage interface {
 	Load(path string) (*Level, error)
 	Save(level *Level) error
@@ -40,7 +44,15 @@ type EnvConfig struct {
 	WeatherFade     float64
 	ExpFog          bool
 	SideOffset      int
+
+	SkyColor     color.RGBA
+	CloudColor   color.RGBA
+	FogColor     color.RGBA
+	AmbientColor color.RGBA
+	DiffuseColor color.RGBA
 }
+
+var DefaultColor = color.RGBA{0, 0, 0, 0}
 
 const (
 	EnvPropSideBlock       = 1 << 0
@@ -54,7 +66,13 @@ const (
 	EnvPropExpFog          = 1 << 8
 	EnvPropSideOffset      = 1 << 9
 
-	EnvPropAll = (EnvPropSideOffset << 1) - 1
+	EnvPropSkyColor     = 1 << 10
+	EnvPropCloudColor   = 1 << 11
+	EnvPropFogColor     = 1 << 12
+	EnvPropAmbientColor = 1 << 13
+	EnvPropDiffuseColor = 1 << 14
+
+	EnvPropAll = (EnvPropDiffuseColor << 1) - 1
 )
 
 type HackConfig struct {
@@ -110,6 +128,11 @@ func NewLevel(name string, width, height, length uint) *Level {
 			WeatherFade:     1.0,
 			ExpFog:          false,
 			SideOffset:      -2,
+			SkyColor:        DefaultColor,
+			CloudColor:      DefaultColor,
+			FogColor:        DefaultColor,
+			AmbientColor:    DefaultColor,
+			DiffuseColor:    DefaultColor,
 		},
 		HackConfig: HackConfig{
 			Flying:          false,

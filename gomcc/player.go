@@ -433,45 +433,65 @@ func (player *Player) sendTexturePack(level *Level) {
 }
 
 func (player *Player) sendEnvConfig(level *Level, mask uint32) {
-	if player.state != stateGame || !player.cpe[CpeEnvMapAspect] {
+	if player.state != stateGame {
 		return
 	}
 
 	var packet Packet
 	config := level.EnvConfig
-	if mask&EnvPropSideBlock != 0 {
-		packet.mapEnvProperty(0, int32(player.convertBlock(config.SideBlock)))
-	}
-	if mask&EnvPropEdgeBlock != 0 {
-		packet.mapEnvProperty(1, int32(player.convertBlock(config.EdgeBlock)))
-	}
-	if mask&EnvPropEdgeHeight != 0 {
-		packet.mapEnvProperty(2, int32(config.EdgeHeight))
-	}
-	if mask&EnvPropCloudHeight != 0 {
-		packet.mapEnvProperty(3, int32(config.CloudHeight))
-	}
-	if mask&EnvPropMaxViewDistance != 0 {
-		packet.mapEnvProperty(4, int32(config.MaxViewDistance))
-	}
-	if mask&EnvPropCloudSpeed != 0 {
-		packet.mapEnvProperty(5, int32(256*config.CloudSpeed))
-	}
-	if mask&EnvPropWeatherSpeed != 0 {
-		packet.mapEnvProperty(6, int32(256*config.WeatherSpeed))
-	}
-	if mask&EnvPropWeatherFade != 0 {
-		packet.mapEnvProperty(7, int32(128*config.WeatherFade))
-	}
-	if mask&EnvPropExpFog != 0 {
-		if config.ExpFog {
-			packet.mapEnvProperty(8, 1)
-		} else {
-			packet.mapEnvProperty(8, 0)
+	if player.cpe[CpeEnvMapAspect] {
+		if mask&EnvPropSideBlock != 0 {
+			packet.mapEnvProperty(0, int32(player.convertBlock(config.SideBlock)))
+		}
+		if mask&EnvPropEdgeBlock != 0 {
+			packet.mapEnvProperty(1, int32(player.convertBlock(config.EdgeBlock)))
+		}
+		if mask&EnvPropEdgeHeight != 0 {
+			packet.mapEnvProperty(2, int32(config.EdgeHeight))
+		}
+		if mask&EnvPropCloudHeight != 0 {
+			packet.mapEnvProperty(3, int32(config.CloudHeight))
+		}
+		if mask&EnvPropMaxViewDistance != 0 {
+			packet.mapEnvProperty(4, int32(config.MaxViewDistance))
+		}
+		if mask&EnvPropCloudSpeed != 0 {
+			packet.mapEnvProperty(5, int32(256*config.CloudSpeed))
+		}
+		if mask&EnvPropWeatherSpeed != 0 {
+			packet.mapEnvProperty(6, int32(256*config.WeatherSpeed))
+		}
+		if mask&EnvPropWeatherFade != 0 {
+			packet.mapEnvProperty(7, int32(128*config.WeatherFade))
+		}
+		if mask&EnvPropExpFog != 0 {
+			if config.ExpFog {
+				packet.mapEnvProperty(8, 1)
+			} else {
+				packet.mapEnvProperty(8, 0)
+			}
+		}
+		if mask&EnvPropSideOffset != 0 {
+			packet.mapEnvProperty(9, int32(config.SideOffset))
 		}
 	}
-	if mask&EnvPropSideOffset != 0 {
-		packet.mapEnvProperty(9, int32(config.SideOffset))
+
+	if player.cpe[CpeEnvColors] {
+		if mask&EnvPropSkyColor != 0 {
+			packet.envSetColor(0, config.SkyColor)
+		}
+		if mask&EnvPropCloudColor != 0 {
+			packet.envSetColor(1, config.CloudColor)
+		}
+		if mask&EnvPropFogColor != 0 {
+			packet.envSetColor(2, config.FogColor)
+		}
+		if mask&EnvPropAmbientColor != 0 {
+			packet.envSetColor(3, config.AmbientColor)
+		}
+		if mask&EnvPropDiffuseColor != 0 {
+			packet.envSetColor(4, config.DiffuseColor)
+		}
 	}
 
 	player.sendPacket(packet)

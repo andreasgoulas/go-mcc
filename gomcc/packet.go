@@ -28,13 +28,14 @@ const (
 	CpeCustomBlocks
 	CpeHeldBlock
 	CpeExtPlayerList
-	CpeLongerMessages
+	CpeEnvColors
 	CpeSelectionCuboid
 	CpeChangeModel
 	CpeEnvWeatherType
 	CpeHackControl
 	CpeMessageTypes
 	CpePlayerClick
+	CpeLongerMessages
 	CpeBulkBlockUpdate
 	CpeEnvMapAspect
 	CpeEntityProperty
@@ -57,13 +58,14 @@ var Extensions = [CpeCount]ExtEntry{
 	{"CustomBlocks", 1},
 	{"HeldBlock", 1},
 	{"ExtPlayerList", 2},
-	{"LongerMessages", 1},
+	{"EnvColors", 1},
 	{"SelectionCuboid", 1},
 	{"ChangeModel", 1},
 	{"EnvWeatherType", 1},
 	{"HackControl", 1},
 	{"MessageTypes", 1},
 	{"PlayerClick", 1},
+	{"LongerMessages", 1},
 	{"BulkBlockUpdate", 1},
 	{"EnvMapAspect", 1},
 	{"EntityProperty", 1},
@@ -98,6 +100,7 @@ const (
 	packetTypeHoldThis                = 0x14
 	packetTypeExtAddPlayerName        = 0x16
 	packetTypeExtRemovePlayerName     = 0x18
+	packetTypeEnvSetColor             = 0x19
 	packetTypeMakeSelection           = 0x1a
 	packetTypeRemoveSelection         = 0x1b
 	packetTypeChangeModel             = 0x1d
@@ -442,6 +445,21 @@ func (packet *Packet) removeSelection(id byte) {
 		PacketID    byte
 		SelectionID byte
 	}{packetTypeRemoveSelection, id})
+}
+
+func (packet *Packet) envSetColor(id byte, color color.RGBA) {
+	data := struct {
+		PacketId byte
+		Variable byte
+		R, G, B  int16
+	}{packetTypeEnvSetColor, id, -1, -1, -1}
+	if color.A != 0 {
+		data.R = int16(color.R)
+		data.G = int16(color.G)
+		data.B = int16(color.B)
+	}
+
+	binary.Write(&packet.buf, binary.BigEndian, &data)
 }
 
 func (packet *Packet) changeModel(entity *Entity, self bool) {
