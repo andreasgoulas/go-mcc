@@ -42,6 +42,21 @@ type EnvConfig struct {
 	SideOffset      int
 }
 
+const (
+	EnvPropSideBlock       = 1 << 0
+	EnvPropEdgeBlock       = 1 << 1
+	EnvPropEdgeHeight      = 1 << 2
+	EnvPropCloudHeight     = 1 << 3
+	EnvPropMaxViewDistance = 1 << 4
+	EnvPropCloudSpeed      = 1 << 5
+	EnvPropWeatherSpeed    = 1 << 6
+	EnvPropWeatherFade     = 1 << 7
+	EnvPropExpFog          = 1 << 8
+	EnvPropSideOffset      = 1 << 9
+
+	EnvPropAll = (EnvPropSideOffset << 1) - 1
+)
+
 type HackConfig struct {
 	Flying          bool
 	NoClip          bool
@@ -61,10 +76,10 @@ type Level struct {
 	width, height, length uint
 	blocks                []BlockID
 
-	weather     WeatherType
-	texturePack string
-	envConfig   EnvConfig
-	hackConfig  HackConfig
+	Weather     WeatherType
+	TexturePack string
+	EnvConfig   EnvConfig
+	HackConfig  HackConfig
 }
 
 func NewLevel(name string, width, height, length uint) *Level {
@@ -83,8 +98,8 @@ func NewLevel(name string, width, height, length uint) *Level {
 		height:  height,
 		length:  length,
 		blocks:  make([]BlockID, width*height*length),
-		weather: WeatherSunny,
-		envConfig: EnvConfig{
+		Weather: WeatherSunny,
+		EnvConfig: EnvConfig{
 			SideBlock:       BlockBedrock,
 			EdgeBlock:       BlockActiveWater,
 			EdgeHeight:      height / 2,
@@ -96,7 +111,7 @@ func NewLevel(name string, width, height, length uint) *Level {
 			ExpFog:          false,
 			SideOffset:      -2,
 		},
-		hackConfig: HackConfig{
+		HackConfig: HackConfig{
 			Flying:          false,
 			NoClip:          false,
 			Speeding:        false,
@@ -116,14 +131,15 @@ func (level *Level) Clone(name string) *Level {
 	copy(blocks, level.blocks)
 
 	return &Level{
-		name:      name,
-		Spawn:     level.Spawn,
-		width:     level.width,
-		height:    level.height,
-		length:    level.length,
-		blocks:    blocks,
-		weather:   level.weather,
-		envConfig: level.envConfig,
+		name:       name,
+		Spawn:      level.Spawn,
+		width:      level.width,
+		height:     level.height,
+		length:     level.length,
+		blocks:     blocks,
+		Weather:    level.Weather,
+		EnvConfig:  level.EnvConfig,
+		HackConfig: level.HackConfig,
 	}
 }
 
@@ -205,68 +221,31 @@ func (level *Level) SetBlock(x, y, z uint, block BlockID, broadcast bool) {
 	}
 }
 
-func (level *Level) Weather() WeatherType {
-	return level.weather
-}
-
-func (level *Level) SetWeather(weather WeatherType) {
-	if weather == level.weather {
-		return
-	}
-
-	level.weather = weather
+func (level *Level) SendWeather() {
 	level.ForEachPlayer(func(player *Player) {
-		player.sendWeather(weather)
+		player.sendWeather(level.Weather)
 	})
 }
 
-func (level *Level) TexturePack() string {
-	return level.texturePack
-}
-
-func (level *Level) SetTexturePack(texturePack string) {
-	if texturePack == level.texturePack {
-		return
-	}
-
-	level.texturePack = texturePack
+func (level *Level) SendTexturePack(texturePack string) {
 	level.ForEachPlayer(func(player *Player) {
-		player.sendTexturePack(texturePack)
+		player.sendTexturePack(level.TexturePack)
 	})
 }
 
-func (level *Level) EnvConfig() EnvConfig {
-	return level.envConfig
-}
-
-func (level *Level) SetEnvConfig(envConfig EnvConfig) {
-	if envConfig == level.envConfig {
-		return
-	}
-
-	level.envConfig = envConfig
+func (level *Level) SendEnvConfig(mask uint32) {
 	level.ForEachPlayer(func(player *Player) {
-		player.sendEnvConfig(envConfig)
+		player.sendEnvConfig(level.EnvConfig, mask)
 	})
 }
 
-func (level *Level) HackConfig() HackConfig {
-	return level.hackConfig
-}
-
-func (level *Level) SetHackConfig(hackConfig HackConfig) {
-	if hackConfig == level.hackConfig {
-		return
-	}
-
-	level.hackConfig = hackConfig
+func (level *Level) SendHackConfig() {
 	level.ForEachPlayer(func(player *Player) {
-		player.sendHackConfig(hackConfig)
+		player.sendHackConfig(level.HackConfig)
 	})
 }
 
-func (level *Level) SetMOTD(motd string) {
-	level.MOTD = motd
+func (level *Level) SendMOTD() {
 	level.ForEachPlayer(func(player *Player) {
 		if player.cpe[CpeInstantMOTD] {
 			player.sendMOTD(level)

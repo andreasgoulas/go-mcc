@@ -359,9 +359,10 @@ func (player *Player) sendLevel(level *Level) {
 		player.sendPacket(packet)
 	}
 
-	player.sendWeather(level.weather)
-	player.sendEnvConfig(level.envConfig)
-	player.sendHackConfig(level.hackConfig)
+	player.sendWeather(level.Weather)
+	player.sendTexturePack(level.TexturePack)
+	player.sendEnvConfig(level.EnvConfig, EnvPropAll)
+	player.sendHackConfig(level.HackConfig)
 
 	player.sendPacket(&packetLevelFinalize{
 		packetTypeLevelFinalize,
@@ -405,11 +406,11 @@ func (player *Player) sendSpawn(entity *Entity) {
 		})
 	}
 
-	if entity.model != ModelHumanoid {
+	if entity.Model != ModelHumanoid {
 		player.sendChangeModel(entity)
 	}
 
-	player.sendEntityProps(entity)
+	player.sendEntityProps(entity, EntityPropAll)
 }
 
 func (player *Player) sendDespawn(entity *Entity) {
@@ -506,9 +507,9 @@ func (player *Player) sendAddPlayerList(entity *Entity) {
 		packetTypeExtAddPlayerName,
 		int16(id),
 		padString(entity.name),
-		padString(entity.listName),
-		padString(entity.groupName),
-		entity.groupRank,
+		padString(entity.ListName),
+		padString(entity.GroupName),
+		entity.GroupRank,
 	})
 }
 
@@ -541,7 +542,7 @@ func (player *Player) sendChangeModel(entity *Entity) {
 	player.sendPacket(&packetChangeModel{
 		packetTypeChangeModel,
 		id,
-		padString(entity.model),
+		padString(entity.Model),
 	})
 }
 
@@ -574,25 +575,53 @@ func (player *Player) sendEnvProp(prop byte, value int) {
 	})
 }
 
-func (player *Player) sendEnvConfig(env EnvConfig) {
+func (player *Player) sendEnvConfig(env EnvConfig, mask uint32) {
 	if player.state != stateGame || !player.cpe[CpeEnvMapAspect] {
 		return
 	}
 
-	player.sendEnvProp(0, int(player.convertBlock(env.SideBlock)))
-	player.sendEnvProp(1, int(player.convertBlock(env.EdgeBlock)))
-	player.sendEnvProp(2, int(env.EdgeHeight))
-	player.sendEnvProp(3, int(env.CloudHeight))
-	player.sendEnvProp(4, int(env.MaxViewDistance))
-	player.sendEnvProp(5, int(256*env.CloudSpeed))
-	player.sendEnvProp(6, int(256*env.WeatherSpeed))
-	player.sendEnvProp(7, int(128*env.WeatherFade))
-	player.sendEnvProp(9, env.SideOffset)
+	if mask&EnvPropSideBlock != 0 {
+		player.sendEnvProp(0, int(player.convertBlock(env.SideBlock)))
+	}
 
-	if env.ExpFog {
-		player.sendEnvProp(8, 1)
-	} else {
-		player.sendEnvProp(8, 0)
+	if mask&EnvPropEdgeBlock != 0 {
+		player.sendEnvProp(1, int(player.convertBlock(env.EdgeBlock)))
+	}
+
+	if mask&EnvPropEdgeHeight != 0 {
+		player.sendEnvProp(2, int(env.EdgeHeight))
+	}
+
+	if mask&EnvPropCloudHeight != 0 {
+		player.sendEnvProp(3, int(env.CloudHeight))
+	}
+
+	if mask&EnvPropMaxViewDistance != 0 {
+		player.sendEnvProp(4, int(env.MaxViewDistance))
+	}
+
+	if mask&EnvPropCloudSpeed != 0 {
+		player.sendEnvProp(5, int(256*env.CloudSpeed))
+	}
+
+	if mask&EnvPropWeatherSpeed != 0 {
+		player.sendEnvProp(6, int(256*env.WeatherSpeed))
+	}
+
+	if mask&EnvPropWeatherFade != 0 {
+		player.sendEnvProp(7, int(128*env.WeatherFade))
+	}
+
+	if mask&EnvPropExpFog != 0 {
+		if env.ExpFog {
+			player.sendEnvProp(8, 1)
+		} else {
+			player.sendEnvProp(8, 0)
+		}
+	}
+
+	if mask&EnvPropSideOffset != 0 {
+		player.sendEnvProp(9, env.SideOffset)
 	}
 }
 
@@ -608,17 +637,35 @@ func (player *Player) sendEntityProp(entity *Entity, prop byte, value int) {
 	})
 }
 
-func (player *Player) sendEntityProps(entity *Entity) {
+func (player *Player) sendEntityProps(entity *Entity, mask uint32) {
 	if player.state != stateGame || !player.cpe[CpeEntityProperty] {
 		return
 	}
 
-	player.sendEntityProp(entity, 0, int(entity.props.RotX))
-	player.sendEntityProp(entity, 1, int(entity.props.RotY))
-	player.sendEntityProp(entity, 2, int(entity.props.RotZ))
-	player.sendEntityProp(entity, 3, int(1000*entity.props.ScaleX))
-	player.sendEntityProp(entity, 4, int(1000*entity.props.ScaleY))
-	player.sendEntityProp(entity, 5, int(1000*entity.props.ScaleZ))
+	props := entity.Props
+	if mask&EntityPropRotX != 0 {
+		player.sendEntityProp(entity, 0, int(props.RotX))
+	}
+
+	if mask&EntityPropRotY != 0 {
+		player.sendEntityProp(entity, 1, int(props.RotY))
+	}
+
+	if mask&EntityPropRotZ != 0 {
+		player.sendEntityProp(entity, 2, int(props.RotZ))
+	}
+
+	if mask&EntityPropScaleX != 0 {
+		player.sendEntityProp(entity, 3, int(1000*props.ScaleX))
+	}
+
+	if mask&EntityPropScaleY != 0 {
+		player.sendEntityProp(entity, 4, int(1000*props.ScaleY))
+	}
+
+	if mask&EntityPropScaleZ != 0 {
+		player.sendEntityProp(entity, 5, int(1000*props.ScaleZ))
+	}
 }
 
 func (player *Player) sendHackConfig(hackConfig HackConfig) {
@@ -815,7 +862,7 @@ func (player *Player) handleIdentification(reader io.Reader) {
 	player.Nickname = player.name
 	player.DisplayName = player.name
 	player.SkinName = player.name
-	player.listName = player.name
+	player.ListName = player.name
 
 	event := EventPlayerPreLogin{player, false, ""}
 	player.server.FireEvent(EventTypePlayerPreLogin, &event)

@@ -41,21 +41,33 @@ type EntityProps struct {
 	ScaleX, ScaleY, ScaleZ float64
 }
 
+const (
+	EntityPropRotX   = 1 << 0
+	EntityPropRotY   = 1 << 1
+	EntityPropRotZ   = 1 << 2
+	EntityPropScaleX = 1 << 3
+	EntityPropScaleY = 1 << 4
+	EntityPropScaleZ = 1 << 5
+
+	EntityPropAll = (EntityPropScaleZ << 1) - 1
+)
+
 type Entity struct {
 	server *Server
 	player *Player
 
-	id    byte
-	name  string
-	model string
-	props EntityProps
+	id   byte
+	name string
+
+	Model string
+	Props EntityProps
 
 	DisplayName string
 	SkinName    string
 
-	listName  string
-	groupName string
-	groupRank byte
+	ListName  string
+	GroupName string
+	GroupRank byte
 
 	level        *Level
 	location     Location
@@ -67,11 +79,11 @@ func NewEntity(name string, server *Server) *Entity {
 		server:      server,
 		id:          0xff,
 		name:        name,
-		model:       ModelHumanoid,
-		props:       EntityProps{ScaleX: 1.0, ScaleY: 1.0, ScaleZ: 1.0},
+		Model:       ModelHumanoid,
+		Props:       EntityProps{ScaleX: 1.0, ScaleY: 1.0, ScaleZ: 1.0},
 		DisplayName: name,
 		SkinName:    name,
-		listName:    name,
+		ListName:    name,
 	}
 }
 
@@ -87,16 +99,7 @@ func (entity *Entity) Name() string {
 	return entity.name
 }
 
-func (entity *Entity) Model() string {
-	return entity.model
-}
-
-func (entity *Entity) SetModel(model string) {
-	if model == entity.model {
-		return
-	}
-
-	entity.model = model
+func (entity *Entity) SendModel() {
 	if entity.level != nil {
 		entity.level.ForEachPlayer(func(player *Player) {
 			player.sendChangeModel(entity)
@@ -104,45 +107,15 @@ func (entity *Entity) SetModel(model string) {
 	}
 }
 
-func (entity *Entity) EntityProps() EntityProps {
-	return entity.props
-}
-
-func (entity *Entity) SetEntityProps(props EntityProps) {
-	if props == entity.props {
-		return
-	}
-
-	entity.props = props
+func (entity *Entity) SendProps(mask uint32) {
 	if entity.level != nil {
 		entity.level.ForEachPlayer(func(player *Player) {
-			player.sendEntityProps(entity)
+			player.sendEntityProps(entity, mask)
 		})
 	}
 }
 
-func (entity *Entity) ListName() string {
-	return entity.listName
-}
-
-func (entity *Entity) Group() string {
-	return entity.groupName
-}
-
-func (entity *Entity) GroupRank() byte {
-	return entity.groupRank
-}
-
-func (entity *Entity) SetList(listName string, groupName string, groupRank byte) {
-	if listName == entity.listName &&
-		groupName == entity.groupName &&
-		groupRank == entity.groupRank {
-		return
-	}
-
-	entity.listName = listName
-	entity.groupName = groupName
-	entity.groupRank = groupRank
+func (entity *Entity) SendListName() {
 	entity.server.ForEachPlayer(func(player *Player) {
 		player.sendAddPlayerList(entity)
 	})
