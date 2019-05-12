@@ -99,16 +99,18 @@ const (
 	BlockCount = BlockMax + 1
 )
 
-const (
-	BlockFacePosX = 0
-	BlockFaceNegX = 1
-	BlockFacePosY = 2
-	BlockFaceNegY = 3
-	BlockFacePosZ = 4
-	BlockFaceNegZ = 5
-
-	BlockFaceMax = BlockFaceNegZ
-)
+var BlockName = [BlockCountCPE]string{
+	"air", "stone", "grass", "dirt", "cobblestone", "wood", "sapling",
+	"bedrock", "active_water", "water", "active_lava", "lava", "sand",
+	"gravel", "gold_ore", "iron_ore", "coal", "log", "leaves", "sponge",
+	"glass", "red", "orange", "yellow", "lime", "green", "aqua", "cyan",
+	"blue", "purple", "indigo", "violet", "magenta", "pink", "black",
+	"gray", "white", "dandelion", "rose", "brown_shroom", "red_shroom",
+	"gold", "iron", "doubleslab", "slab", "brick", "tnt", "bookshelf",
+	"moss", "obsidian", "cobblestone_slab", "rope", "sandstone", "snow",
+	"fire", "light_pink", "forest_green", "brown", "deep_blue", "turquoise",
+	"ice", "ceramic_tile", "magma", "pillar", "crate", "stone_brick",
+}
 
 // FallbackBlock converts a CPE block to a similar vanilla-compatible one.
 func FallbackBlock(block byte) byte {
@@ -150,90 +152,66 @@ func FallbackBlock(block byte) byte {
 	}
 }
 
+const (
+	BlockFacePosX = 0
+	BlockFaceNegX = 1
+	BlockFacePosY = 2
+	BlockFaceNegY = 3
+	BlockFacePosZ = 4
+	BlockFaceNegZ = 5
+
+	BlockFaceMax = BlockFaceNegZ
+)
+
+const (
+	CollideModeWalk  = 0
+	CollideModeSwim  = 1
+	CollideModeSolid = 2
+)
+
+const (
+	WalkSoundNone   = 0
+	WalkSoundWood   = 1
+	WalkSoundGravel = 2
+	WalkSoundGrass  = 3
+	WalkSoundStone  = 4
+	WalkSoundMetal  = 5
+	WalkSoundGlass  = 6
+	WalkSoundWool   = 7
+	WalkSoundSand   = 8
+	WalkSoundSnow   = 9
+)
+
+const (
+	BlockShapeSprite = 0
+	BlockShapeCube   = 16
+)
+
+const (
+	DrawModeOpaque = 0
+	DrawModeGlass  = 1
+	DrawModeLeaves = 2
+	DrawModeIce    = 3
+	DrawModeGas    = 4
+)
+
 type BlockDefinition struct {
-	Fallback      byte
-	Name          string
-	Collide       byte
-	Speed         float64
+	Name     string
+	Fallback byte
+
+	Speed       float64
+	CollideMode byte
+	WalkSound   byte
+
+	BlockLight bool
+	FullBright bool
+	Shape      byte
+	DrawMode   byte
+
+	FogDensity byte
+	Fog        color.RGBA
+
 	TopTexture    uint
 	SideTexture   uint
 	BottomTexture uint
-	BlockLight    bool
-	WalkSound     byte
-	FullBright    bool
-	Shape         byte
-	Draw          byte
-	FogDensity    byte
-	Fog           color.RGBA
-}
-
-var BlockInfo = [BlockCountCPE]struct {
-	Name string
-}{
-	{"air"},
-	{"stone"},
-	{"grass"},
-	{"dirt"},
-	{"cobblestone"},
-	{"wood"},
-	{"sapling"},
-	{"bedrock"},
-	{"active_water"},
-	{"water"},
-	{"active_lava"},
-	{"lava"},
-	{"sand"},
-	{"gravel"},
-	{"gold_ore"},
-	{"iron_ore"},
-	{"coal"},
-	{"log"},
-	{"leaves"},
-	{"sponge"},
-	{"glass"},
-	{"red"},
-	{"orange"},
-	{"yellow"},
-	{"lime"},
-	{"green"},
-	{"aqua"},
-	{"cyan"},
-	{"blue"},
-	{"purple"},
-	{"indigo"},
-	{"violet"},
-	{"magenta"},
-	{"pink"},
-	{"black"},
-	{"gray"},
-	{"white"},
-	{"dandelion"},
-	{"rose"},
-	{"brown_shroom"},
-	{"red_shroom"},
-	{"gold"},
-	{"iron"},
-	{"doubleslab"},
-	{"slab"},
-	{"brick"},
-	{"tnt"},
-	{"bookshelf"},
-	{"moss"},
-	{"obsidian"},
-	{"cobblestone_slab"},
-	{"rope"},
-	{"sandstone"},
-	{"snow"},
-	{"fire"},
-	{"light_pink"},
-	{"forest_green"},
-	{"brown"},
-	{"deep_blue"},
-	{"turquoise"},
-	{"ice"},
-	{"ceramic_tile"},
-	{"magma"},
-	{"pillar"},
-	{"crate"},
-	{"stone_brick"},
 }

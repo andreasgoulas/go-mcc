@@ -556,7 +556,7 @@ func (packet *Packet) defineBlock(id byte, block *BlockDefinition, extTex bool) 
 		packetTypeDefineBlock,
 		id,
 		padString(block.Name),
-		block.Collide,
+		block.CollideMode,
 		byte(64*math.Log2(block.Speed) + 128),
 	})
 
@@ -597,7 +597,7 @@ func (packet *Packet) defineBlock(id byte, block *BlockDefinition, extTex bool) 
 		block.WalkSound,
 		fullBright,
 		block.Shape,
-		block.Draw,
+		block.DrawMode,
 		block.FogDensity,
 		block.Fog.R, block.Fog.G, block.Fog.B,
 	})
