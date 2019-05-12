@@ -31,6 +31,7 @@ const (
 	CpeExtPlayerList
 	CpeEnvColors
 	CpeSelectionCuboid
+	CpeBlockPermissions
 	CpeChangeModel
 	CpeEnvWeatherType
 	CpeHackControl
@@ -66,6 +67,7 @@ var Extensions = [CpeCount]ExtEntry{
 	{"ExtPlayerList", 2},
 	{"EnvColors", 1},
 	{"SelectionCuboid", 1},
+	{"BlockPermissions", 1},
 	{"ChangeModel", 1},
 	{"EnvWeatherType", 1},
 	{"HackControl", 1},
@@ -114,6 +116,7 @@ const (
 	packetTypeEnvSetColor             = 0x19
 	packetTypeMakeSelection           = 0x1a
 	packetTypeRemoveSelection         = 0x1b
+	packetTypeSetBlockPermission      = 0x1c
 	packetTypeChangeModel             = 0x1d
 	packetTypeEnvSetWeatherType       = 0x1f
 	packetTypeHackControl             = 0x20
@@ -176,7 +179,7 @@ func (packet *Packet) textureID(textureID uint, extTex bool) {
 
 func (packet *Packet) motd(player *Player, motd string) {
 	userType := byte(0x00)
-	if player.operator {
+	if player.CanPlace[BlockBedrock] {
 		userType = 0x64
 	}
 
@@ -359,7 +362,7 @@ func (packet *Packet) kick(reason string) {
 
 func (packet *Packet) userType(player *Player) {
 	userType := byte(0x00)
-	if player.operator {
+	if player.CanPlace[BlockBedrock] {
 		userType = 0x64
 	}
 
@@ -482,6 +485,23 @@ func (packet *Packet) envSetColor(id byte, color color.RGBA) {
 		data.R = int16(color.R)
 		data.G = int16(color.G)
 		data.B = int16(color.B)
+	}
+
+	binary.Write(packet, binary.BigEndian, &data)
+}
+
+func (packet *Packet) setBlockPermission(id byte, canPlace, canBreak bool) {
+	data := struct {
+		PacketID       byte
+		BlockType      byte
+		AllowPlacement byte
+		AllowDeletion  byte
+	}{packetTypeSetBlockPermission, id, 0, 0}
+	if canPlace {
+		data.AllowPlacement = 1
+	}
+	if canBreak {
+		data.AllowDeletion = 1
 	}
 
 	binary.Write(packet, binary.BigEndian, &data)

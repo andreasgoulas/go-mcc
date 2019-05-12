@@ -43,11 +43,12 @@ type Player struct {
 	*Entity
 
 	Nickname string
+	CanPlace [BlockCount]bool
+	CanBreak [BlockCount]bool
 
 	conn  net.Conn
 	state uint32
 
-	operator       bool
 	permGroupsLock sync.RWMutex
 	permGroups     []*PermissionGroup
 
@@ -63,12 +64,25 @@ type Player struct {
 }
 
 func NewPlayer(conn net.Conn, server *Server) *Player {
-	return &Player{
+	player := &Player{
 		Entity:        NewEntity("", server),
 		conn:          conn,
 		state:         stateClosed,
 		clickDistance: 5.0,
 	}
+
+	for i := 0; i < BlockCount; i++ {
+		player.CanPlace[i] = true
+		player.CanBreak[i] = true
+	}
+
+	banned := []byte{BlockBedrock, BlockActiveWater, BlockWater, BlockActiveLava, BlockLava}
+	for _, block := range banned {
+		player.CanPlace[block] = false
+		player.CanBreak[block] = false
+	}
+
+	return player
 }
 
 func (player *Player) AddPermissionGroup(group *PermissionGroup) {
@@ -154,17 +168,20 @@ func (player *Player) Kick(reason string) {
 	player.Disconnect()
 }
 
-func (player *Player) Operator() bool {
-	return player.operator
-}
-
-func (player *Player) SetOperator(value bool) {
-	player.operator = value
-	if player.state == stateGame && value != player.operator {
-		var packet Packet
-		packet.userType(player)
-		player.sendPacket(packet)
+func (player *Player) SendBlockPermissions() {
+	if player.state != stateGame {
+		return
 	}
+
+	var packet Packet
+	packet.userType(player)
+	if player.cpe[CpeBlockPermissions] {
+		for i := 0; i < BlockCount; i++ {
+			packet.setBlockPermission(byte(i), player.CanPlace[i], player.CanBreak[i])
+		}
+	}
+
+	player.sendPacket(packet)
 }
 
 func (player *Player) ClickDistance() float64 {
@@ -360,6 +377,7 @@ func (player *Player) sendLevel(level *Level) {
 	}
 	stream.Close()
 
+	player.SendBlockPermissions()
 	player.sendBlockDefinitions(level)
 	player.sendInventory(level)
 	player.sendEnvConfig(level, EnvPropAll)
@@ -887,20 +905,21 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 	}
 
 	if !player.CanReach(x, y, z) {
-		player.SendMessage("You can't build that far away.")
+		player.SendMessage("You cannot build that far away.")
 		player.revertBlock(x, y, z)
 		return
 	}
 
 	switch packet.Mode {
 	case 0x00:
-		event := &EventBlockBreak{
-			player,
-			level,
-			level.GetBlock(x, y, z),
-			x, y, z,
-			false,
+		oldBlock := level.GetBlock(x, y, z)
+		if !player.CanBreak[oldBlock] {
+			player.SendMessage("You cannot break that block.")
+			player.revertBlock(x, y, z)
+			return
 		}
+
+		event := &EventBlockBreak{player, level, oldBlock, x, y, z, false}
 		player.server.FireEvent(EventTypeBlockBreak, &event)
 		if event.Cancel {
 			player.revertBlock(x, y, z)
@@ -916,13 +935,13 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 			return
 		}
 
-		event := &EventBlockPlace{
-			player,
-			level,
-			block,
-			x, y, z,
-			false,
+		if !player.CanPlace[block] {
+			player.SendMessage("You cannot place that block.")
+			player.revertBlock(x, y, z)
+			return
 		}
+
+		event := &EventBlockPlace{player, level, block, x, y, z, false}
 		player.server.FireEvent(EventTypeBlockPlace, &event)
 		if event.Cancel {
 			player.revertBlock(x, y, z)
