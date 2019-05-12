@@ -49,18 +49,9 @@ func (generator *FlatGenerator) Generate(level *Level) {
 		grassHeight = level.height / 2
 	}
 
-	for y := uint(0); y < grassHeight; y++ {
-		for z := uint(0); z < level.length; z++ {
-			for x := uint(0); x < level.width; x++ {
-				level.SetBlock(x, y, z, generator.SoilBlock, false)
-			}
-		}
-	}
-
-	for z := uint(0); z < level.length; z++ {
-		for x := uint(0); x < level.width; x++ {
-			level.SetBlock(x, grassHeight, z, generator.SurfaceBlock, false)
-		}
+	level.FillLayers(grassHeight, grassHeight, generator.SurfaceBlock)
+	if grassHeight > 0 {
+		level.FillLayers(0, grassHeight-1, generator.SoilBlock)
 	}
 }
 

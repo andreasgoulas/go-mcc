@@ -25,8 +25,6 @@ type LevelStorage interface {
 	Save(level *Level) error
 }
 
-type WeatherType byte
-
 const (
 	WeatherSunny   = 0
 	WeatherRaining = 1
@@ -34,7 +32,7 @@ const (
 )
 
 type EnvConfig struct {
-	Weather     uint
+	Weather     byte
 	TexturePack string
 
 	SideBlock       byte
@@ -100,16 +98,12 @@ type Level struct {
 	length uint
 	Blocks []byte
 
-	BlockDefs []*BlockDefinition
-	Inventory []byte
-
-	MOTD  string
-	Spawn Location
-
-	Weather     WeatherType
-	TexturePack string
-	EnvConfig   EnvConfig
-	HackConfig  HackConfig
+	MOTD       string
+	Spawn      Location
+	EnvConfig  EnvConfig
+	HackConfig HackConfig
+	BlockDefs  []*BlockDefinition
+	Inventory  []byte
 }
 
 func NewLevel(name string, width, height, length uint) *Level {
@@ -248,6 +242,14 @@ func (level *Level) SetBlock(x, y, z uint, block byte, broadcast bool) {
 				player.sendBlockChange(x, y, z, block)
 			})
 		}
+	}
+}
+
+func (level *Level) FillLayers(yStart, yEnd uint, block byte) {
+	start := yStart * level.width * level.length
+	end := (yEnd + 1) * level.width * level.length
+	for i := start; i < end; i++ {
+		level.Blocks[i] = block
 	}
 }
 

@@ -497,11 +497,11 @@ func (packet *Packet) changeModel(entity *Entity, self bool) {
 	}{packetTypeChangeModel, id, padString(entity.Model)})
 }
 
-func (packet *Packet) envWeatherType(weather uint) {
+func (packet *Packet) envWeatherType(weather byte) {
 	binary.Write(packet, binary.BigEndian, &struct {
 		PacketID    byte
 		WeatherType byte
-	}{packetTypeEnvSetWeatherType, byte(weather)})
+	}{packetTypeEnvSetWeatherType, weather})
 }
 
 func (packet *Packet) hackControl(config *HackConfig) {
