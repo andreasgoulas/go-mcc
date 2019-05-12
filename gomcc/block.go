@@ -160,7 +160,8 @@ const (
 	BlockFacePosZ = 4
 	BlockFaceNegZ = 5
 
-	BlockFaceMax = BlockFaceNegZ
+	BlockFaceMax   = BlockFaceNegZ
+	BlockFaceCount = BlockFaceMax + 1
 )
 
 const (
@@ -205,13 +206,12 @@ type BlockDefinition struct {
 
 	BlockLight bool
 	FullBright bool
-	Shape      byte
 	DrawMode   byte
+	Textures   [BlockFaceCount]uint
+
+	Shape byte
+	AABB  AABB
 
 	FogDensity byte
 	Fog        color.RGBA
-
-	TopTexture    uint
-	SideTexture   uint
-	BottomTexture uint
 }

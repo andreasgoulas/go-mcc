@@ -247,7 +247,7 @@ func (player *Player) sendPacket(packet Packet) {
 		return
 	}
 
-	_, err := packet.buf.WriteTo(player.conn)
+	_, err := packet.WriteTo(player.conn)
 	if err == io.EOF {
 		player.Disconnect()
 	}
@@ -464,9 +464,14 @@ func (player *Player) sendBlockDefinitions(level *Level) {
 	}
 
 	var packet Packet
+	extTex := player.cpe[CpeExtendedTextures]
 	for id, def := range level.BlockDefs {
 		if def != nil {
-			packet.defineBlock(byte(id), def, player.cpe[CpeExtendedTextures])
+			if player.cpe[CpeBlockDefinitionsExt] && def.Shape != 0 {
+				packet.defineBlock(byte(id), def, true, extTex)
+			} else {
+				packet.defineBlock(byte(id), def, false, extTex)
+			}
 		}
 	}
 
