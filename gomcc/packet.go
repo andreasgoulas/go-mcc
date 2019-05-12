@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"image/color"
+	"math"
 	"strings"
 )
 
@@ -36,6 +37,7 @@ const (
 	CpeMessageTypes
 	CpePlayerClick
 	CpeLongerMessages
+	CpeBlockDefinitions
 	CpeBulkBlockUpdate
 	CpeEnvMapAspect
 	CpeEntityProperty
@@ -43,8 +45,9 @@ const (
 	CpeTwoWayPing
 	CpeInstantMOTD
 	CpeFastMap
+	CpeExtendedTextures
 
-	CpeMax   = CpeFastMap
+	CpeMax   = CpeExtendedTextures
 	CpeCount = CpeMax + 1
 )
 
@@ -66,6 +69,7 @@ var Extensions = [CpeCount]ExtEntry{
 	{"MessageTypes", 1},
 	{"PlayerClick", 1},
 	{"LongerMessages", 1},
+	{"BlockDefinitions", 1},
 	{"BulkBlockUpdate", 1},
 	{"EnvMapAspect", 1},
 	{"EntityProperty", 1},
@@ -73,6 +77,7 @@ var Extensions = [CpeCount]ExtEntry{
 	{"TwoWayPing", 1},
 	{"InstantMOTD", 1},
 	{"FastMap", 1},
+	{"ExtendedTextures", 1},
 }
 
 const (
@@ -108,6 +113,8 @@ const (
 	packetTypeHackControl             = 0x20
 	packetTypeExtAddEntity2           = 0x21
 	packetTypePlayerClicked           = 0x22
+	packetTypeDefineBlock             = 0x23
+	packetTypeRemoveBlockDefinition   = 0x24
 	packetTypeBulkBlockUpdate         = 0x26
 	packetTypeSetMapEnvUrl            = 0x28
 	packetTypeSetMapEnvProperty       = 0x29
@@ -536,6 +543,71 @@ func (packet *Packet) extAddEntity2(entity *Entity, self bool, extPos bool) {
 		byte(location.Yaw * 256 / 360),
 		byte(location.Pitch * 256 / 360),
 	})
+}
+
+func (packet *Packet) defineBlock(id byte, block *BlockDefinition, extTex bool) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID      byte
+		BlockID       byte
+		Name          [64]byte
+		Solidity      byte
+		MovementSpeed byte
+	}{
+		packetTypeDefineBlock,
+		id,
+		padString(block.Name),
+		block.Collide,
+		byte(64*math.Log2(block.Speed) + 128),
+	})
+
+	if extTex {
+		binary.Write(&packet.buf, binary.BigEndian, &struct {
+			TopTextureID    int16
+			SideTextureID   int16
+			BottomTextureID int16
+		}{int16(block.TopTexture), int16(block.SideTexture), int16(block.BottomTexture)})
+	} else {
+		binary.Write(&packet.buf, binary.BigEndian, &struct {
+			TopTextureID    byte
+			SideTextureID   byte
+			BottomTextureID byte
+		}{byte(block.TopTexture), byte(block.SideTexture), byte(block.BottomTexture)})
+	}
+
+	transmitsLight := byte(1)
+	if block.BlockLight {
+		transmitsLight = 0
+	}
+
+	fullBright := byte(0)
+	if block.FullBright {
+		fullBright = 1
+	}
+
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		TransmitsLight   byte
+		WalkSound        byte
+		FullBright       byte
+		Shape            byte
+		BlockDraw        byte
+		FogDensity       byte
+		FogR, FogG, FogB byte
+	}{
+		transmitsLight,
+		block.WalkSound,
+		fullBright,
+		block.Shape,
+		block.Draw,
+		block.FogDensity,
+		block.Fog.R, block.Fog.G, block.Fog.B,
+	})
+}
+
+func (packet *Packet) removeBlockDefinition(id byte) {
+	binary.Write(&packet.buf, binary.BigEndian, &struct {
+		PacketID byte
+		BlockID  byte
+	}{packetTypeRemoveBlockDefinition, id})
 }
 
 func (packet *Packet) bulkBlockUpdate(indices []int32, blocks []byte) {

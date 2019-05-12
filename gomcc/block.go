@@ -16,6 +16,10 @@
 
 package gomcc
 
+import (
+	"image/color"
+)
+
 const (
 	BlockAir         = 0
 	BlockStone       = 1
@@ -68,8 +72,8 @@ const (
 	BlockMoss        = 48
 	BlockObsidian    = 49
 
-	BlockMax   = BlockObsidian
-	BlockCount = BlockMax + 1
+	BlockMaxClassic   = BlockObsidian
+	BlockCountClassic = BlockMaxClassic + 1
 
 	BlockCobblestoneSlab = 50
 	BlockRope            = 51
@@ -90,6 +94,9 @@ const (
 
 	BlockMaxCPE   = BlockStoneBrick
 	BlockCountCPE = BlockMaxCPE + 1
+
+	BlockMax   = 255
+	BlockCount = BlockMax + 1
 )
 
 const (
@@ -141,6 +148,23 @@ func FallbackBlock(block byte) byte {
 	default:
 		return block
 	}
+}
+
+type BlockDefinition struct {
+	Fallback      byte
+	Name          string
+	Collide       byte
+	Speed         float64
+	TopTexture    uint
+	SideTexture   uint
+	BottomTexture uint
+	BlockLight    bool
+	WalkSound     byte
+	FullBright    bool
+	Shape         byte
+	Draw          byte
+	FogDensity    byte
+	Fog           color.RGBA
 }
 
 var BlockInfo = [BlockCountCPE]struct {

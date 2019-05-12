@@ -88,13 +88,16 @@ type Level struct {
 	server *Server
 	name   string
 
+	dirty  bool
+	width  uint
+	height uint
+	length uint
+	Blocks []byte
+
+	BlockDefs [BlockMax]*BlockDefinition
+
 	MOTD  string
 	Spawn Location
-
-	width, height, length uint
-
-	Blocks []byte
-	dirty  bool
 
 	Weather     WeatherType
 	TexturePack string
@@ -108,17 +111,17 @@ func NewLevel(name string, width, height, length uint) *Level {
 	}
 
 	return &Level{
-		name: name,
+		name:   name,
+		dirty:  false,
+		width:  width,
+		height: height,
+		length: length,
+		Blocks: make([]byte, width*height*length),
 		Spawn: Location{
 			X: float64(width) / 2,
 			Y: float64(height) * 3 / 4,
 			Z: float64(length) / 2,
 		},
-		width:   width,
-		height:  height,
-		length:  length,
-		Blocks:  make([]byte, width*height*length),
-		dirty:   false,
 		Weather: WeatherSunny,
 		EnvConfig: EnvConfig{
 			SideBlock:       BlockBedrock,
@@ -248,6 +251,12 @@ func (level *Level) SetBlock(x, y, z uint, block byte, broadcast bool) {
 	}
 }
 
+func (level *Level) SendBlockDefinitions() {
+	level.ForEachPlayer(func(player *Player) {
+		player.sendBlockDefinitions(level)
+	})
+}
+
 func (level *Level) SendWeather() {
 	level.ForEachPlayer(func(player *Player) {
 		player.sendWeather(level)
@@ -315,7 +324,7 @@ func (buffer *BlockBuffer) Flush() {
 	buffer.level.ForEachPlayer(func(player *Player) {
 		var blocks [256]byte
 		for i := uint(0); i < buffer.count; i++ {
-			blocks[i] = player.convertBlock(buffer.blocks[i])
+			blocks[i] = player.convertBlock(buffer.blocks[i], buffer.level)
 		}
 
 		var packet Packet

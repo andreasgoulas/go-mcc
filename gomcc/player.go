@@ -54,6 +54,7 @@ type Player struct {
 	cpe           [CpeCount]bool
 	remExtensions uint
 	message       string
+	maxBlockID    byte
 	cpeBlockLevel byte
 	clickDistance float64
 	heldBlock     byte
@@ -192,9 +193,10 @@ func (player *Player) HeldBlock() byte {
 }
 
 func (player *Player) SetHeldBlock(block byte, lock bool) {
-	if player.state == stateGame && player.cpe[CpeHeldBlock] {
+	level := player.level
+	if player.state == stateGame && player.cpe[CpeHeldBlock] && level != nil {
 		var packet Packet
-		packet.holdThis(player.convertBlock(block), lock)
+		packet.holdThis(player.convertBlock(block, level), lock)
 		player.sendPacket(packet)
 	}
 }
@@ -251,7 +253,15 @@ func (player *Player) sendPacket(packet Packet) {
 	}
 }
 
-func (player *Player) convertBlock(block byte) byte {
+func (player *Player) convertBlock(block byte, level *Level) byte {
+	if !player.cpe[CpeBlockDefinitions] {
+		if def := level.BlockDefs[block]; def != nil {
+			block = def.Fallback
+		} else if block > BlockMaxCPE {
+			return BlockAir
+		}
+	}
+
 	if player.cpeBlockLevel < 1 {
 		return FallbackBlock(block)
 	}
@@ -277,9 +287,9 @@ func (player *Player) sendLevel(level *Level) {
 
 	player.sendMOTD(level)
 
-	var conv [BlockCountCPE]byte
-	for i := byte(0); i < BlockCountCPE; i++ {
-		conv[i] = player.convertBlock(i)
+	var conv [BlockMax]byte
+	for i := byte(0); i < BlockMax; i++ {
+		conv[i] = player.convertBlock(i, level)
 	}
 
 	stream := levelStream{player: player}
@@ -309,6 +319,7 @@ func (player *Player) sendLevel(level *Level) {
 	}
 	stream.Close()
 
+	player.sendBlockDefinitions(level)
 	player.sendWeather(level)
 	player.sendTexturePack(level)
 	player.sendEnvConfig(level, EnvPropAll)
@@ -375,9 +386,10 @@ func (player *Player) sendTeleport(entity *Entity) {
 }
 
 func (player *Player) sendBlockChange(x, y, z uint, block byte) {
-	if player.state == stateGame {
+	level := player.level
+	if player.state == stateGame && level != nil {
 		var packet Packet
-		packet.setBlock(x, y, z, player.convertBlock(block))
+		packet.setBlock(x, y, z, player.convertBlock(block, level))
 		player.sendPacket(packet)
 	}
 }
@@ -416,6 +428,51 @@ func (player *Player) sendChangeModel(entity *Entity) {
 	}
 }
 
+func (player *Player) sendEntityProps(entity *Entity, mask uint32) {
+	if player.state != stateGame || !player.cpe[CpeEntityProperty] {
+		return
+	}
+
+	var packet Packet
+	props := entity.Props
+	self := entity.id == player.id
+	if mask&EntityPropRotX != 0 {
+		packet.entityProperty(entity, self, 0, int32(props.RotX))
+	}
+	if mask&EntityPropRotY != 0 {
+		packet.entityProperty(entity, self, 1, int32(props.RotY))
+	}
+	if mask&EntityPropRotZ != 0 {
+		packet.entityProperty(entity, self, 2, int32(props.RotZ))
+	}
+	if mask&EntityPropScaleX != 0 {
+		packet.entityProperty(entity, self, 3, int32(1000*props.ScaleX))
+	}
+	if mask&EntityPropScaleY != 0 {
+		packet.entityProperty(entity, self, 4, int32(1000*props.ScaleY))
+	}
+	if mask&EntityPropScaleZ != 0 {
+		packet.entityProperty(entity, self, 5, int32(1000*props.ScaleZ))
+	}
+
+	player.sendPacket(packet)
+}
+
+func (player *Player) sendBlockDefinitions(level *Level) {
+	if player.state != stateGame || !player.cpe[CpeBlockDefinitions] {
+		return
+	}
+
+	var packet Packet
+	for id, def := range level.BlockDefs {
+		if def != nil {
+			packet.defineBlock(byte(id), def, player.cpe[CpeExtendedTextures])
+		}
+	}
+
+	player.sendPacket(packet)
+}
+
 func (player *Player) sendWeather(level *Level) {
 	if player.state == stateGame && player.cpe[CpeEnvWeatherType] {
 		var packet Packet
@@ -441,10 +498,12 @@ func (player *Player) sendEnvConfig(level *Level, mask uint32) {
 	config := level.EnvConfig
 	if player.cpe[CpeEnvMapAspect] {
 		if mask&EnvPropSideBlock != 0 {
-			packet.mapEnvProperty(0, int32(player.convertBlock(config.SideBlock)))
+			packet.mapEnvProperty(
+				0, int32(player.convertBlock(config.SideBlock, level)))
 		}
 		if mask&EnvPropEdgeBlock != 0 {
-			packet.mapEnvProperty(1, int32(player.convertBlock(config.EdgeBlock)))
+			packet.mapEnvProperty(
+				1, int32(player.convertBlock(config.EdgeBlock, level)))
 		}
 		if mask&EnvPropEdgeHeight != 0 {
 			packet.mapEnvProperty(2, int32(config.EdgeHeight))
@@ -492,36 +551,6 @@ func (player *Player) sendEnvConfig(level *Level, mask uint32) {
 		if mask&EnvPropDiffuseColor != 0 {
 			packet.envSetColor(4, config.DiffuseColor)
 		}
-	}
-
-	player.sendPacket(packet)
-}
-
-func (player *Player) sendEntityProps(entity *Entity, mask uint32) {
-	if player.state != stateGame || !player.cpe[CpeEntityProperty] {
-		return
-	}
-
-	var packet Packet
-	props := entity.Props
-	self := entity.id == player.id
-	if mask&EntityPropRotX != 0 {
-		packet.entityProperty(entity, self, 0, int32(props.RotX))
-	}
-	if mask&EntityPropRotY != 0 {
-		packet.entityProperty(entity, self, 1, int32(props.RotY))
-	}
-	if mask&EntityPropRotZ != 0 {
-		packet.entityProperty(entity, self, 2, int32(props.RotZ))
-	}
-	if mask&EntityPropScaleX != 0 {
-		packet.entityProperty(entity, self, 3, int32(1000*props.ScaleX))
-	}
-	if mask&EntityPropScaleY != 0 {
-		packet.entityProperty(entity, self, 4, int32(1000*props.ScaleY))
-	}
-	if mask&EntityPropScaleZ != 0 {
-		packet.entityProperty(entity, self, 5, int32(1000*props.ScaleZ))
 	}
 
 	player.sendPacket(packet)
@@ -638,6 +667,14 @@ func (player *Player) login() {
 		if atomic.CompareAndSwapInt32(&player.server.playerCount, count, count+1) {
 			break
 		}
+	}
+
+	if player.cpe[CpeBlockDefinitions] {
+		player.maxBlockID = BlockMax
+	} else if player.cpe[CpeCustomBlocks] && player.cpeBlockLevel == 1 {
+		player.maxBlockID = BlockMaxCPE
+	} else {
+		player.maxBlockID = BlockMaxClassic
 	}
 
 	joinEvent := EventPlayerJoin{player}
@@ -784,7 +821,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 		level.SetBlock(x, y, z, BlockAir, true)
 
 	case 0x01:
-		if block > BlockMaxCPE || (player.cpeBlockLevel < 1 && block > BlockMax) {
+		if block > player.maxBlockID {
 			player.SendMessage("Invalid block!")
 			player.revertBlock(x, y, z)
 			return
