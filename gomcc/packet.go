@@ -44,6 +44,7 @@ const (
 	CpeEntityProperty
 	CpeExtEntityPositions
 	CpeTwoWayPing
+	CpeInventoryOrder
 	CpeInstantMOTD
 	CpeFastMap
 	CpeExtendedTextures
@@ -77,6 +78,7 @@ var Extensions = [CpeCount]ExtEntry{
 	{"EntityProperty", 1},
 	{"ExtEntityPositions", 1},
 	{"TwoWayPing", 1},
+	{"InventoryOrder", 1},
 	{"InstantMOTD", 1},
 	{"FastMap", 1},
 	{"ExtendedTextures", 1},
@@ -123,6 +125,7 @@ const (
 	packetTypeSetMapEnvProperty       = 0x29
 	packetTypeSetEntityProperty       = 0x2a
 	packetTypeTwoWayPing              = 0x2b
+	packetTypeSetInventoryOrder       = 0x2c
 )
 
 func padString(str string) [64]byte {
@@ -159,7 +162,7 @@ func (packet *Packet) position(location Location, extPos bool) {
 	}
 }
 
-func (packet *Packet) texture(textureID uint, extTex bool) {
+func (packet *Packet) textureID(textureID uint, extTex bool) {
 	if extTex {
 		id := int16(textureID)
 		binary.Write(packet, binary.BigEndian, &id)
@@ -494,11 +497,11 @@ func (packet *Packet) changeModel(entity *Entity, self bool) {
 	}{packetTypeChangeModel, id, padString(entity.Model)})
 }
 
-func (packet *Packet) envWeatherType(level *Level) {
+func (packet *Packet) envWeatherType(weather uint) {
 	binary.Write(packet, binary.BigEndian, &struct {
 		PacketID    byte
 		WeatherType byte
-	}{packetTypeEnvSetWeatherType, byte(level.Weather)})
+	}{packetTypeEnvSetWeatherType, byte(weather)})
 }
 
 func (packet *Packet) hackControl(config *HackConfig) {
@@ -577,16 +580,16 @@ func (packet *Packet) defineBlock(id byte, block *BlockDefinition, ext bool, ext
 		byte(64*math.Log2(block.Speed) + 128),
 	})
 
-	packet.texture(block.Textures[BlockFacePosY], extTex)
+	packet.textureID(block.Textures[BlockFacePosY], extTex)
 	if ext {
-		packet.texture(block.Textures[BlockFaceNegX], extTex)
-		packet.texture(block.Textures[BlockFacePosX], extTex)
-		packet.texture(block.Textures[BlockFaceNegZ], extTex)
-		packet.texture(block.Textures[BlockFacePosZ], extTex)
+		packet.textureID(block.Textures[BlockFaceNegX], extTex)
+		packet.textureID(block.Textures[BlockFacePosX], extTex)
+		packet.textureID(block.Textures[BlockFaceNegZ], extTex)
+		packet.textureID(block.Textures[BlockFacePosZ], extTex)
 	} else {
-		packet.texture(block.Textures[BlockFacePosX], extTex)
+		packet.textureID(block.Textures[BlockFacePosX], extTex)
 	}
-	packet.texture(block.Textures[BlockFaceNegY], extTex)
+	packet.textureID(block.Textures[BlockFaceNegY], extTex)
 
 	transmitsLight := byte(1)
 	if block.BlockLight {
@@ -653,11 +656,11 @@ func (packet *Packet) bulkBlockUpdate(indices []int32, blocks []byte) {
 	binary.Write(packet, binary.BigEndian, &data)
 }
 
-func (packet *Packet) mapEnvUrl(level *Level) {
+func (packet *Packet) mapEnvUrl(texturePack string) {
 	binary.Write(packet, binary.BigEndian, &struct {
 		PacketID       byte
 		TexturePackURL [64]byte
-	}{packetTypeSetMapEnvUrl, padString(level.TexturePack)})
+	}{packetTypeSetMapEnvUrl, padString(texturePack)})
 }
 
 func (packet *Packet) mapEnvProperty(id byte, value int32) {
@@ -688,6 +691,14 @@ func (packet *Packet) twoWayPing(dir byte, data int16) {
 		Direction byte
 		Data      int16
 	}{packetTypeTwoWayPing, dir, data})
+}
+
+func (packet *Packet) setInventoryOrder(order byte, block byte) {
+	binary.Write(packet, binary.BigEndian, &struct {
+		PacketID byte
+		Order    byte
+		BlockID  byte
+	}{packetTypeSetInventoryOrder, order, block})
 }
 
 type levelStream struct {

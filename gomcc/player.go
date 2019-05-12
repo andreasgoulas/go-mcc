@@ -255,9 +255,13 @@ func (player *Player) sendPacket(packet Packet) {
 
 func (player *Player) convertBlock(block byte, level *Level) byte {
 	if !player.cpe[CpeBlockDefinitions] {
-		if def := level.BlockDefs[block]; def != nil {
-			block = def.Fallback
-		} else if block > BlockMaxCPE {
+		if level.BlockDefs != nil {
+			if def := level.BlockDefs[block]; def != nil {
+				block = def.Fallback
+			}
+		}
+
+		if block > BlockMaxCPE {
 			return BlockAir
 		}
 	}
@@ -320,8 +324,7 @@ func (player *Player) sendLevel(level *Level) {
 	stream.Close()
 
 	player.sendBlockDefinitions(level)
-	player.sendWeather(level)
-	player.sendTexturePack(level)
+	player.sendInventory(level)
 	player.sendEnvConfig(level, EnvPropAll)
 	player.sendHackConfig(level)
 
@@ -370,6 +373,8 @@ func (player *Player) spawnLevel(level *Level) {
 }
 
 func (player *Player) despawnLevel(level *Level) {
+	player.resetBlockDefinitions(level)
+	player.resetInventory(level)
 	player.sendDespawn(player.Entity)
 	level.ForEachEntity(func(other *Entity) {
 		player.sendDespawn(other)
@@ -478,20 +483,45 @@ func (player *Player) sendBlockDefinitions(level *Level) {
 	player.sendPacket(packet)
 }
 
-func (player *Player) sendWeather(level *Level) {
-	if player.state == stateGame && player.cpe[CpeEnvWeatherType] {
-		var packet Packet
-		packet.envWeatherType(level)
-		player.sendPacket(packet)
+func (player *Player) resetBlockDefinitions(level *Level) {
+	if player.state != stateGame || !player.cpe[CpeBlockDefinitions] {
+		return
 	}
+
+	var packet Packet
+	for id, def := range level.BlockDefs {
+		if def != nil {
+			packet.removeBlockDefinition(byte(id))
+		}
+	}
+
+	player.sendPacket(packet)
 }
 
-func (player *Player) sendTexturePack(level *Level) {
-	if player.state == stateGame && player.cpe[CpeEnvMapAspect] {
-		var packet Packet
-		packet.mapEnvUrl(level)
-		player.sendPacket(packet)
+func (player *Player) sendInventory(level *Level) {
+	if player.state != stateGame || !player.cpe[CpeInventoryOrder] {
+		return
 	}
+
+	var packet Packet
+	for id, order := range level.Inventory {
+		packet.setInventoryOrder(order, byte(id))
+	}
+
+	player.sendPacket(packet)
+}
+
+func (player *Player) resetInventory(level *Level) {
+	if player.state != stateGame || !player.cpe[CpeInventoryOrder] {
+		return
+	}
+
+	var packet Packet
+	for id := range level.Inventory {
+		packet.setInventoryOrder(byte(id), byte(id))
+	}
+
+	player.sendPacket(packet)
 }
 
 func (player *Player) sendEnvConfig(level *Level, mask uint32) {
@@ -538,6 +568,9 @@ func (player *Player) sendEnvConfig(level *Level, mask uint32) {
 		if mask&EnvPropSideOffset != 0 {
 			packet.mapEnvProperty(9, int32(config.SideOffset))
 		}
+		if mask&EnvPropTexturePack != 0 {
+			packet.mapEnvUrl(config.TexturePack)
+		}
 	}
 
 	if player.cpe[CpeEnvColors] {
@@ -555,6 +588,12 @@ func (player *Player) sendEnvConfig(level *Level, mask uint32) {
 		}
 		if mask&EnvPropDiffuseColor != 0 {
 			packet.envSetColor(4, config.DiffuseColor)
+		}
+	}
+
+	if player.cpe[CpeEnvWeatherType] {
+		if mask&EnvPropWeather != 0 {
+			packet.envWeatherType(config.Weather)
 		}
 	}
 

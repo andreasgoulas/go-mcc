@@ -34,6 +34,9 @@ const (
 )
 
 type EnvConfig struct {
+	Weather     uint
+	TexturePack string
+
 	SideBlock       byte
 	EdgeBlock       byte
 	EdgeHeight      uint
@@ -55,22 +58,25 @@ type EnvConfig struct {
 var DefaultColor = color.RGBA{0, 0, 0, 0}
 
 const (
-	EnvPropSideBlock       = 1 << 0
-	EnvPropEdgeBlock       = 1 << 1
-	EnvPropEdgeHeight      = 1 << 2
-	EnvPropCloudHeight     = 1 << 3
-	EnvPropMaxViewDistance = 1 << 4
-	EnvPropCloudSpeed      = 1 << 5
-	EnvPropWeatherSpeed    = 1 << 6
-	EnvPropWeatherFade     = 1 << 7
-	EnvPropExpFog          = 1 << 8
-	EnvPropSideOffset      = 1 << 9
+	EnvPropWeather     = 1 << 0
+	EnvPropTexturePack = 1 << 1
 
-	EnvPropSkyColor     = 1 << 10
-	EnvPropCloudColor   = 1 << 11
-	EnvPropFogColor     = 1 << 12
-	EnvPropAmbientColor = 1 << 13
-	EnvPropDiffuseColor = 1 << 14
+	EnvPropSideBlock       = 1 << 2
+	EnvPropEdgeBlock       = 1 << 3
+	EnvPropEdgeHeight      = 1 << 4
+	EnvPropCloudHeight     = 1 << 5
+	EnvPropMaxViewDistance = 1 << 6
+	EnvPropCloudSpeed      = 1 << 7
+	EnvPropWeatherSpeed    = 1 << 8
+	EnvPropWeatherFade     = 1 << 9
+	EnvPropExpFog          = 1 << 10
+	EnvPropSideOffset      = 1 << 11
+
+	EnvPropSkyColor     = 1 << 12
+	EnvPropCloudColor   = 1 << 13
+	EnvPropFogColor     = 1 << 14
+	EnvPropAmbientColor = 1 << 15
+	EnvPropDiffuseColor = 1 << 16
 
 	EnvPropAll = (EnvPropDiffuseColor << 1) - 1
 )
@@ -94,7 +100,8 @@ type Level struct {
 	length uint
 	Blocks []byte
 
-	BlockDefs [BlockMax]*BlockDefinition
+	BlockDefs []*BlockDefinition
+	Inventory []byte
 
 	MOTD  string
 	Spawn Location
@@ -122,7 +129,6 @@ func NewLevel(name string, width, height, length uint) *Level {
 			Y: float64(height) * 3 / 4,
 			Z: float64(length) / 2,
 		},
-		Weather: WeatherSunny,
 		EnvConfig: EnvConfig{
 			SideBlock:       BlockBedrock,
 			EdgeBlock:       BlockActiveWater,
@@ -139,6 +145,7 @@ func NewLevel(name string, width, height, length uint) *Level {
 			FogColor:        DefaultColor,
 			AmbientColor:    DefaultColor,
 			DiffuseColor:    DefaultColor,
+			Weather:         WeatherSunny,
 		},
 		HackConfig: HackConfig{
 			Flying:          false,
@@ -151,25 +158,18 @@ func NewLevel(name string, width, height, length uint) *Level {
 	}
 }
 
-func (level *Level) Clone(name string) *Level {
+func (level Level) Clone(name string) *Level {
 	if len(name) == 0 {
 		return nil
 	}
 
-	blocks := make([]byte, len(level.Blocks))
-	copy(blocks, level.Blocks)
-
-	return &Level{
-		name:       name,
-		Spawn:      level.Spawn,
-		width:      level.width,
-		height:     level.height,
-		length:     level.length,
-		Blocks:     blocks,
-		Weather:    level.Weather,
-		EnvConfig:  level.EnvConfig,
-		HackConfig: level.HackConfig,
-	}
+	newLevel := level
+	newLevel.server = nil
+	newLevel.name = name
+	newLevel.dirty = true
+	newLevel.Blocks = make([]byte, len(level.Blocks))
+	copy(newLevel.Blocks, level.Blocks)
+	return &newLevel
 }
 
 func (level *Level) Server() *Server {
@@ -257,15 +257,9 @@ func (level *Level) SendBlockDefinitions() {
 	})
 }
 
-func (level *Level) SendWeather() {
+func (level *Level) SendInventory() {
 	level.ForEachPlayer(func(player *Player) {
-		player.sendWeather(level)
-	})
-}
-
-func (level *Level) SendTexturePack(texturePack string) {
-	level.ForEachPlayer(func(player *Player) {
-		player.sendTexturePack(level)
+		player.sendInventory(level)
 	})
 }
 
