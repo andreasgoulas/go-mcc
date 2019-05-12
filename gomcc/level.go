@@ -253,18 +253,6 @@ func (level *Level) FillLayers(yStart, yEnd uint, block byte) {
 	}
 }
 
-func (level *Level) SendBlockDefinitions() {
-	level.ForEachPlayer(func(player *Player) {
-		player.sendBlockDefinitions(level)
-	})
-}
-
-func (level *Level) SendInventory() {
-	level.ForEachPlayer(func(player *Player) {
-		player.sendInventory(level)
-	})
-}
-
 func (level *Level) SendEnvConfig(mask uint32) {
 	level.ForEachPlayer(func(player *Player) {
 		player.sendEnvConfig(level, mask)

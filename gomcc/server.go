@@ -60,6 +60,7 @@ type Server struct {
 	Config    *Config
 	MainLevel *Level
 	URL       string
+	Colors    []ColorDesc
 
 	playerCount int32
 	salt        [16]byte

@@ -217,6 +217,42 @@ func (player *Player) ResetSelection(id byte) {
 	}
 }
 
+func (player *Player) escapeColor(code byte) (result byte, ok bool) {
+	if (code >= 'a' && code <= 'f') || (code >= 'A' && code <= 'A') ||
+		(code >= '0' && code <= '9') {
+		return code, true
+	}
+
+	for _, desc := range player.server.Colors {
+		if desc.Code == code {
+			if player.cpe[CpeTextColors] {
+				return desc.Code, true
+			} else {
+				return desc.Fallback, true
+			}
+		}
+	}
+
+	return
+}
+
+func (player *Player) escapeColors(message string) string {
+	buf := bytes.NewBuffer(make([]byte, 0, len(message)))
+	for i := 0; i < len(message); i++ {
+		c := message[i]
+		if (c == '%' || c == '&') && i < len(message)-1 {
+			i++
+			if code, ok := player.escapeColor(message[i]); ok {
+				buf.Write([]byte{'&', code})
+			}
+		} else {
+			buf.WriteByte(c)
+		}
+	}
+
+	return buf.String()
+}
+
 func (player *Player) SendMessage(message string) {
 	player.SendMessageExt(MessageChat, message)
 }
@@ -231,6 +267,7 @@ func (player *Player) SendMessageExt(msgType int, message string) {
 	}
 
 	var packet Packet
+	message = player.escapeColors(message)
 	for _, line := range WordWrap(message, 64) {
 		packet.message(msgType, line)
 	}
@@ -409,6 +446,17 @@ func (player *Player) sendCPE() {
 	player.sendPacket(packet)
 }
 
+func (player *Player) sendTextColors() {
+	if player.state == stateGame && player.cpe[CpeTextColors] {
+		var packet Packet
+		for _, desc := range player.server.Colors {
+			packet.setTextColor(&desc)
+		}
+
+		player.sendPacket(packet)
+	}
+}
+
 func (player *Player) sendAddPlayerList(entity *Entity) {
 	if player.state == stateGame && player.cpe[CpeExtPlayerList] {
 		var packet Packet
@@ -499,29 +547,25 @@ func (player *Player) resetBlockDefinitions(level *Level) {
 }
 
 func (player *Player) sendInventory(level *Level) {
-	if player.state != stateGame || !player.cpe[CpeInventoryOrder] {
-		return
-	}
+	if player.state == stateGame && player.cpe[CpeInventoryOrder] {
+		var packet Packet
+		for id, order := range level.Inventory {
+			packet.setInventoryOrder(order, byte(id))
+		}
 
-	var packet Packet
-	for id, order := range level.Inventory {
-		packet.setInventoryOrder(order, byte(id))
+		player.sendPacket(packet)
 	}
-
-	player.sendPacket(packet)
 }
 
 func (player *Player) resetInventory(level *Level) {
-	if player.state != stateGame || !player.cpe[CpeInventoryOrder] {
-		return
-	}
+	if player.state == stateGame && player.cpe[CpeInventoryOrder] {
+		var packet Packet
+		for id := range level.Inventory {
+			packet.setInventoryOrder(byte(id), byte(id))
+		}
 
-	var packet Packet
-	for id := range level.Inventory {
-		packet.setInventoryOrder(byte(id), byte(id))
+		player.sendPacket(packet)
 	}
-
-	player.sendPacket(packet)
 }
 
 func (player *Player) sendEnvConfig(level *Level, mask uint32) {
@@ -739,6 +783,7 @@ func (player *Player) login() {
 		}
 	})
 
+	player.sendTextColors()
 	player.server.BroadcastMessage(ColorYellow + player.name + " has joined the game!")
 
 	if player.server.MainLevel != nil {
@@ -961,13 +1006,7 @@ func (player *Player) handleMessage(reader io.Reader) {
 		copy(players, player.server.players)
 		player.server.playersLock.RUnlock()
 
-		event := EventPlayerChat{
-			player,
-			players,
-			ConvertColors(message),
-			"%s: &f%s",
-			false,
-		}
+		event := EventPlayerChat{player, players, message, "%s: &f%s", false}
 		player.server.FireEvent(EventTypePlayerChat, &event)
 		if event.Cancel {
 			return

@@ -17,6 +17,7 @@
 package gomcc
 
 import (
+	"image/color"
 	"strings"
 )
 
@@ -41,23 +42,9 @@ const (
 	ColorDefault = ColorWhite
 )
 
-// ConvertColors returns the given string with each occurence of a %-prefixed
-// color code replaced by a client-compatible one.
-func ConvertColors(message string) string {
-	result := make([]byte, len(message))
-	for i := range message {
-		result[i] = message[i]
-		if message[i] == '%' && i < len(message)-1 {
-			color := message[i+1]
-			if (color >= 'a' && color <= 'f') ||
-				(color >= 'A' && color <= 'A') ||
-				(color >= '0' && color <= '9') {
-				result[i] = '&'
-			}
-		}
-	}
-
-	return string(result)
+type ColorDesc struct {
+	color.RGBA
+	Code, Fallback byte
 }
 
 const (

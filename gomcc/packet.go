@@ -40,6 +40,7 @@ const (
 	CpeBlockDefinitions
 	CpeBlockDefinitionsExt
 	CpeBulkBlockUpdate
+	CpeTextColors
 	CpeEnvMapAspect
 	CpeEntityProperty
 	CpeExtEntityPositions
@@ -74,6 +75,7 @@ var Extensions = [CpeCount]ExtEntry{
 	{"BlockDefinitions", 1},
 	{"BlockDefinitionsExt", 2},
 	{"BulkBlockUpdate", 1},
+	{"TextColors", 1},
 	{"EnvMapAspect", 1},
 	{"EntityProperty", 1},
 	{"ExtEntityPositions", 1},
@@ -121,6 +123,7 @@ const (
 	packetTypeRemoveBlockDefinition   = 0x24
 	packetTypeDefineBlockExt          = 0x25
 	packetTypeBulkBlockUpdate         = 0x26
+	packetTypeSetTextColor            = 0x27
 	packetTypeSetMapEnvUrl            = 0x28
 	packetTypeSetMapEnvProperty       = 0x29
 	packetTypeSetEntityProperty       = 0x2a
@@ -654,6 +657,18 @@ func (packet *Packet) bulkBlockUpdate(indices []int32, blocks []byte) {
 	copy(data.Indices[:], indices)
 	copy(data.Blocks[:], blocks)
 	binary.Write(packet, binary.BigEndian, &data)
+}
+
+func (packet *Packet) setTextColor(color *ColorDesc) {
+	binary.Write(packet, binary.BigEndian, &struct {
+		PacketID   byte
+		R, G, B, A byte
+		Code       byte
+	}{
+		packetTypeSetTextColor,
+		color.R, color.G, color.B, color.A,
+		color.Code,
+	})
 }
 
 func (packet *Packet) mapEnvUrl(texturePack string) {
