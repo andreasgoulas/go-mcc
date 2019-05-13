@@ -234,10 +234,13 @@ func (player *Player) ResetSelection(id byte) {
 	}
 }
 
-func (player *Player) escapeColor(code byte) (result byte, ok bool) {
-	if (code >= 'a' && code <= 'f') || (code >= 'A' && code <= 'A') ||
-		(code >= '0' && code <= '9') {
+func (player *Player) convertColor(code byte) (result byte, ok bool) {
+	if (code >= 'a' && code <= 'f') || (code >= '0' && code <= '9') {
 		return code, true
+	}
+
+	if code >= 'A' && code <= 'F' {
+		return code + 32, true
 	}
 
 	for _, desc := range player.server.Colors {
@@ -253,13 +256,13 @@ func (player *Player) escapeColor(code byte) (result byte, ok bool) {
 	return
 }
 
-func (player *Player) escapeColors(message string) string {
+func (player *Player) convertMessage(message string) string {
 	buf := bytes.NewBuffer(make([]byte, 0, len(message)))
 	for i := 0; i < len(message); i++ {
 		c := message[i]
 		if (c == '%' || c == '&') && i < len(message)-1 {
 			i++
-			if code, ok := player.escapeColor(message[i]); ok {
+			if code, ok := player.convertColor(message[i]); ok {
 				buf.Write([]byte{'&', code})
 			}
 		} else {
@@ -284,7 +287,7 @@ func (player *Player) SendMessageExt(msgType int, message string) {
 	}
 
 	var packet Packet
-	message = player.escapeColors(message)
+	message = player.convertMessage(message)
 	for _, line := range WordWrap(message, 64) {
 		packet.message(msgType, line)
 	}
