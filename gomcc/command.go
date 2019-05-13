@@ -48,6 +48,19 @@ type ColorDesc struct {
 }
 
 const (
+	KeyModNone  = 0
+	KeyModCtrl  = 1
+	KeyModShift = 2
+	KeyModAlt   = 4
+)
+
+type HotKeyDesc struct {
+	Label, Action string
+	Key           uint
+	KeyMods       byte
+}
+
+const (
 	MessageChat         = 0
 	MessageStatus1      = 1
 	MessageStatus2      = 2

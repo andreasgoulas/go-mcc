@@ -174,7 +174,7 @@ func (player *Player) SendBlockPermissions() {
 	}
 
 	var packet Packet
-	packet.userType(player)
+	packet.updateUserType(player)
 	if player.cpe[CpeBlockPermissions] {
 		for i := 0; i < BlockCount; i++ {
 			packet.setBlockPermission(byte(i), player.CanPlace[i], player.CanBreak[i])
@@ -465,6 +465,17 @@ func (player *Player) sendCPE() {
 	}
 
 	player.sendPacket(packet)
+}
+
+func (player *Player) sendHotKeys() {
+	if player.state == stateGame && player.cpe[CpeTextHotKey] {
+		var packet Packet
+		for _, desc := range player.server.HotKeys {
+			packet.setTextHotKey(&desc)
+		}
+
+		player.sendPacket(packet)
+	}
 }
 
 func (player *Player) sendTextColors() {
@@ -804,6 +815,7 @@ func (player *Player) login() {
 		}
 	})
 
+	player.sendHotKeys()
 	player.sendTextColors()
 	player.server.BroadcastMessage(ColorYellow + player.name + " has joined the game!")
 

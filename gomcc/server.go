@@ -61,6 +61,7 @@ type Server struct {
 	MainLevel *Level
 	URL       string
 	Colors    []ColorDesc
+	HotKeys   []HotKeyDesc
 
 	playerCount int32
 	salt        [16]byte

@@ -28,6 +28,7 @@ const (
 	CpeClickDistance = iota
 	CpeCustomBlocks
 	CpeHeldBlock
+	CpeTextHotKey
 	CpeExtPlayerList
 	CpeEnvColors
 	CpeSelectionCuboid
@@ -64,6 +65,7 @@ var Extensions = [CpeCount]ExtEntry{
 	{"ClickDistance", 1},
 	{"CustomBlocks", 1},
 	{"HeldBlock", 1},
+	{"TextHotKey", 1},
 	{"ExtPlayerList", 2},
 	{"EnvColors", 1},
 	{"SelectionCuboid", 1},
@@ -104,34 +106,34 @@ const (
 	packetTypeRemoveEntity              = 0x0c
 	packetTypeMessage                   = 0x0d
 	packetTypeKick                      = 0x0e
-	packetTypeSetPermission             = 0x0f
-
-	packetTypeExtInfo                 = 0x10
-	packetTypeExtEntry                = 0x11
-	packetTypeSetClickDistance        = 0x12
-	packetTypeCustomBlockSupportLevel = 0x13
-	packetTypeHoldThis                = 0x14
-	packetTypeExtAddPlayerName        = 0x16
-	packetTypeExtRemovePlayerName     = 0x18
-	packetTypeEnvSetColor             = 0x19
-	packetTypeMakeSelection           = 0x1a
-	packetTypeRemoveSelection         = 0x1b
-	packetTypeSetBlockPermission      = 0x1c
-	packetTypeChangeModel             = 0x1d
-	packetTypeEnvSetWeatherType       = 0x1f
-	packetTypeHackControl             = 0x20
-	packetTypeExtAddEntity2           = 0x21
-	packetTypePlayerClicked           = 0x22
-	packetTypeDefineBlock             = 0x23
-	packetTypeRemoveBlockDefinition   = 0x24
-	packetTypeDefineBlockExt          = 0x25
-	packetTypeBulkBlockUpdate         = 0x26
-	packetTypeSetTextColor            = 0x27
-	packetTypeSetMapEnvUrl            = 0x28
-	packetTypeSetMapEnvProperty       = 0x29
-	packetTypeSetEntityProperty       = 0x2a
-	packetTypeTwoWayPing              = 0x2b
-	packetTypeSetInventoryOrder       = 0x2c
+	packetTypeUpdateUserType            = 0x0f
+	packetTypeExtInfo                   = 0x10
+	packetTypeExtEntry                  = 0x11
+	packetTypeSetClickDistance          = 0x12
+	packetTypeCustomBlockSupportLevel   = 0x13
+	packetTypeHoldThis                  = 0x14
+	packetTypeSetTextHotKey             = 0x15
+	packetTypeExtAddPlayerName          = 0x16
+	packetTypeExtRemovePlayerName       = 0x18
+	packetTypeEnvSetColor               = 0x19
+	packetTypeMakeSelection             = 0x1a
+	packetTypeRemoveSelection           = 0x1b
+	packetTypeSetBlockPermission        = 0x1c
+	packetTypeChangeModel               = 0x1d
+	packetTypeEnvSetWeatherType         = 0x1f
+	packetTypeHackControl               = 0x20
+	packetTypeExtAddEntity2             = 0x21
+	packetTypePlayerClicked             = 0x22
+	packetTypeDefineBlock               = 0x23
+	packetTypeRemoveBlockDefinition     = 0x24
+	packetTypeDefineBlockExt            = 0x25
+	packetTypeBulkBlockUpdate           = 0x26
+	packetTypeSetTextColor              = 0x27
+	packetTypeSetMapEnvUrl              = 0x28
+	packetTypeSetMapEnvProperty         = 0x29
+	packetTypeSetEntityProperty         = 0x2a
+	packetTypeTwoWayPing                = 0x2b
+	packetTypeSetInventoryOrder         = 0x2c
 )
 
 func padString(str string) [64]byte {
@@ -360,7 +362,7 @@ func (packet *Packet) kick(reason string) {
 	}{packetTypeKick, padString(reason)})
 }
 
-func (packet *Packet) userType(player *Player) {
+func (packet *Packet) updateUserType(player *Player) {
 	userType := byte(0x00)
 	if player.CanPlace[BlockBedrock] {
 		userType = 0x64
@@ -369,7 +371,7 @@ func (packet *Packet) userType(player *Player) {
 	binary.Write(packet, binary.BigEndian, &struct {
 		PacketID byte
 		UserType byte
-	}{packetTypeSetPermission, userType})
+	}{packetTypeUpdateUserType, userType})
 }
 
 func (packet *Packet) extInfo() {
@@ -413,6 +415,22 @@ func (packet *Packet) holdThis(block byte, lock bool) {
 		BlockToHold   byte
 		PreventChange byte
 	}{packetTypeHoldThis, block, preventChange})
+}
+
+func (packet *Packet) setTextHotKey(hotKey *HotKeyDesc) {
+	binary.Write(packet, binary.BigEndian, struct {
+		PacketID byte
+		Label    [64]byte
+		Action   [64]byte
+		KeyCode  int32
+		KeyMods  byte
+	}{
+		packetTypeSetTextHotKey,
+		padString(hotKey.Label),
+		padString(hotKey.Action),
+		int32(hotKey.Key),
+		hotKey.KeyMods,
+	})
 }
 
 func (packet *Packet) extAddPlayerName(entity *Entity, self bool) {
