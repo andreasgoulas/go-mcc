@@ -156,13 +156,13 @@ type Packet struct {
 
 func (packet *Packet) position(location Location, extPos bool) {
 	if extPos {
-		binary.Write(packet, binary.BigEndian, &struct{ X, Y, Z int32 }{
+		binary.Write(packet, binary.BigEndian, struct{ X, Y, Z int32 }{
 			int32(location.X * 32),
 			int32(location.Y * 32),
 			int32(location.Z * 32),
 		})
 	} else {
-		binary.Write(packet, binary.BigEndian, &struct{ X, Y, Z int16 }{
+		binary.Write(packet, binary.BigEndian, struct{ X, Y, Z int16 }{
 			int16(location.X * 32),
 			int16(location.Y * 32),
 			int16(location.Z * 32),
@@ -172,8 +172,7 @@ func (packet *Packet) position(location Location, extPos bool) {
 
 func (packet *Packet) textureID(textureID uint, extTex bool) {
 	if extTex {
-		id := int16(textureID)
-		binary.Write(packet, binary.BigEndian, &id)
+		binary.Write(packet, binary.BigEndian, int16(textureID))
 	} else {
 		packet.WriteByte(byte(textureID))
 	}
@@ -185,7 +184,7 @@ func (packet *Packet) motd(player *Player, motd string) {
 		userType = 0x64
 	}
 
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID        byte
 		ProtocolVersion byte
 		Name            [64]byte
@@ -209,7 +208,7 @@ func (packet *Packet) levelInitialize() {
 }
 
 func (packet *Packet) levelInitializeExt(size uint) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		Size     int32
 	}{packetTypeLevelInitialize, int32(size)})
@@ -233,14 +232,14 @@ func (packet *Packet) levelDataChunk(blocks []byte, percent byte) {
 }
 
 func (packet *Packet) levelFinalize(x, y, z uint) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		X, Y, Z  int16
 	}{packetTypeLevelFinalize, int16(x), int16(y), int16(z)})
 }
 
 func (packet *Packet) setBlock(x, y, z uint, block byte) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID  byte
 		X, Y, Z   int16
 		BlockType byte
@@ -254,14 +253,14 @@ func (packet *Packet) addEntity(entity *Entity, self bool, extPos bool) {
 	}
 
 	location := entity.location
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		PlayerID byte
 		Name     [64]byte
 	}{packetTypeAddEntity, id, padString(entity.DisplayName)})
 
 	packet.position(location, extPos)
-	binary.Write(packet, binary.BigEndian, &struct{ Yaw, Pitch byte }{
+	binary.Write(packet, binary.BigEndian, struct{ Yaw, Pitch byte }{
 		byte(location.Yaw * 256 / 360),
 		byte(location.Pitch * 256 / 360),
 	})
@@ -274,13 +273,13 @@ func (packet *Packet) teleport(entity *Entity, self bool, extPos bool) {
 	}
 
 	location := entity.location
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		PlayerID byte
 	}{packetTypePlayerTeleport, id})
 
 	packet.position(location, extPos)
-	binary.Write(packet, binary.BigEndian, &struct{ Yaw, Pitch byte }{
+	binary.Write(packet, binary.BigEndian, struct{ Yaw, Pitch byte }{
 		byte(location.Yaw * 256 / 360),
 		byte(location.Pitch * 256 / 360),
 	})
@@ -289,7 +288,7 @@ func (packet *Packet) teleport(entity *Entity, self bool, extPos bool) {
 func (packet *Packet) positionOrientationUpdate(entity *Entity) {
 	location := entity.location
 	lastLocation := entity.lastLocation
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID   byte
 		PlayerID   byte
 		X, Y, Z    byte
@@ -308,7 +307,7 @@ func (packet *Packet) positionOrientationUpdate(entity *Entity) {
 func (packet *Packet) positionUpdate(entity *Entity) {
 	location := entity.location
 	lastLocation := entity.lastLocation
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		PlayerID byte
 		X, Y, Z  byte
@@ -323,7 +322,7 @@ func (packet *Packet) positionUpdate(entity *Entity) {
 
 func (packet *Packet) orientationUpdate(entity *Entity) {
 	location := entity.location
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID   byte
 		PlayerID   byte
 		Yaw, Pitch byte
@@ -341,14 +340,14 @@ func (packet *Packet) removeEntity(entity *Entity, self bool) {
 		id = 0xff
 	}
 
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		PlayerID byte
 	}{packetTypeRemoveEntity, id})
 }
 
 func (packet *Packet) message(msgType int, message string) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		PlayerID byte
 		Message  [64]byte
@@ -356,7 +355,7 @@ func (packet *Packet) message(msgType int, message string) {
 }
 
 func (packet *Packet) kick(reason string) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		Reason   [64]byte
 	}{packetTypeKick, padString(reason)})
@@ -368,7 +367,7 @@ func (packet *Packet) updateUserType(player *Player) {
 		userType = 0x64
 	}
 
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		UserType byte
 	}{packetTypeUpdateUserType, userType})
@@ -439,7 +438,7 @@ func (packet *Packet) extAddPlayerName(entity *Entity, self bool) {
 		id = 0xff
 	}
 
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID   byte
 		NameID     int16
 		PlayerName [64]byte
@@ -462,14 +461,14 @@ func (packet *Packet) extRemovePlayerName(entity *Entity, self bool) {
 		id = 0xff
 	}
 
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		NameID   int16
 	}{packetTypeExtRemovePlayerName, id})
 }
 
 func (packet *Packet) makeSelection(id byte, label string, box AABB, color color.RGBA) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID               byte
 		SelectionID            byte
 		Label                  [64]byte
@@ -487,7 +486,7 @@ func (packet *Packet) makeSelection(id byte, label string, box AABB, color color
 }
 
 func (packet *Packet) removeSelection(id byte) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID    byte
 		SelectionID byte
 	}{packetTypeRemoveSelection, id})
@@ -522,7 +521,7 @@ func (packet *Packet) setBlockPermission(id byte, canPlace, canBreak bool) {
 		data.AllowDeletion = 1
 	}
 
-	binary.Write(packet, binary.BigEndian, &data)
+	binary.Write(packet, binary.BigEndian, data)
 }
 
 func (packet *Packet) changeModel(entity *Entity, self bool) {
@@ -531,7 +530,7 @@ func (packet *Packet) changeModel(entity *Entity, self bool) {
 		id = 0xff
 	}
 
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID  byte
 		EntityID  byte
 		ModelName [64]byte
@@ -539,7 +538,7 @@ func (packet *Packet) changeModel(entity *Entity, self bool) {
 }
 
 func (packet *Packet) envWeatherType(weather byte) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID    byte
 		WeatherType byte
 	}{packetTypeEnvSetWeatherType, weather})
@@ -582,7 +581,7 @@ func (packet *Packet) extAddEntity2(entity *Entity, self bool, extPos bool) {
 	}
 
 	location := entity.location
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID    byte
 		EntityID    byte
 		DisplayName [64]byte
@@ -595,7 +594,7 @@ func (packet *Packet) extAddEntity2(entity *Entity, self bool, extPos bool) {
 	})
 
 	packet.position(location, extPos)
-	binary.Write(packet, binary.BigEndian, &struct{ Yaw, Pitch byte }{
+	binary.Write(packet, binary.BigEndian, struct{ Yaw, Pitch byte }{
 		byte(location.Yaw * 256 / 360),
 		byte(location.Pitch * 256 / 360),
 	})
@@ -607,7 +606,7 @@ func (packet *Packet) defineBlock(id byte, block *BlockDefinition, ext bool, ext
 		packetID = packetTypeDefineBlockExt
 	}
 
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID      byte
 		BlockID       byte
 		Name          [64]byte
@@ -642,7 +641,7 @@ func (packet *Packet) defineBlock(id byte, block *BlockDefinition, ext bool, ext
 		fullBright = 1
 	}
 
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		TransmitsLight byte
 		WalkSound      byte
 		FullBright     byte
@@ -650,7 +649,7 @@ func (packet *Packet) defineBlock(id byte, block *BlockDefinition, ext bool, ext
 
 	if ext {
 		aabb := block.AABB
-		binary.Write(packet, binary.BigEndian, &struct {
+		binary.Write(packet, binary.BigEndian, struct {
 			MinX, MinY, MinZ byte
 			MaxX, MaxY, MaxZ byte
 		}{
@@ -661,7 +660,7 @@ func (packet *Packet) defineBlock(id byte, block *BlockDefinition, ext bool, ext
 		packet.WriteByte(block.Shape)
 	}
 
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		BlockDraw        byte
 		FogDensity       byte
 		FogR, FogG, FogB byte
@@ -673,7 +672,7 @@ func (packet *Packet) defineBlock(id byte, block *BlockDefinition, ext bool, ext
 }
 
 func (packet *Packet) removeBlockDefinition(id byte) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		BlockID  byte
 	}{packetTypeRemoveBlockDefinition, id})
@@ -694,11 +693,11 @@ func (packet *Packet) bulkBlockUpdate(indices []int32, blocks []byte) {
 
 	copy(data.Indices[:], indices)
 	copy(data.Blocks[:], blocks)
-	binary.Write(packet, binary.BigEndian, &data)
+	binary.Write(packet, binary.BigEndian, data)
 }
 
 func (packet *Packet) setTextColor(color *ColorDesc) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID   byte
 		R, G, B, A byte
 		Code       byte
@@ -710,14 +709,14 @@ func (packet *Packet) setTextColor(color *ColorDesc) {
 }
 
 func (packet *Packet) mapEnvUrl(texturePack string) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID       byte
 		TexturePackURL [64]byte
 	}{packetTypeSetMapEnvUrl, padString(texturePack)})
 }
 
 func (packet *Packet) mapEnvProperty(id byte, value int32) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		Type     byte
 		Value    int32
@@ -730,7 +729,7 @@ func (packet *Packet) entityProperty(entity *Entity, self bool, prop byte, value
 		id = 0xff
 	}
 
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		EntityID byte
 		Type     byte
@@ -739,7 +738,7 @@ func (packet *Packet) entityProperty(entity *Entity, self bool, prop byte, value
 }
 
 func (packet *Packet) twoWayPing(dir byte, data int16) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID  byte
 		Direction byte
 		Data      int16
@@ -747,7 +746,7 @@ func (packet *Packet) twoWayPing(dir byte, data int16) {
 }
 
 func (packet *Packet) setInventoryOrder(order byte, block byte) {
-	binary.Write(packet, binary.BigEndian, &struct {
+	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		Order    byte
 		BlockID  byte

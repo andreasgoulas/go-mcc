@@ -3,8 +3,12 @@
 ## Introduction
 
 Go-MCC is an open source Minecraft classic server written in Go. It is fully
-compatible with the original client and it supports a large subset of the
-Classic Protocol Extension (CPE) project.
+compatible with the original client, World of Minecraft and ClassiCube. It
+supports a large subset of the Classic Protocol Extension (CPE) project.
+
+The core functionality of Go-MCC can be extended through the use of plugins. The
+Core plugin provides important features typically found in Minecraft servers,
+such as ban lists, a rank manager and data persistency.
 
 ## Install
 
