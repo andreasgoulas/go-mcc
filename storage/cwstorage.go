@@ -70,8 +70,11 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 	level.Spawn.Z = float64(cw.Spawn.Z) / 32
 	level.Spawn.Yaw = float64(cw.Spawn.H) * 360 / 256
 	level.Spawn.Pitch = float64(cw.Spawn.P) * 360 / 256
-	copy(level.Blocks[:], cw.BlockArray)
 	copy(level.UUID[:], cw.UUID)
+
+	if uint(len(cw.BlockArray)) == level.Size() {
+		level.Blocks = cw.BlockArray
+	}
 
 	if cw.TimeCreated > 0 {
 		level.TimeCreated = time.Unix(cw.TimeCreated, 0)

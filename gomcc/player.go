@@ -343,7 +343,7 @@ func (player *Player) sendLevel(level *Level) {
 	stream := levelStream{player: player}
 	if player.cpe[CpeFastMap] {
 		var packet Packet
-		packet.levelInitializeExt(level.Volume())
+		packet.levelInitializeExt(level.Size())
 		player.sendPacket(packet)
 
 		writer, _ := flate.NewWriter(&stream, -1)
@@ -358,7 +358,7 @@ func (player *Player) sendLevel(level *Level) {
 		player.sendPacket(packet)
 
 		writer := gzip.NewWriter(&stream)
-		binary.Write(writer, binary.BigEndian, int32(level.Volume()))
+		binary.Write(writer, binary.BigEndian, int32(level.Size()))
 		for i, block := range level.Blocks {
 			stream.percent = byte(i * 100 / len(level.Blocks))
 			writer.Write([]byte{conv[block]})

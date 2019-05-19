@@ -181,7 +181,7 @@ func (level *Level) Length() uint {
 	return level.length
 }
 
-func (level *Level) Volume() uint {
+func (level *Level) Size() uint {
 	return level.width * level.height * level.length
 }
 
