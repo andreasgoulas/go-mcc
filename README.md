@@ -23,3 +23,7 @@ go get -u -buildmode=plugin github.com/structinf/Go-MCC/core
 ```
 
 To use a plugin, you need to place it in the `plugins/` directory of the server.
+
+## License
+
+Go-MCC is licensed under the [MIT License](https://opensource.org/licenses/MIT).

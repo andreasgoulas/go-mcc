@@ -201,23 +201,6 @@ func (packet *Packet) levelInitializeExt(size uint) {
 	}{packetTypeLevelInitialize, int32(size)})
 }
 
-func (packet *Packet) levelDataChunk(blocks []byte, percent byte) {
-	data := struct {
-		PacketID        byte
-		ChunkLength     int16
-		ChunkData       [1024]byte
-		PercentComplete byte
-	}{
-		packetTypeLevelDataChunk,
-		int16(len(blocks)),
-		[1024]byte{},
-		percent,
-	}
-
-	copy(data.ChunkData[:], blocks)
-	binary.Write(packet, binary.BigEndian, data)
-}
-
 func (packet *Packet) levelFinalize(x, y, z uint) {
 	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
@@ -743,16 +726,27 @@ func (packet *Packet) setInventoryOrder(order byte, block byte) {
 type levelStream struct {
 	player  *Player
 	packet  Packet
-	buf     [1024]byte
 	index   int
 	percent byte
 }
 
-func (stream *levelStream) send() {
-	stream.packet.levelDataChunk(stream.buf[:stream.index], stream.percent)
-	stream.player.sendPacket(stream.packet)
+func (stream *levelStream) reset() {
 	stream.packet.Reset()
+	stream.packet.Write([]byte{packetTypeLevelDataChunk, 0, 0})
 	stream.index = 0
+}
+
+func (stream *levelStream) send() {
+	if stream.index < 1024 {
+		stream.packet.Write(make([]byte, 1024-stream.index))
+	}
+	stream.packet.Write([]byte{stream.percent})
+
+	buf := stream.packet.Bytes()
+	binary.BigEndian.PutUint16(buf[1:], uint16(stream.index))
+
+	stream.player.sendPacket(stream.packet)
+	stream.reset()
 }
 
 func (stream *levelStream) Close() {
@@ -766,7 +760,7 @@ func (stream *levelStream) Write(p []byte) (int, error) {
 	count := len(p)
 	for count > 0 {
 		size := min(1024-stream.index, count)
-		copy(stream.buf[stream.index:], p[offset:offset+size])
+		stream.packet.Write(p[offset : offset+size])
 
 		stream.index += size
 		offset += size

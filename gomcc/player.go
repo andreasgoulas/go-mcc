@@ -341,6 +341,7 @@ func (player *Player) sendLevel(level *Level) {
 	}
 
 	stream := levelStream{player: player}
+	stream.reset()
 	if player.cpe[CpeFastMap] {
 		var packet Packet
 		packet.levelInitializeExt(level.Size())
