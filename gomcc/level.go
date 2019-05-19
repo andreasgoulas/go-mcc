@@ -5,6 +5,7 @@ package gomcc
 
 import (
 	"image/color"
+	"time"
 )
 
 type LevelStorage interface {
@@ -85,6 +86,9 @@ type Level struct {
 	length uint
 	Blocks []byte
 
+	UUID        [16]byte
+	TimeCreated time.Time
+
 	MOTD       string
 	Spawn      Location
 	EnvConfig  EnvConfig
@@ -99,12 +103,14 @@ func NewLevel(name string, width, height, length uint) *Level {
 	}
 
 	return &Level{
-		name:   name,
-		dirty:  false,
-		width:  width,
-		height: height,
-		length: length,
-		Blocks: make([]byte, width*height*length),
+		name:        name,
+		dirty:       true,
+		width:       width,
+		height:      height,
+		length:      length,
+		Blocks:      make([]byte, width*height*length),
+		UUID:        RandomUUID(),
+		TimeCreated: time.Now(),
 		Spawn: Location{
 			X: float64(width) / 2,
 			Y: float64(height) * 3 / 4,
@@ -149,6 +155,8 @@ func (level Level) Clone(name string) *Level {
 	newLevel.name = name
 	newLevel.dirty = true
 	newLevel.Blocks = make([]byte, len(level.Blocks))
+	newLevel.UUID = RandomUUID()
+	newLevel.TimeCreated = time.Now()
 	copy(newLevel.Blocks, level.Blocks)
 	return &newLevel
 }

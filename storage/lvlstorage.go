@@ -22,16 +22,16 @@ type lvlHeader struct {
 }
 
 type LvlStorage struct {
-	directoryPath string
+	dirPath string
 }
 
-func NewLvlStorage(directoryPath string) *LvlStorage {
-	os.Mkdir(directoryPath, 0777)
-	return &LvlStorage{directoryPath}
+func NewLvlStorage(dirPath string) *LvlStorage {
+	os.Mkdir(dirPath, 0777)
+	return &LvlStorage{dirPath}
 }
 
 func (storage *LvlStorage) getPath(name string) string {
-	return storage.directoryPath + name + ".lvl"
+	return storage.dirPath + name + ".lvl"
 }
 
 func (storage *LvlStorage) Load(name string) (level *gomcc.Level, err error) {
@@ -47,7 +47,7 @@ func (storage *LvlStorage) Load(name string) (level *gomcc.Level, err error) {
 	}
 	defer reader.Close()
 
-	header := lvlHeader{}
+	var header lvlHeader
 	if err = binary.Read(reader, binary.BigEndian, &header); err != nil {
 		return
 	}
@@ -79,7 +79,7 @@ func (storage *LvlStorage) Save(level *gomcc.Level) (err error) {
 	defer file.Close()
 	defer writer.Close()
 
-	binary.Write(writer, binary.BigEndian, &lvlHeader{
+	if err = binary.Write(writer, binary.BigEndian, lvlHeader{
 		1874,
 		uint16(level.Width()),
 		uint16(level.Height()),
@@ -90,8 +90,7 @@ func (storage *LvlStorage) Save(level *gomcc.Level) (err error) {
 		byte(level.Spawn.Yaw * 256 / 360),
 		byte(level.Spawn.Pitch * 256 / 360),
 		0, 0,
-	})
-	if err != nil {
+	}); err != nil {
 		return
 	}
 

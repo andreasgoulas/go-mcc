@@ -86,8 +86,8 @@ func loadPlugins(path string, server *gomcc.Server) {
 
 func main() {
 	config := readConfig("server.properties")
-	lvlstorage := storage.NewLvlStorage("levels/")
-	server := gomcc.NewServer(config, lvlstorage)
+	cwstorage := storage.NewCwStorage("levels/")
+	server := gomcc.NewServer(config, cwstorage)
 	if server == nil {
 		return
 	}
