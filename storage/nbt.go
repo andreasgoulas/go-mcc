@@ -32,13 +32,13 @@ const (
 
 func NbtMarshal(w io.Writer, name string, v interface{}) error {
 	encoder := newNbtEncoder(w)
-	return encoder.marshal(name, reflect.ValueOf(v))
+	return encoder.writeTag(name, reflect.ValueOf(v))
 }
 
-func NbtUnmarshal(w io.Reader, v interface{}) (err error) {
+func NbtUnmarshal(w io.Reader, v interface{}) error {
 	decoder := newNbtDecoder(w)
-	_, err = decoder.unmarshal(reflect.ValueOf(v).Elem())
-	return
+	_, err := decoder.readTag(reflect.ValueOf(v).Elem())
+	return err
 }
 
 type nbtEncoder struct {
@@ -47,6 +47,40 @@ type nbtEncoder struct {
 
 func newNbtEncoder(w io.Writer) *nbtEncoder {
 	return &nbtEncoder{w}
+}
+
+func (nbt *nbtEncoder) tagType(t reflect.Type) byte {
+	switch t.Kind() {
+	case reflect.Uint8:
+		return NbtTagByte
+	case reflect.Int16:
+		return NbtTagShort
+	case reflect.Int32:
+		return NbtTagInt
+	case reflect.Int64:
+		return NbtTagLong
+	case reflect.Float32:
+		return NbtTagFloat
+	case reflect.Float64:
+		return NbtTagDouble
+	case reflect.String:
+		return NbtTagString
+	case reflect.Slice:
+		switch t.Elem().Kind() {
+		case reflect.Uint8:
+			return NbtTagByteArray
+		case reflect.Int32:
+			return NbtTagIntArray
+		case reflect.Int64:
+			return NbtTagLongArray
+		default:
+			return NbtTagList
+		}
+	case reflect.Struct:
+		return NbtTagCompound
+	}
+
+	return NbtTagEnd
 }
 
 func (nbt *nbtEncoder) writeByte(tag byte) error {
@@ -89,6 +123,29 @@ func (nbt *nbtEncoder) writeString(tag string) error {
 	return binary.Write(nbt.w, binary.BigEndian, []byte(tag))
 }
 
+func (nbt *nbtEncoder) writeList(v reflect.Value) (err error) {
+	tagType := nbt.tagType(v.Type().Elem())
+	if tagType == NbtTagEnd {
+		return errors.New("nbt: invalid type")
+	}
+
+	if err = nbt.writeByte(tagType); err != nil {
+		return
+	}
+
+	if err = nbt.writeInt(int32(v.Len())); err != nil {
+		return
+	}
+
+	for i := 0; i < v.Len(); i++ {
+		if err = nbt.writePayload(tagType, v.Index(i)); err != nil {
+			return
+		}
+	}
+
+	return
+}
+
 func (nbt *nbtEncoder) writeCompound(v reflect.Value) error {
 	for i := 0; i < v.Type().NumField(); i++ {
 		field := v.Type().Field(i)
@@ -106,7 +163,7 @@ func (nbt *nbtEncoder) writeCompound(v reflect.Value) error {
 			fname = field.Name
 		}
 
-		if err := nbt.marshal(fname, v.Field(i)); err != nil {
+		if err := nbt.writeTag(fname, v.Field(i)); err != nil {
 			return err
 		}
 	}
@@ -130,50 +187,7 @@ func (nbt *nbtEncoder) writeLongArray(tag []int64) error {
 	return binary.Write(nbt.w, binary.BigEndian, tag)
 }
 
-func (nbt *nbtEncoder) marshal(name string, v reflect.Value) (err error) {
-	var tagType byte
-	switch v.Type().Kind() {
-	case reflect.Uint8:
-		tagType = NbtTagByte
-	case reflect.Int16:
-		tagType = NbtTagShort
-	case reflect.Int32:
-		tagType = NbtTagInt
-	case reflect.Int64:
-		tagType = NbtTagLong
-	case reflect.Float32:
-		tagType = NbtTagFloat
-	case reflect.Float64:
-		tagType = NbtTagDouble
-	case reflect.String:
-		tagType = NbtTagString
-	case reflect.Slice:
-		switch v.Type().Elem().Kind() {
-		case reflect.Uint8:
-			tagType = NbtTagByteArray
-		case reflect.Int32:
-			tagType = NbtTagIntArray
-		case reflect.Int64:
-			tagType = NbtTagLongArray
-		default:
-			return
-		}
-	case reflect.Struct:
-		tagType = NbtTagCompound
-	default:
-		return
-	}
-
-	if err = nbt.writeByte(tagType); err != nil {
-		return
-	}
-
-	if len(name) != 0 {
-		if err = nbt.writeString(name); err != nil {
-			return
-		}
-	}
-
+func (nbt *nbtEncoder) writePayload(tagType byte, v reflect.Value) (err error) {
 	switch tagType {
 	case NbtTagByte:
 		err = nbt.writeByte(byte(v.Uint()))
@@ -191,6 +205,8 @@ func (nbt *nbtEncoder) marshal(name string, v reflect.Value) (err error) {
 		err = nbt.writeByteArray(v.Bytes())
 	case NbtTagString:
 		err = nbt.writeString(v.String())
+	case NbtTagList:
+		err = nbt.writeList(v)
 	case NbtTagCompound:
 		err = nbt.writeCompound(v)
 	case NbtTagIntArray:
@@ -200,6 +216,23 @@ func (nbt *nbtEncoder) marshal(name string, v reflect.Value) (err error) {
 	}
 
 	return
+}
+
+func (nbt *nbtEncoder) writeTag(name string, v reflect.Value) (err error) {
+	tagType := nbt.tagType(v.Type())
+	if tagType == NbtTagEnd {
+		return errors.New("nbt: invalid type")
+	}
+
+	if err = nbt.writeByte(tagType); err != nil {
+		return
+	}
+
+	if err = nbt.writeString(name); err != nil {
+		return
+	}
+
+	return nbt.writePayload(tagType, v)
 }
 
 type nbtDecoder struct {
@@ -265,9 +298,34 @@ func (nbt *nbtDecoder) readString() (tag string, err error) {
 	return string(buf), nil
 }
 
+func (nbt *nbtDecoder) readList(v reflect.Value) (out reflect.Value, err error) {
+	tagType, err := nbt.readByte()
+	if err != nil {
+		return
+	}
+
+	length, err := nbt.readInt()
+	if err != nil {
+		return
+	}
+
+	for i := int32(0); i < length; i++ {
+		tmp := reflect.Indirect(reflect.New(v.Type().Elem()))
+		if err = nbt.readPayload(tagType, tmp); err != nil {
+			return
+		}
+
+		if v.IsValid() {
+			v = reflect.Append(v, tmp)
+		}
+	}
+
+	return v, nil
+}
+
 func (nbt *nbtDecoder) readCompound(v reflect.Value) (err error) {
 	for {
-		tagType, err := nbt.unmarshal(v)
+		tagType, err := nbt.readTag(v)
 		if tagType == NbtTagEnd || err != nil {
 			return err
 		}
@@ -298,8 +356,55 @@ func (nbt *nbtDecoder) readLongArray() (tag []int64, err error) {
 	return
 }
 
-func (nbt *nbtDecoder) unmarshal(v reflect.Value) (tagType byte, err error) {
-	if err = binary.Read(nbt.r, binary.BigEndian, &tagType); err != nil {
+func (nbt *nbtDecoder) readPayload(tagType byte, v reflect.Value) (err error) {
+	var tag interface{}
+	var list reflect.Value
+	switch tagType {
+	case NbtTagByte:
+		tag, err = nbt.readByte()
+	case NbtTagShort:
+		tag, err = nbt.readShort()
+	case NbtTagInt:
+		tag, err = nbt.readInt()
+	case NbtTagLong:
+		tag, err = nbt.readLong()
+	case NbtTagFloat:
+		tag, err = nbt.readFloat()
+	case NbtTagDouble:
+		tag, err = nbt.readDouble()
+	case NbtTagByteArray:
+		tag, err = nbt.readByteArray()
+	case NbtTagString:
+		tag, err = nbt.readString()
+	case NbtTagList:
+		list, err = nbt.readList(list)
+	case NbtTagCompound:
+		err = nbt.readCompound(v)
+	case NbtTagIntArray:
+		tag, err = nbt.readIntArray()
+	case NbtTagLongArray:
+		tag, err = nbt.readLongArray()
+	default:
+		err = errors.New("nbt: invalid tag")
+	}
+
+	if err != nil {
+		return
+	}
+
+	if v.IsValid() {
+		if tag != nil {
+			v.Set(reflect.ValueOf(tag))
+		} else if list.IsValid() {
+			v.Set(list)
+		}
+	}
+
+	return
+}
+
+func (nbt *nbtDecoder) readTag(v reflect.Value) (tagType byte, err error) {
+	if tagType, err = nbt.readByte(); err != nil {
 		return
 	}
 
@@ -325,43 +430,6 @@ func (nbt *nbtDecoder) unmarshal(v reflect.Value) (tagType byte, err error) {
 		}
 	}
 
-	var tag interface{}
-	switch tagType {
-	case NbtTagByte:
-		tag, err = nbt.readByte()
-	case NbtTagShort:
-		tag, err = nbt.readShort()
-	case NbtTagInt:
-		tag, err = nbt.readInt()
-	case NbtTagLong:
-		tag, err = nbt.readLong()
-	case NbtTagFloat:
-		tag, err = nbt.readFloat()
-	case NbtTagDouble:
-		tag, err = nbt.readDouble()
-	case NbtTagByteArray:
-		tag, err = nbt.readByteArray()
-	case NbtTagString:
-		tag, err = nbt.readString()
-	case NbtTagCompound:
-		err = nbt.readCompound(target)
-	case NbtTagIntArray:
-		tag, err = nbt.readIntArray()
-	case NbtTagLongArray:
-		tag, err = nbt.readLongArray()
-	default:
-		err = errors.New("nbt: invalid tag")
-	}
-
-	if err != nil {
-		return
-	}
-
-	if target.IsValid() {
-		if tag != nil {
-			target.Set(reflect.ValueOf(tag))
-		}
-	}
-
+	err = nbt.readPayload(tagType, target)
 	return
 }
