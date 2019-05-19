@@ -48,6 +48,7 @@ type Player struct {
 	heldBlock     byte
 
 	pingTicker *time.Ticker
+	pingBuffer pingBuffer
 }
 
 func NewPlayer(conn net.Conn, server *Server) *Player {
@@ -813,9 +814,14 @@ func (player *Player) login() {
 
 	player.pingTicker = time.NewTicker(2 * time.Second)
 	go func() {
-		var packet Packet
-		packet.ping()
 		for range player.pingTicker.C {
+			var packet Packet
+			if player.cpe[CpeTwoWayPing] {
+				packet.twoWayPing(1, player.pingBuffer.Next())
+			} else {
+				packet.ping()
+			}
+
 			player.sendPacket(packet)
 		}
 	}()
@@ -1137,5 +1143,8 @@ func (player *Player) handleTwoWayPing(reader io.Reader) {
 		var response Packet
 		response.twoWayPing(0, packet.Data)
 		player.sendPacket(response)
+
+	case 1:
+		player.pingBuffer.Update(packet.Data)
 	}
 }

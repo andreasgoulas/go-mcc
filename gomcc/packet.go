@@ -9,6 +9,7 @@ import (
 	"image/color"
 	"math"
 	"strings"
+	"time"
 )
 
 const (
@@ -772,4 +773,51 @@ func (stream *levelStream) Write(p []byte) (int, error) {
 	}
 
 	return len(p), nil
+}
+
+type pingEntry struct {
+	data           int16
+	sent, received time.Time
+}
+
+type pingBuffer struct {
+	entries [10]pingEntry
+	index   int
+}
+
+func (buf *pingBuffer) Next() int16 {
+	data := buf.entries[buf.index].data + 1
+	buf.index = (buf.index + 1) % len(buf.entries)
+	buf.entries[buf.index] = pingEntry{
+		data: data,
+		sent: time.Now(),
+	}
+
+	return data
+}
+
+func (buf *pingBuffer) Update(data int16) {
+	for i, entry := range buf.entries {
+		if entry.data == data {
+			buf.entries[i].received = time.Now()
+			break
+		}
+	}
+}
+
+func (buf *pingBuffer) Average() (d time.Duration) {
+	count := int64(0)
+	var sum time.Duration
+	for _, entry := range buf.entries {
+		if entry.received.After(entry.sent) {
+			sum += entry.received.Sub(entry.sent)
+			count++
+		}
+	}
+
+	if count > 0 {
+		return time.Duration(int64(sum) / (2 * count))
+	}
+
+	return
 }
