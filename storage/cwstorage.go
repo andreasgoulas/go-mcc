@@ -64,7 +64,11 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 		return nil, errors.New("cwstorage: invalid format")
 	}
 
-	level = gomcc.NewLevel(cw.Name, uint(cw.X), uint(cw.Y), uint(cw.Z))
+	level = gomcc.NewLevel(name, uint(cw.X), uint(cw.Y), uint(cw.Z))
+	if level == nil {
+		return nil, errors.New("cwstorage: level creation failed")
+	}
+
 	level.Spawn.X = float64(cw.Spawn.X) / 32
 	level.Spawn.Y = float64(cw.Spawn.Y) / 32
 	level.Spawn.Z = float64(cw.Spawn.Z) / 32

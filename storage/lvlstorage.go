@@ -57,6 +57,10 @@ func (storage *LvlStorage) Load(name string) (level *gomcc.Level, err error) {
 	}
 
 	level = gomcc.NewLevel(name, uint(header.Width), uint(header.Height), uint(header.Length))
+	if level == nil {
+		return nil, errors.New("lvlstorage: level creation failed")
+	}
+
 	level.Spawn.X = float64(header.SpawnX) / 32
 	level.Spawn.Y = float64(header.SpawnY) / 32
 	level.Spawn.Z = float64(header.SpawnZ) / 32
