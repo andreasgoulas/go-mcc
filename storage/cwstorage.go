@@ -69,9 +69,9 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 		return nil, errors.New("cwstorage: level creation failed")
 	}
 
-	level.Spawn.X = float64(cw.Spawn.X) / 32
-	level.Spawn.Y = float64(cw.Spawn.Y) / 32
-	level.Spawn.Z = float64(cw.Spawn.Z) / 32
+	level.Spawn.X = float64(cw.Spawn.X) + 0.5
+	level.Spawn.Y = float64(cw.Spawn.Y) + 1.0
+	level.Spawn.Z = float64(cw.Spawn.Z) + 0.5
 	level.Spawn.Yaw = float64(cw.Spawn.H) * 360 / 256
 	level.Spawn.Pitch = float64(cw.Spawn.P) * 360 / 256
 	copy(level.UUID[:], cw.UUID)
@@ -108,9 +108,9 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 		int16(level.Length()),
 		level.TimeCreated.Unix(),
 		cwSpawn{
-			int16(level.Spawn.X * 32),
-			int16(level.Spawn.Y * 32),
-			int16(level.Spawn.Z * 32),
+			int16(level.Spawn.X),
+			int16(level.Spawn.Y - 1.0),
+			int16(level.Spawn.Z),
 			byte(level.Spawn.Yaw * 256 / 360),
 			byte(level.Spawn.Pitch * 256 / 360),
 		},
