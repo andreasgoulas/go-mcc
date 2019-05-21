@@ -23,6 +23,7 @@ const (
 	ModelChibi     = "chibi"
 )
 
+// EntityProps holds various entity properties.
 type EntityProps struct {
 	RotX, RotY, RotZ       float64
 	ScaleX, ScaleY, ScaleZ float64
@@ -39,6 +40,7 @@ const (
 	EntityPropAll = (EntityPropScaleZ << 1) - 1
 )
 
+// Entity represents a base entity.
 type Entity struct {
 	server *Server
 	player *Player
@@ -61,6 +63,7 @@ type Entity struct {
 	lastLocation Location
 }
 
+// NewEntity creates a new Entity with the specified name.
 func NewEntity(name string, server *Server) *Entity {
 	return &Entity{
 		server:      server,
@@ -86,6 +89,7 @@ func (entity *Entity) Name() string {
 	return entity.name
 }
 
+// SendModel sends the model of the entity to all relevant players.
 func (entity *Entity) SendModel() {
 	if entity.level != nil {
 		entity.level.ForEachPlayer(func(player *Player) {
@@ -94,6 +98,8 @@ func (entity *Entity) SendModel() {
 	}
 }
 
+// SendProps sends the EntityProps of the entity to all relevant players.
+// mask controls which properties are sent.
 func (entity *Entity) SendProps(mask uint32) {
 	if entity.level != nil {
 		entity.level.ForEachPlayer(func(player *Player) {
@@ -102,6 +108,7 @@ func (entity *Entity) SendProps(mask uint32) {
 	}
 }
 
+// SendListName sends the tab list name of the entity to all relevant players.
 func (entity *Entity) SendListName() {
 	entity.server.ForEachPlayer(func(player *Player) {
 		player.sendAddPlayerList(entity)
@@ -112,6 +119,7 @@ func (entity *Entity) Location() Location {
 	return entity.location
 }
 
+// Teleport teleports the entity to location.
 func (entity *Entity) Teleport(location Location) {
 	if location == entity.location {
 		return
@@ -133,6 +141,7 @@ func (entity *Entity) Level() *Level {
 	return entity.level
 }
 
+// TeleportLevel teleports the entity to the spawn location of level.
 func (entity *Entity) TeleportLevel(level *Level) {
 	if entity.level == level {
 		return
@@ -214,6 +223,7 @@ func (entity *Entity) update() {
 	})
 }
 
+// Respawn respawns the entity to all relevant players.
 func (entity *Entity) Respawn() {
 	if entity.level == nil {
 		return

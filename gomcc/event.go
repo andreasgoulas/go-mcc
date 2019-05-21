@@ -17,8 +17,7 @@ const (
 )
 
 const (
-	EventTypePlayerPreLogin = iota
-	EventTypePlayerLogin
+	EventTypePlayerLogin = iota
 	EventTypePlayerJoin
 	EventTypePlayerQuit
 	EventTypePlayerChat
@@ -30,31 +29,31 @@ const (
 	EventTypeLevelLoad
 	EventTypeLevelUnload
 	EventTypeLevelSave
-	EventTypeMessage
 )
 
+// EventHandler is the type of the function called to handle an event.
 type EventHandler func(eventType EventType, event interface{})
 
-type EventPlayerPreLogin struct {
-	Player       *Player
-	Cancel       bool
-	CancelReason string
-}
-
+// EventPlayerLogin is dispatched when a player attempts to log in.
+// If the event is cancelled, the player will be kicked.
 type EventPlayerLogin struct {
 	Player       *Player
 	Cancel       bool
 	CancelReason string
 }
 
+// EventPlayerJoin is dispatched when a player joins the server.
 type EventPlayerJoin struct {
 	Player *Player
 }
 
+// EventPlayerQuit is dispatched when a player leaves the server.
 type EventPlayerQuit struct {
 	Player *Player
 }
 
+// EventPlayerChat is dispatched when a player sends a message.
+// If the event is cancelled, the message will not be sent.
 type EventPlayerChat struct {
 	Player  *Player
 	Targets []*Player
@@ -63,6 +62,10 @@ type EventPlayerChat struct {
 	Cancel  bool
 }
 
+// EventPlayerClick is dispatched when a player makes a mouse click.
+// If the player is currently targeting another entity, Target will be set.
+// If the player is currently targeting a block, BlockX, BlockY, BlockZ,
+// BlockFace will be set.
 type EventPlayerClick struct {
 	Player                 *Player
 	Button, Action         byte
@@ -72,17 +75,22 @@ type EventPlayerClick struct {
 	BlockFace              byte
 }
 
+// EventEntityLevelChange is dispatched when an entity changes level.
 type EventEntityLevelChange struct {
 	Entity   *Entity
 	From, To *Level
 }
 
+// EventEntityMove is dispatched when an entity moves.
+// If the event is cancelled, the entity will not move.
 type EventEntityMove struct {
 	Entity   *Entity
 	From, To Location
 	Cancel   bool
 }
 
+// EventBlockPlace is dispatched when a player places a block.
+// If the event is cancelled, the block will not be placed.
 type EventBlockPlace struct {
 	Player  *Player
 	Level   *Level
@@ -91,6 +99,8 @@ type EventBlockPlace struct {
 	Cancel  bool
 }
 
+// EventBlockBreak is dispatched when a player breaks a block.
+// If the event is cancelled, the block will not be broken.
 type EventBlockBreak struct {
 	Player  *Player
 	Level   *Level
@@ -99,20 +109,17 @@ type EventBlockBreak struct {
 	Cancel  bool
 }
 
+// EventLevelLoad is dispatched when a level is loaded.
 type EventLevelLoad struct {
 	Level *Level
 }
 
+// EventLevelUnload is dispatched when a level is unloaded.
 type EventLevelUnload struct {
 	Level *Level
 }
 
+// EventLevelSave is dispatched when a level is saved.
 type EventLevelSave struct {
 	Level *Level
-}
-
-type EventMessage struct {
-	Sender  *CommandSender
-	Message string
-	Cancel  bool
 }

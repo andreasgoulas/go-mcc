@@ -29,6 +29,7 @@ const (
 	ColorDefault = ColorWhite
 )
 
+// ColorDesc describes a chat color.
 type ColorDesc struct {
 	color.RGBA
 	Code, Fallback byte
@@ -41,7 +42,8 @@ const (
 	KeyModAlt   = 4
 )
 
-type HotKeyDesc struct {
+// HotKeyDesc describes a text hotkey.
+type HotkeyDesc struct {
 	Label, Action string
 	Key           uint
 	KeyMods       byte
@@ -72,7 +74,7 @@ type CommandSender interface {
 // contains the arguments of the command.
 type CommandHandler func(sender CommandSender, command *Command, message string)
 
-// A Command describes a command.
+// Command describes a command.
 type Command struct {
 	Name        string
 	Description string
@@ -80,6 +82,7 @@ type Command struct {
 	Handler     CommandHandler
 }
 
+// PermissionGroup is a container that holds permission nodes.
 type PermissionGroup struct {
 	permissions [][]string
 }
@@ -98,15 +101,18 @@ func checkPermission(permission []string, template []string) bool {
 	return lenP == lenT
 }
 
+// Clear resets the group to be empty.
 func (group *PermissionGroup) Clear() {
 	group.permissions = nil
 }
 
+// AddPermission adds permission to the group.
 func (group *PermissionGroup) AddPermission(permission string) {
 	split := strings.Split(permission, ".")
 	group.permissions = append(group.permissions, split)
 }
 
+// HasPermission reports whether the group contains permission.
 func (group *PermissionGroup) HasPermission(permission string) bool {
 	if len(permission) == 0 {
 		return true

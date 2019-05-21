@@ -387,7 +387,7 @@ func (packet *Packet) holdThis(block byte, lock bool) {
 	}{packetTypeHoldThis, block, preventChange})
 }
 
-func (packet *Packet) setTextHotKey(hotKey *HotKeyDesc) {
+func (packet *Packet) setTextHotKey(hotkey *HotkeyDesc) {
 	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		Label    [64]byte
@@ -396,10 +396,10 @@ func (packet *Packet) setTextHotKey(hotKey *HotKeyDesc) {
 		KeyMods  byte
 	}{
 		packetTypeSetTextHotKey,
-		padString(hotKey.Label),
-		padString(hotKey.Action),
-		int32(hotKey.Key),
-		hotKey.KeyMods,
+		padString(hotkey.Label),
+		padString(hotkey.Action),
+		int32(hotkey.Key),
+		hotkey.KeyMods,
 	})
 }
 

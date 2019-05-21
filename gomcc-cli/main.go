@@ -94,9 +94,12 @@ func main() {
 
 	loadPlugins("plugins/", server)
 
-	wg := &sync.WaitGroup{}
-	go server.Run(wg)
+	var wg sync.WaitGroup
+	if err := server.Start(&wg); err != nil {
+		log.Println(err)
+		return
+	}
 
-	console := NewConsole(server, wg)
+	console := NewConsole(server, &wg)
 	console.Run()
 }

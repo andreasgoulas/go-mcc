@@ -8,8 +8,10 @@ import (
 	"time"
 )
 
+// LevelStorage is the interface that must be implemented by storage backends
+// that can import and export levels.
 type LevelStorage interface {
-	Load(path string) (*Level, error)
+	Load(name string) (*Level, error)
 	Save(level *Level) error
 }
 
@@ -19,6 +21,7 @@ const (
 	WeatherSnowing = 2
 )
 
+// EnvConfig specifies the appearance of a level.
 type EnvConfig struct {
 	Weather     byte
 	TexturePack string
@@ -67,6 +70,7 @@ const (
 	EnvPropAll = (EnvPropDiffuseColor << 1) - 1
 )
 
+// HackConfig holds configuration for client hacks/cheats.
 type HackConfig struct {
 	Flying          bool
 	NoClip          bool
@@ -76,6 +80,7 @@ type HackConfig struct {
 	JumpHeight      int
 }
 
+// Level represents a level, which contains blocks and various metadata.
 type Level struct {
 	server *Server
 	name   string
@@ -97,6 +102,7 @@ type Level struct {
 	Inventory  []byte
 }
 
+// NewLevel creates a new empty Level with the specified name and dimensions.
 func NewLevel(name string, width, height, length uint) *Level {
 	if len(name) == 0 {
 		return nil
@@ -145,6 +151,7 @@ func NewLevel(name string, width, height, length uint) *Level {
 	}
 }
 
+// Clone returns a duplicate of the level.
 func (level Level) Clone(name string) *Level {
 	if len(name) == 0 {
 		return nil
@@ -154,9 +161,10 @@ func (level Level) Clone(name string) *Level {
 	newLevel.server = nil
 	newLevel.name = name
 	newLevel.dirty = true
-	newLevel.Blocks = make([]byte, len(level.Blocks))
 	newLevel.UUID = RandomUUID()
 	newLevel.TimeCreated = time.Now()
+
+	newLevel.Blocks = make([]byte, len(level.Blocks))
 	copy(newLevel.Blocks, level.Blocks)
 	return &newLevel
 }
@@ -181,14 +189,17 @@ func (level *Level) Length() uint {
 	return level.length
 }
 
+// Size returns the number of blocks.
 func (level *Level) Size() uint {
 	return level.width * level.height * level.length
 }
 
+// Index converts the specified coordinates to an array index.
 func (level *Level) Index(x, y, z uint) uint {
 	return x + level.width*(z+level.length*y)
 }
 
+// Position converts the specified array index to block coordinates.
 func (level *Level) Position(index uint) (x, y, z uint) {
 	x = index % level.width
 	y = (index / level.width) / level.length
@@ -196,6 +207,13 @@ func (level *Level) Position(index uint) (x, y, z uint) {
 	return
 }
 
+// InBounds reports whether the specified coordinates are within the bounds of
+// the level.
+func (level *Level) InBounds(x, y, z uint) bool {
+	return x < level.width && y < level.height && z < level.length
+}
+
+// GetBlock returns the block at the specified coordinates.
 func (level *Level) GetBlock(x, y, z uint) byte {
 	if x < level.width && y < level.height && z < level.length {
 		return level.Blocks[level.Index(x, y, z)]
@@ -204,30 +222,8 @@ func (level *Level) GetBlock(x, y, z uint) byte {
 	return BlockAir
 }
 
-func (level *Level) ForEachEntity(fn func(*Entity)) {
-	if level.server == nil {
-		return
-	}
-
-	level.server.ForEachEntity(func(entity *Entity) {
-		if entity.level == level {
-			fn(entity)
-		}
-	})
-}
-
-func (level *Level) ForEachPlayer(fn func(*Player)) {
-	if level.server == nil {
-		return
-	}
-
-	level.server.ForEachPlayer(func(player *Player) {
-		if player.level == level {
-			fn(player)
-		}
-	})
-}
-
+// SetBlock sets the block at the specified coordinates.
+// broadcast controls whether the block change is sent to the players.
 func (level *Level) SetBlock(x, y, z uint, block byte, broadcast bool) {
 	if x < level.width && y < level.height && z < level.length {
 		level.dirty = true
@@ -240,6 +236,7 @@ func (level *Level) SetBlock(x, y, z uint, block byte, broadcast bool) {
 	}
 }
 
+// FillLayers fills the specified range of layers with block.
 func (level *Level) FillLayers(yStart, yEnd uint, block byte) {
 	start := yStart * level.width * level.length
 	end := (yEnd + 1) * level.width * level.length
@@ -248,18 +245,48 @@ func (level *Level) FillLayers(yStart, yEnd uint, block byte) {
 	}
 }
 
+// ForEachEntity calls fn for each entity in the level.
+func (level *Level) ForEachEntity(fn func(*Entity)) {
+	if level.server == nil {
+		return
+	}
+
+	level.server.ForEachEntity(func(entity *Entity) {
+		if entity.level == level {
+			fn(entity)
+		}
+	})
+}
+
+// ForEachPlayer calls fn for each player in the level.
+func (level *Level) ForEachPlayer(fn func(*Player)) {
+	if level.server == nil {
+		return
+	}
+
+	level.server.ForEachPlayer(func(player *Player) {
+		if player.level == level {
+			fn(player)
+		}
+	})
+}
+
+// SendEnvConfig sends the EnvConfig of the level to all relevant players.
+// mask controls which properties are sent.
 func (level *Level) SendEnvConfig(mask uint32) {
 	level.ForEachPlayer(func(player *Player) {
 		player.sendEnvConfig(level, mask)
 	})
 }
 
+// SendHackConfig sends the HackConfig of the level to all relevant players.
 func (level *Level) SendHackConfig() {
 	level.ForEachPlayer(func(player *Player) {
 		player.sendHackConfig(level)
 	})
 }
 
+// SendMOTD sends the MOTD of the level to all relevant players.
 func (level *Level) SendMOTD() {
 	level.ForEachPlayer(func(player *Player) {
 		if player.cpe[CpeInstantMOTD] {
@@ -273,6 +300,7 @@ func (level *Level) SendMOTD() {
 	})
 }
 
+// BlockBuffer is a queue of block changes to apply to a level.
 type BlockBuffer struct {
 	level   *Level
 	count   uint
@@ -280,10 +308,12 @@ type BlockBuffer struct {
 	blocks  [256]byte
 }
 
-func MakeBlockBuffer(level *Level) BlockBuffer {
-	return BlockBuffer{level: level}
+// NewBlockBuffer returns a new BlockBuffer to queue changes to level.
+func NewBlockBuffer(level *Level) *BlockBuffer {
+	return &BlockBuffer{level: level}
 }
 
+// Set sets the block at the specified coordinates.
 func (buffer *BlockBuffer) Set(x, y, z uint, block byte) {
 	buffer.indices[buffer.count] = int32(buffer.level.Index(x, y, z))
 	buffer.blocks[buffer.count] = block
@@ -293,6 +323,7 @@ func (buffer *BlockBuffer) Set(x, y, z uint, block byte) {
 	}
 }
 
+// Flush flushes any pending changes to the underlying level.
 func (buffer *BlockBuffer) Flush() {
 	for i := uint(0); i < buffer.count; i++ {
 		index := buffer.indices[i]

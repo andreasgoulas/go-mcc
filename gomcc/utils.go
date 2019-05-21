@@ -9,20 +9,6 @@ import (
 	"unicode"
 )
 
-// A Location represents the location of an entity in a world.
-// Yaw and Pitch are specified in degrees.
-type Location struct {
-	X, Y, Z, Yaw, Pitch float64
-}
-
-type BlockPos struct {
-	X, Y, Z uint
-}
-
-type AABB struct {
-	Min, Max BlockPos
-}
-
 func min(x, y int) int {
 	if x < y {
 		return x
@@ -30,6 +16,23 @@ func min(x, y int) int {
 	return y
 }
 
+// Location represents the location of an entity in a world.
+// Yaw and Pitch are specified in degrees.
+type Location struct {
+	X, Y, Z, Yaw, Pitch float64
+}
+
+// Vector3U represents a three-dimensional integer vector.
+type Vector3U struct {
+	X, Y, Z uint
+}
+
+// AABB represents an axis-aligned bounding box.
+type AABB struct {
+	Min, Max Vector3U
+}
+
+// IsValidName reports whether name is a valid entity name.
 func IsValidName(name string) bool {
 	if len(name) < 3 || len(name) > 16 {
 		return false
@@ -44,6 +47,7 @@ func IsValidName(name string) bool {
 	return true
 }
 
+// IsValidMessage reports whether message is a valid chat message.
 func IsValidMessage(message string) bool {
 	for _, c := range message {
 		if c > unicode.MaxASCII || !unicode.IsPrint(c) || c == '&' {
@@ -54,14 +58,15 @@ func IsValidMessage(message string) bool {
 	return true
 }
 
-func WordWrap(message string, limit int) (result []string) {
+// WordWrap wraps message at width characters.
+func WordWrap(message string, width int) (result []string) {
 	for _, line := range strings.Split(message, "\n") {
 		for {
-			if len(line) <= limit {
+			if len(line) <= width {
 				break
 			}
 
-			i := strings.LastIndex(line[:limit+1], " ")
+			i := strings.LastIndex(line[:width+1], " ")
 			if i < 0 {
 				i = strings.LastIndex(line, " ")
 				if i < 0 {
@@ -79,6 +84,7 @@ func WordWrap(message string, limit int) (result []string) {
 	return
 }
 
+// RandomUUID returns a random (Version 4) UUID.
 func RandomUUID() (uuid [16]byte) {
 	rand.Read(uuid[:])
 	uuid[6] = (uuid[6] & 0x0f) | 0x40

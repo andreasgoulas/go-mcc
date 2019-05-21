@@ -272,7 +272,6 @@ func (plugin *CorePlugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleUnbanIp,
 	})
 
-	server.RegisterHandler(gomcc.EventTypePlayerPreLogin, plugin.handlePlayerPreLogin)
 	server.RegisterHandler(gomcc.EventTypePlayerLogin, plugin.handlePlayerLogin)
 	server.RegisterHandler(gomcc.EventTypePlayerJoin, plugin.handlePlayerJoin)
 	server.RegisterHandler(gomcc.EventTypePlayerQuit, plugin.handlePlayerQuit)
@@ -284,18 +283,15 @@ func (plugin *CorePlugin) Disable(server *gomcc.Server) {
 	plugin.Players.Save("players.json")
 }
 
-func (plugin *CorePlugin) handlePlayerPreLogin(eventType gomcc.EventType, event interface{}) {
-	e := event.(*gomcc.EventPlayerPreLogin)
+func (plugin *CorePlugin) handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
+	e := event.(*gomcc.EventPlayerLogin)
 	addr := e.Player.RemoteAddr()
 	if entry := plugin.Bans.IP.IsBanned(addr); entry != nil {
 		e.Cancel = true
 		e.CancelReason = entry.Reason
 		return
 	}
-}
 
-func (plugin *CorePlugin) handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
-	e := event.(*gomcc.EventPlayerLogin)
 	name := e.Player.Name()
 	if entry := plugin.Bans.Name.IsBanned(name); entry != nil {
 		e.Cancel = true

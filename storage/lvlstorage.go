@@ -21,10 +21,14 @@ type lvlHeader struct {
 	PermissionVisit, PermissionBuild byte
 }
 
+// LvlStorage is an implementation of the gomcc.LevelStorage interface that can
+// handle MCSharp (.lvl) levels.
 type LvlStorage struct {
 	dirPath string
 }
 
+// NewLvlStorage creates a new LvlStorage that uses dirPath as the working
+// directory.
 func NewLvlStorage(dirPath string) *LvlStorage {
 	os.Mkdir(dirPath, 0777)
 	return &LvlStorage{dirPath}
@@ -34,6 +38,7 @@ func (storage *LvlStorage) getPath(name string) string {
 	return storage.dirPath + name + ".lvl"
 }
 
+// Load implements gomcc.LevelStorage.
 func (storage *LvlStorage) Load(name string) (level *gomcc.Level, err error) {
 	file, err := os.Open(storage.getPath(name))
 	if err != nil {
@@ -73,6 +78,7 @@ func (storage *LvlStorage) Load(name string) (level *gomcc.Level, err error) {
 	return
 }
 
+// Save implements gomcc.LevelStorage.
 func (storage *LvlStorage) Save(level *gomcc.Level) (err error) {
 	file, err := os.Create(storage.getPath(level.Name()))
 	if err != nil {

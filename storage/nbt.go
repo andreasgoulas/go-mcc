@@ -30,13 +30,15 @@ const (
 	NbtTagCount = NbtTagMax + 1
 )
 
+// NbtMarshal writes the NBT representation of v into w.
 func NbtMarshal(w io.Writer, name string, v interface{}) error {
 	encoder := newNbtEncoder(w)
 	return encoder.writeTag(name, reflect.ValueOf(v))
 }
 
-func NbtUnmarshal(w io.Reader, v interface{}) error {
-	decoder := newNbtDecoder(w)
+// NbtUnmarshal reads NBT data from r into v.
+func NbtUnmarshal(r io.Reader, v interface{}) error {
+	decoder := newNbtDecoder(r)
 	_, err := decoder.readTag(reflect.ValueOf(v).Elem())
 	return err
 }

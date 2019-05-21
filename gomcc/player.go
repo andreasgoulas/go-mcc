@@ -26,6 +26,7 @@ const (
 	stateGame   = 2
 )
 
+// Player represents a game client.
 type Player struct {
 	*Entity
 
@@ -51,6 +52,7 @@ type Player struct {
 	pingBuffer pingBuffer
 }
 
+// NewPlayer returns a new Player.
 func NewPlayer(conn net.Conn, server *Server) *Player {
 	player := &Player{
 		Entity:        NewEntity("", server),
@@ -73,12 +75,14 @@ func NewPlayer(conn net.Conn, server *Server) *Player {
 	return player
 }
 
+// AddPermissionGroup adds group to the permission groups of the player.
 func (player *Player) AddPermissionGroup(group *PermissionGroup) {
 	player.permGroupsLock.Lock()
 	player.permGroups = append(player.permGroups, group)
 	player.permGroupsLock.Unlock()
 }
 
+// RemovePermissionGroup removes group from the permission groups of the player.
 func (player *Player) RemovePermissionGroup(group *PermissionGroup) {
 	player.permGroupsLock.RLock()
 	defer player.permGroupsLock.RUnlock()
@@ -100,6 +104,7 @@ func (player *Player) RemovePermissionGroup(group *PermissionGroup) {
 	player.permGroups = player.permGroups[:len(player.permGroups)-1]
 }
 
+// HasPermission reports whether the player has the specified permission node.
 func (player *Player) HasPermission(permission string) bool {
 	player.permGroupsLock.RLock()
 	defer player.permGroupsLock.RUnlock()
@@ -113,16 +118,19 @@ func (player *Player) HasPermission(permission string) bool {
 	return false
 }
 
+// HasExtension reports whther the player has the specified CPE extension.
 func (player *Player) HasExtension(extension uint) bool {
 	return player.cpe[extension]
 }
 
+// RemoteAddr returns the remote network address as a string.
 func (player *Player) RemoteAddr() string {
 	addr := player.conn.RemoteAddr()
 	host, _, _ := net.SplitHostPort(addr.String())
 	return host
 }
 
+// Disconnect closes the remote connection.
 func (player *Player) Disconnect() {
 	if player.state == stateClosed {
 		return
@@ -148,6 +156,7 @@ func (player *Player) Disconnect() {
 	}
 }
 
+// Kick kicks and disconnects the player.
 func (player *Player) Kick(reason string) {
 	var packet Packet
 	packet.kick(reason)
@@ -156,6 +165,7 @@ func (player *Player) Kick(reason string) {
 	player.Disconnect()
 }
 
+// SendBlockPermission sends the block permissions to the player.
 func (player *Player) SendBlockPermissions() {
 	if player.state != stateGame {
 		return
@@ -176,6 +186,7 @@ func (player *Player) ClickDistance() float64 {
 	return player.clickDistance
 }
 
+// SetClickDistance sets the maximum reach distance of the player.
 func (player *Player) SetClickDistance(value float64) {
 	player.clickDistance = value
 	if player.state == stateGame && player.cpe[CpeClickDistance] {
@@ -185,6 +196,8 @@ func (player *Player) SetClickDistance(value float64) {
 	}
 }
 
+// CanReach reports whether the player can reach the block at the specified
+// coordinates.
 func (player *Player) CanReach(x, y, z uint) bool {
 	loc := player.location
 	dx := math.Min(math.Abs(loc.X-float64(x)), math.Abs(loc.X-float64(x+1)))
@@ -197,6 +210,8 @@ func (player *Player) HeldBlock() byte {
 	return player.heldBlock
 }
 
+// SetHeldBlock changes the block that the player is holding.
+// lock controls whether the player can change the held block.
 func (player *Player) SetHeldBlock(block byte, lock bool) {
 	level := player.level
 	if player.state == stateGame && player.cpe[CpeHeldBlock] && level != nil {
@@ -206,6 +221,7 @@ func (player *Player) SetHeldBlock(block byte, lock bool) {
 	}
 }
 
+// SetSelection marks a cuboid selection.
 func (player *Player) SetSelection(id byte, label string, box AABB, color color.RGBA) {
 	if player.state == stateGame && player.cpe[CpeSelectionCuboid] {
 		var packet Packet
@@ -214,6 +230,7 @@ func (player *Player) SetSelection(id byte, label string, box AABB, color color.
 	}
 }
 
+// ResetSelection resets the selection with the specified ID.
 func (player *Player) ResetSelection(id byte) {
 	if player.state == stateGame && player.cpe[CpeSelectionCuboid] {
 		var packet Packet
@@ -261,10 +278,12 @@ func (player *Player) convertMessage(message string) string {
 	return buf.String()
 }
 
+// SendMessage sends a message to the player.
 func (player *Player) SendMessage(message string) {
 	player.SendMessageExt(MessageChat, message)
 }
 
+// SendMessageExt sends a message with the specified type to the player.
 func (player *Player) SendMessageExt(msgType int, message string) {
 	if msgType != MessageChat && !player.cpe[CpeMessageTypes] {
 		if msgType == MessageAnnouncement {
@@ -283,6 +302,8 @@ func (player *Player) SendMessageExt(msgType int, message string) {
 	player.sendPacket(packet)
 }
 
+// SetSpawn sets the spawn location of the player to the current player
+// location.
 func (player *Player) SetSpawn() {
 	player.sendSpawn(player.Entity)
 }
@@ -456,10 +477,10 @@ func (player *Player) sendCPE() {
 	player.sendPacket(packet)
 }
 
-func (player *Player) sendHotKeys() {
+func (player *Player) sendHotkeys() {
 	if player.state == stateGame && player.cpe[CpeTextHotKey] {
 		var packet Packet
-		for _, desc := range player.server.HotKeys {
+		for _, desc := range player.server.Hotkeys {
 			packet.setTextHotKey(&desc)
 		}
 
@@ -766,6 +787,11 @@ func (player *Player) login() {
 		return
 	}
 
+	if player.server.FindEntity(player.name) != nil {
+		player.Kick("Already logged in!")
+		return
+	}
+
 	for {
 		count := player.server.playerCount
 		if int(count) >= player.server.Config.MaxPlayers {
@@ -804,7 +830,7 @@ func (player *Player) login() {
 		}
 	})
 
-	player.sendHotKeys()
+	player.sendHotkeys()
 	player.sendTextColors()
 	player.server.BroadcastMessage(ColorYellow + player.name + " has joined the game!")
 
@@ -866,24 +892,12 @@ func (player *Player) handleIdentification(reader io.Reader) {
 	player.SkinName = player.name
 	player.ListName = player.name
 
-	event := EventPlayerPreLogin{player, false, ""}
-	player.server.FireEvent(EventTypePlayerPreLogin, &event)
-	if event.Cancel {
-		player.Kick(event.CancelReason)
-		return
-	}
-
 	key := trimString(packet.VerificationKey)
 	if player.server.Config.Verify {
 		if !player.verify([]byte(key)) {
 			player.Kick("Login failed!")
 			return
 		}
-	}
-
-	if player.server.FindEntity(player.name) != nil {
-		player.Kick("Already logged in!")
-		return
 	}
 
 	if packet.Type == 0x42 {

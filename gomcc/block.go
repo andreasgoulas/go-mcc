@@ -183,6 +183,7 @@ const (
 	DrawModeGas    = 4
 )
 
+// BlockDefinition describes a custom block.
 type BlockDefinition struct {
 	Name     string
 	Fallback byte

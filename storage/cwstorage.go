@@ -27,10 +27,14 @@ type cwLevel struct {
 	BlockArray    []byte
 }
 
+// CwStorage is an implementation of the gomcc.levelStorage interface that can
+// handle ClassicWorld (.cw) levels.
 type CwStorage struct {
 	dirPath string
 }
 
+// NewCwStorage creates a new CwStorage that uses dirPath as the working
+// directory.
 func NewCwStorage(dirPath string) *CwStorage {
 	os.Mkdir(dirPath, 0777)
 	return &CwStorage{dirPath}
@@ -40,6 +44,7 @@ func (storage *CwStorage) getPath(name string) string {
 	return storage.dirPath + name + ".cw"
 }
 
+// Load implements gomcc.LevelStorage.
 func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 	path := storage.getPath(name)
 	file, err := os.Open(path)
@@ -89,6 +94,7 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 	return
 }
 
+// Save implements gomcc.LevelStorage.
 func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 	file, err := os.Create(storage.getPath(level.Name()))
 	if err != nil {

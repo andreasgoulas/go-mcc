@@ -7,10 +7,13 @@ import (
 	"strconv"
 )
 
+// Generator is the interface that must be implemented by level generators.
 type Generator interface {
 	Generate(level *Level)
 }
 
+// FlatGenerator is an implementation of the Generator interface that can
+// generate flat grass levels.
 type FlatGenerator struct {
 	GrassHeight  int
 	SurfaceBlock byte
@@ -30,6 +33,7 @@ func newFlatGenerator(args ...string) Generator {
 	}
 }
 
+// Generate implements Generator.
 func (generator *FlatGenerator) Generate(level *Level) {
 	grassHeight := uint(generator.GrassHeight)
 	if generator.GrassHeight < 0 {
