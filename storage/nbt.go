@@ -241,6 +241,10 @@ func (nbt *nbtEncoder) writePayload(tagType byte, v reflect.Value) (err error) {
 }
 
 func (nbt *nbtEncoder) writeTag(name string, v reflect.Value) (err error) {
+	if v.Kind() == reflect.Interface {
+		v = v.Elem()
+	}
+
 	tagType := nbt.tagType(v.Type())
 	if tagType == NbtTagEnd {
 		return errors.New("nbt: invalid type")
@@ -352,8 +356,9 @@ func (nbt *nbtDecoder) readCompound(v reflect.Value) (err error) {
 			return errors.New("nbt: invalid type")
 		}
 
-		m := make(map[string]interface{})
-		v.Set(reflect.ValueOf(m))
+		var m map[string]interface{}
+		v.Set(reflect.MakeMap(reflect.TypeOf(m)))
+		v = v.Elem()
 
 	case reflect.Map:
 		if v.Type().Key().Kind() != reflect.String {
@@ -455,16 +460,17 @@ func (nbt *nbtDecoder) readTag(v reflect.Value) (tagType byte, err error) {
 	}
 
 	var target reflect.Value
-	name = strings.ToLower(name)
 	switch v.Kind() {
 	case reflect.Map:
-		target = reflect.New(v.Type().Elem())
+		mapElem := v.Type().Elem()
+		target = reflect.New(mapElem).Elem()
 
 	case reflect.Struct:
+		key := strings.ToLower(name)
 		for i := 0; i < v.NumField(); i++ {
 			field := v.Type().Field(i)
-			if strings.ToLower(field.Tag.Get("nbt")) == name ||
-				(field.Tag.Get("nbt") == "" && strings.ToLower(field.Name) == name) {
+			if strings.ToLower(field.Tag.Get("nbt")) == key ||
+				(field.Tag.Get("nbt") == "" && strings.ToLower(field.Name) == key) {
 				target = v.Field(i)
 				break
 			}

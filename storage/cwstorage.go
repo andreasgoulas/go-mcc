@@ -105,6 +105,7 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 		level.TimeCreated = stat.ModTime()
 	}
 
+	level.Metadata = cw.Metadata
 	return
 }
 
@@ -135,6 +136,6 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 			byte(level.Spawn.Pitch * 256 / 360),
 		},
 		level.Blocks,
-		nil,
+		level.Metadata,
 	})
 }

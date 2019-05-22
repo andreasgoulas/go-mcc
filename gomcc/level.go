@@ -93,6 +93,7 @@ type Level struct {
 
 	UUID        [16]byte
 	TimeCreated time.Time
+	Metadata    map[string]interface{}
 
 	MOTD       string
 	Spawn      Location
