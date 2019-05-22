@@ -25,6 +25,7 @@ type cwLevel struct {
 	TimeCreated   int64
 	Spawn         cwSpawn
 	BlockArray    []byte
+	Metadata      map[string]interface{}
 }
 
 // CwStorage is an implementation of the gomcc.levelStorage interface that can
@@ -134,5 +135,6 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 			byte(level.Spawn.Pitch * 256 / 360),
 		},
 		level.Blocks,
+		nil,
 	})
 }
