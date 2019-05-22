@@ -82,7 +82,7 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 	if storage.FixSpawnPosition &&
 		cw.Spawn.X < cw.X && cw.Spawn.Y < cw.Y && cw.Spawn.Z < cw.Z {
 		level.Spawn.X = float64(cw.Spawn.X) + 0.5
-		level.Spawn.Y = float64(cw.Spawn.Y) + 1.0
+		level.Spawn.Y = float64(cw.Spawn.Y)
 		level.Spawn.Z = float64(cw.Spawn.Z) + 0.5
 	} else {
 		level.Spawn.X = float64(cw.Spawn.X) / 32

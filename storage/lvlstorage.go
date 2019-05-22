@@ -66,9 +66,9 @@ func (storage *LvlStorage) Load(name string) (level *gomcc.Level, err error) {
 		return nil, errors.New("lvlstorage: level creation failed")
 	}
 
-	level.Spawn.X = float64(header.SpawnX) / 32
-	level.Spawn.Y = float64(header.SpawnY) / 32
-	level.Spawn.Z = float64(header.SpawnZ) / 32
+	level.Spawn.X = float64(header.SpawnX) + 0.5
+	level.Spawn.Y = float64(header.SpawnY)
+	level.Spawn.Z = float64(header.SpawnZ) + 0.5
 	level.Spawn.Yaw = float64(header.SpawnYaw) * 360 / 256
 	level.Spawn.Pitch = float64(header.SpawnPitch) * 360 / 256
 	if _, err = io.ReadFull(reader, level.Blocks); err != nil {
@@ -94,9 +94,9 @@ func (storage *LvlStorage) Save(level *gomcc.Level) (err error) {
 		uint16(level.Width()),
 		uint16(level.Height()),
 		uint16(level.Length()),
-		uint16(level.Spawn.X * 32),
-		uint16(level.Spawn.Y * 32),
-		uint16(level.Spawn.Z * 32),
+		uint16(level.Spawn.X),
+		uint16(level.Spawn.Y),
+		uint16(level.Spawn.Z),
 		byte(level.Spawn.Yaw * 256 / 360),
 		byte(level.Spawn.Pitch * 256 / 360),
 		0, 0,
