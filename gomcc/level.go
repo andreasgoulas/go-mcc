@@ -85,11 +85,11 @@ type Level struct {
 	server *Server
 	name   string
 
-	dirty  bool
 	width  uint
 	height uint
 	length uint
 	Blocks []byte
+	Dirty  bool
 
 	UUID        [16]byte
 	TimeCreated time.Time
@@ -110,11 +110,11 @@ func NewLevel(name string, width, height, length uint) *Level {
 
 	return &Level{
 		name:        name,
-		dirty:       true,
 		width:       width,
 		height:      height,
 		length:      length,
 		Blocks:      make([]byte, width*height*length),
+		Dirty:       true,
 		UUID:        RandomUUID(),
 		TimeCreated: time.Now(),
 		Spawn: Location{
@@ -160,7 +160,7 @@ func (level Level) Clone(name string) *Level {
 	newLevel := level
 	newLevel.server = nil
 	newLevel.name = name
-	newLevel.dirty = true
+	newLevel.Dirty = true
 	newLevel.UUID = RandomUUID()
 	newLevel.TimeCreated = time.Now()
 
@@ -226,7 +226,7 @@ func (level *Level) GetBlock(x, y, z uint) byte {
 // broadcast controls whether the block change is sent to the players.
 func (level *Level) SetBlock(x, y, z uint, block byte, broadcast bool) {
 	if x < level.width && y < level.height && z < level.length {
-		level.dirty = true
+		level.Dirty = true
 		level.Blocks[level.Index(x, y, z)] = block
 		if broadcast {
 			level.ForEachPlayer(func(player *Player) {
@@ -330,7 +330,7 @@ func (buffer *BlockBuffer) Flush() {
 		buffer.level.Blocks[index] = buffer.blocks[i]
 	}
 
-	buffer.level.dirty = true
+	buffer.level.Dirty = true
 	buffer.level.ForEachPlayer(func(player *Player) {
 		var blocks [256]byte
 		for i := uint(0); i < buffer.count; i++ {

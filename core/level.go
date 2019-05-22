@@ -183,7 +183,10 @@ func (plugin *CorePlugin) handleSetSpawn(sender gomcc.CommandSender, command *go
 	args := strings.Fields(message)
 	switch len(args) {
 	case 0:
-		player.Level().Spawn = player.Location()
+		level := player.Level()
+		level.Spawn = player.Location()
+		level.Dirty = true
+
 		player.SetSpawn()
 		sender.SendMessage("Spawn location set to your current location")
 
