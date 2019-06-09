@@ -29,8 +29,7 @@ func (plugin *CorePlugin) handleBan(sender gomcc.CommandSender, command *gomcc.C
 
 	if plugin.Bans.Name.Ban(args[0], reason, sender.Name()) {
 		sender.SendMessage("Player " + args[0] + " banned")
-		player := sender.Server().FindPlayer(args[0])
-		if player != nil {
+		if player := sender.Server().FindPlayer(args[0]); player != nil {
 			player.Kick(reason)
 		}
 	} else {

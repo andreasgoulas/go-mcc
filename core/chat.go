@@ -127,12 +127,15 @@ func (plugin *CorePlugin) handleMute(sender gomcc.CommandSender, command *gomcc.
 		return
 	}
 
-	cplayer := plugin.Players.OfflinePlayer(args[0])
-	cplayer.Mute = !cplayer.Mute
-	if cplayer.Mute {
-		sender.SendMessage("Player " + args[0] + " muted")
+	if cplayer := plugin.Players.OfflinePlayer(args[0]); cplayer != nil {
+		cplayer.Mute = !cplayer.Mute
+		if cplayer.Mute {
+			sender.SendMessage("Player " + args[0] + " muted")
+		} else {
+			sender.SendMessage("Player " + args[0] + " unmuted")
+		}
 	} else {
-		sender.SendMessage("Player " + args[0] + " unmuted")
+		sender.SendMessage("Player " + args[0] + " not found")
 	}
 }
 
