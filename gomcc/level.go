@@ -124,6 +124,7 @@ func NewLevel(name string, width, height, length uint) *Level {
 			Z: float64(length) / 2,
 		},
 		EnvConfig: EnvConfig{
+			Weather:         WeatherSunny,
 			SideBlock:       BlockBedrock,
 			EdgeBlock:       BlockActiveWater,
 			EdgeHeight:      height / 2,
@@ -139,7 +140,6 @@ func NewLevel(name string, width, height, length uint) *Level {
 			FogColor:        DefaultColor,
 			AmbientColor:    DefaultColor,
 			DiffuseColor:    DefaultColor,
-			Weather:         WeatherSunny,
 		},
 		HackConfig: HackConfig{
 			Flying:          false,

@@ -30,6 +30,11 @@ const (
 	NbtTagCount = NbtTagMax + 1
 )
 
+// NbtUnknown collects all unknown fields of an NBT object.
+type NbtUnknown map[string]interface{}
+
+var nbtUnknownType = reflect.TypeOf(NbtUnknown{})
+
 // NbtMarshal writes the NBT representation of v into w.
 // name specifies the name of the root tag.
 func NbtMarshal(w io.Writer, name string, v interface{}) error {
@@ -170,6 +175,14 @@ func (nbt *nbtEncoder) writeCompound(v reflect.Value) error {
 	case reflect.Struct:
 		for i := 0; i < v.Type().NumField(); i++ {
 			field := v.Type().Field(i)
+			if field.Type == nbtUnknownType {
+				if err := nbt.writeCompound(v.Field(i)); err != nil {
+					return err
+				}
+
+				continue
+			}
+
 			if field.Anonymous {
 				continue
 			}
@@ -190,7 +203,7 @@ func (nbt *nbtEncoder) writeCompound(v reflect.Value) error {
 		}
 	}
 
-	return nbt.writeByte(NbtTagEnd)
+	return nil
 }
 
 func (nbt *nbtEncoder) writeIntArray(tag []int32) error {
@@ -230,7 +243,11 @@ func (nbt *nbtEncoder) writePayload(tagType byte, v reflect.Value) (err error) {
 	case NbtTagList:
 		err = nbt.writeList(v)
 	case NbtTagCompound:
-		err = nbt.writeCompound(v)
+		if err = nbt.writeCompound(v); err != nil {
+			return
+		}
+
+		err = nbt.writeByte(NbtTagEnd)
 	case NbtTagIntArray:
 		err = nbt.writeIntArray(v.Interface().([]int32))
 	case NbtTagLongArray:
@@ -461,20 +478,44 @@ func (nbt *nbtDecoder) readTag(v reflect.Value) (tagType byte, err error) {
 
 	var target reflect.Value
 	switch v.Kind() {
-	case reflect.Map:
-		mapElem := v.Type().Elem()
-		target = reflect.New(mapElem).Elem()
-
 	case reflect.Struct:
 		key := strings.ToLower(name)
 		for i := 0; i < v.NumField(); i++ {
 			field := v.Type().Field(i)
-			if strings.ToLower(field.Tag.Get("nbt")) == key ||
-				(field.Tag.Get("nbt") == "" && strings.ToLower(field.Name) == key) {
+			fname := strings.ToLower(field.Name)
+			tag := strings.ToLower(field.Tag.Get("nbt"))
+			if tag == key || (tag == "" && fname == key) {
 				target = v.Field(i)
 				break
 			}
 		}
+
+		if target.IsValid() {
+			break
+		}
+
+		for i := 0; i < v.NumField(); i++ {
+			field := v.Type().Field(i)
+			if field.Type == nbtUnknownType {
+				target = v.Field(i)
+				break
+			}
+		}
+
+		if !target.IsValid() {
+			break
+		}
+
+		v = target
+		if v.IsNil() {
+			v.Set(reflect.MakeMap(v.Type()))
+		}
+
+		fallthrough
+
+	case reflect.Map:
+		mapElem := v.Type().Elem()
+		target = reflect.New(mapElem).Elem()
 	}
 
 	err = nbt.readPayload(tagType, target)
