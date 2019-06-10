@@ -17,8 +17,18 @@ type cwSpawn struct {
 	H, P    byte
 }
 
+type cwEnvWeatherType struct {
+	ExtensionVersion int32
+	WeatherType      byte
+}
+
+type cwCPE struct {
+	EnvWeatherType cwEnvWeatherType
+}
+
 type cwMetadata struct {
 	NbtUnknown
+	CPE cwCPE
 }
 
 type cwLevel struct {
@@ -109,6 +119,11 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 		level.TimeCreated = stat.ModTime()
 	}
 
+	cpe := cw.Metadata.CPE
+	if cpe.EnvWeatherType.ExtensionVersion == 1 {
+		level.EnvConfig.Weather = cpe.EnvWeatherType.WeatherType
+	}
+
 	level.Metadata = cw.Metadata.NbtUnknown
 	return
 }
@@ -123,6 +138,10 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 	writer := gzip.NewWriter(file)
 	defer file.Close()
 	defer writer.Close()
+
+	cpe := cwCPE{
+		cwEnvWeatherType{1, level.EnvConfig.Weather},
+	}
 
 	return NbtMarshal(writer, "ClassicWorld", cwLevel{
 		1,
@@ -142,6 +161,7 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 		level.Blocks,
 		cwMetadata{
 			level.Metadata,
+			cpe,
 		},
 	})
 }
