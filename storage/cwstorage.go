@@ -18,6 +18,11 @@ type cwSpawn struct {
 	H, P    byte
 }
 
+type cwClickDistance struct {
+	ExtensionVersion int16
+	Distance         int16
+}
+
 type cwColor struct {
 	R, G, B int16
 }
@@ -58,6 +63,7 @@ type cwEnvWeatherType struct {
 
 type cwCPE struct {
 	NbtUnknown
+	ClickDistance    cwClickDistance
 	EnvColors        cwEnvColors
 	EnvMapAppearance cwEnvMapAppearance
 	EnvWeatherType   cwEnvWeatherType
@@ -157,6 +163,10 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 	}
 
 	cpe := cw.Metadata.CPE
+	if cpe.ClickDistance.ExtensionVersion == 1 {
+		level.HackConfig.ReachDistance = float64(cpe.ClickDistance.Distance) / 32
+	}
+
 	if cpe.EnvColors.ExtensionVersion == 1 {
 		level.EnvConfig.SkyColor = cpe.EnvColors.Sky.decode()
 		level.EnvConfig.CloudColor = cpe.EnvColors.Cloud.decode()
@@ -194,6 +204,7 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 
 	cpe := cwCPE{
 		level.MetadataCPE,
+		cwClickDistance{1, int16(level.HackConfig.ReachDistance * 32)},
 		cwEnvColors{
 			1,
 			encodeColor(level.EnvConfig.SkyColor),

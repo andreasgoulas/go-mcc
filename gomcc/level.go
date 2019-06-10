@@ -72,6 +72,7 @@ const (
 
 // HackConfig holds configuration for client hacks/cheats.
 type HackConfig struct {
+	ReachDistance   float64
 	Flying          bool
 	NoClip          bool
 	Speeding        bool
@@ -93,12 +94,12 @@ type Level struct {
 
 	UUID        [16]byte
 	TimeCreated time.Time
-	MOTD       string
-	Spawn      Location
-	EnvConfig  EnvConfig
-	HackConfig HackConfig
-	BlockDefs  []*BlockDefinition
-	Inventory  []byte
+	MOTD        string
+	Spawn       Location
+	EnvConfig   EnvConfig
+	HackConfig  HackConfig
+	BlockDefs   []*BlockDefinition
+	Inventory   []byte
 
 	Metadata, MetadataCPE map[string]interface{}
 }
@@ -142,6 +143,7 @@ func NewLevel(name string, width, height, length uint) *Level {
 			DiffuseColor:    DefaultColor,
 		},
 		HackConfig: HackConfig{
+			ReachDistance:   5,
 			Flying:          false,
 			NoClip:          false,
 			Speeding:        false,

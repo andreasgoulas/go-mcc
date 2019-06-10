@@ -360,11 +360,11 @@ func (packet *Packet) extEntry(entry *ExtEntry) {
 	}{packetTypeExtEntry, padString(entry.Name), int32(entry.Version)})
 }
 
-func (packet *Packet) clickDistance(player *Player) {
+func (packet *Packet) clickDistance(dist float64) {
 	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		Distance int16
-	}{packetTypeSetClickDistance, int16(player.clickDistance * 32)})
+	}{packetTypeSetClickDistance, int16(dist * 32)})
 }
 
 func (packet *Packet) customBlockSupportLevel(level byte) {

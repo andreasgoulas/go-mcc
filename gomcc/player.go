@@ -45,7 +45,6 @@ type Player struct {
 	message       string
 	maxBlockID    byte
 	cpeBlockLevel byte
-	clickDistance float64
 	heldBlock     byte
 
 	pingTicker *time.Ticker
@@ -55,10 +54,9 @@ type Player struct {
 // NewPlayer returns a new Player.
 func NewPlayer(conn net.Conn, server *Server) *Player {
 	player := &Player{
-		Entity:        NewEntity("", server),
-		conn:          conn,
-		state:         stateClosed,
-		clickDistance: 5.0,
+		Entity: NewEntity("", server),
+		conn:   conn,
+		state:  stateClosed,
 	}
 
 	for i := 0; i < BlockCount; i++ {
@@ -182,20 +180,6 @@ func (player *Player) SendBlockPermissions() {
 	player.sendPacket(packet)
 }
 
-func (player *Player) ClickDistance() float64 {
-	return player.clickDistance
-}
-
-// SetClickDistance sets the maximum reach distance of the player.
-func (player *Player) SetClickDistance(value float64) {
-	player.clickDistance = value
-	if player.state == stateGame && player.cpe[CpeClickDistance] {
-		var packet Packet
-		packet.clickDistance(player)
-		player.sendPacket(packet)
-	}
-}
-
 // CanReach reports whether the player can reach the block at the specified
 // coordinates.
 func (player *Player) CanReach(x, y, z uint) bool {
@@ -203,7 +187,8 @@ func (player *Player) CanReach(x, y, z uint) bool {
 	dx := math.Min(math.Abs(loc.X-float64(x)), math.Abs(loc.X-float64(x+1)))
 	dy := math.Min(math.Abs(loc.Y-float64(y)), math.Abs(loc.Y-float64(y+1)))
 	dz := math.Min(math.Abs(loc.Z-float64(z)), math.Abs(loc.Z-float64(z+1)))
-	return dx*dx+dy*dy+dz*dz <= player.clickDistance*player.clickDistance
+	dist := player.level.HackConfig.ReachDistance
+	return dx*dx+dy*dy+dz*dz <= dist*dist
 }
 
 func (player *Player) HeldBlock() byte {
@@ -687,11 +672,19 @@ func (player *Player) sendEnvConfig(level *Level, mask uint32) {
 }
 
 func (player *Player) sendHackConfig(level *Level) {
-	if player.state == stateGame && player.cpe[CpeHackControl] {
-		var packet Packet
-		packet.hackControl(&level.HackConfig)
-		player.sendPacket(packet)
+	if player.state != stateGame {
+		return
 	}
+
+	var packet Packet
+	if player.cpe[CpeClickDistance] {
+		packet.clickDistance(level.HackConfig.ReachDistance)
+	}
+	if player.cpe[CpeHackControl] {
+		packet.hackControl(&level.HackConfig)
+	}
+
+	player.sendPacket(packet)
 }
 
 func (player *Player) handle() {
