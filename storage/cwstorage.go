@@ -17,13 +17,23 @@ type cwSpawn struct {
 	H, P    byte
 }
 
+type cwEnvMapAppearance struct {
+	ExtensionVersion int32
+	TextureURL       string
+	SideBlock        byte
+	EdgeBlock        byte
+	SideLevel        int16
+}
+
 type cwEnvWeatherType struct {
 	ExtensionVersion int32
 	WeatherType      byte
 }
 
 type cwCPE struct {
-	EnvWeatherType cwEnvWeatherType
+	NbtUnknown
+	EnvMapAppearance cwEnvMapAppearance
+	EnvWeatherType   cwEnvWeatherType
 }
 
 type cwMetadata struct {
@@ -124,7 +134,15 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 		level.EnvConfig.Weather = cpe.EnvWeatherType.WeatherType
 	}
 
+	if cpe.EnvMapAppearance.ExtensionVersion == 1 {
+		level.EnvConfig.TexturePack = cpe.EnvMapAppearance.TextureURL
+		level.EnvConfig.SideBlock = cpe.EnvMapAppearance.SideBlock
+		level.EnvConfig.EdgeBlock = cpe.EnvMapAppearance.EdgeBlock
+		level.EnvConfig.EdgeHeight = uint(cpe.EnvMapAppearance.SideLevel)
+	}
+
 	level.Metadata = cw.Metadata.NbtUnknown
+	level.MetadataCPE = cpe.NbtUnknown
 	return
 }
 
@@ -140,6 +158,14 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 	defer writer.Close()
 
 	cpe := cwCPE{
+		level.MetadataCPE,
+		cwEnvMapAppearance{
+			1,
+			level.EnvConfig.TexturePack,
+			level.EnvConfig.SideBlock,
+			level.EnvConfig.EdgeBlock,
+			int16(level.EnvConfig.EdgeHeight),
+		},
 		cwEnvWeatherType{1, level.EnvConfig.Weather},
 	}
 

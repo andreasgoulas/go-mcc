@@ -93,14 +93,14 @@ type Level struct {
 
 	UUID        [16]byte
 	TimeCreated time.Time
-	Metadata    map[string]interface{}
-
 	MOTD       string
 	Spawn      Location
 	EnvConfig  EnvConfig
 	HackConfig HackConfig
 	BlockDefs  []*BlockDefinition
 	Inventory  []byte
+
+	Metadata, MetadataCPE map[string]interface{}
 }
 
 // NewLevel creates a new empty Level with the specified name and dimensions.
