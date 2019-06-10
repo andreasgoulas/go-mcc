@@ -6,6 +6,7 @@ package storage
 import (
 	"compress/gzip"
 	"errors"
+	"image/color"
 	"os"
 	"time"
 
@@ -15,6 +16,31 @@ import (
 type cwSpawn struct {
 	X, Y, Z int16
 	H, P    byte
+}
+
+type cwColor struct {
+	R, G, B int16
+}
+
+func encodeColor(c color.RGBA) cwColor {
+	if c.A != 0 {
+		return cwColor{int16(c.R), int16(c.G), int16(c.B)}
+	} else {
+		return cwColor{-1, -1, -1}
+	}
+}
+
+func (c cwColor) decode() color.RGBA {
+	if c.R < 0 || c.G < 0 || c.B < 0 {
+		return gomcc.DefaultColor
+	} else {
+		return color.RGBA{byte(c.R), byte(c.G), byte(c.B), 0xff}
+	}
+}
+
+type cwEnvColors struct {
+	ExtensionVersion                   int32
+	Sky, Cloud, Fog, Ambient, Sunlight cwColor
 }
 
 type cwEnvMapAppearance struct {
@@ -32,6 +58,7 @@ type cwEnvWeatherType struct {
 
 type cwCPE struct {
 	NbtUnknown
+	EnvColors        cwEnvColors
 	EnvMapAppearance cwEnvMapAppearance
 	EnvWeatherType   cwEnvWeatherType
 }
@@ -130,8 +157,12 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 	}
 
 	cpe := cw.Metadata.CPE
-	if cpe.EnvWeatherType.ExtensionVersion == 1 {
-		level.EnvConfig.Weather = cpe.EnvWeatherType.WeatherType
+	if cpe.EnvColors.ExtensionVersion == 1 {
+		level.EnvConfig.SkyColor = cpe.EnvColors.Sky.decode()
+		level.EnvConfig.CloudColor = cpe.EnvColors.Cloud.decode()
+		level.EnvConfig.FogColor = cpe.EnvColors.Fog.decode()
+		level.EnvConfig.AmbientColor = cpe.EnvColors.Ambient.decode()
+		level.EnvConfig.DiffuseColor = cpe.EnvColors.Sunlight.decode()
 	}
 
 	if cpe.EnvMapAppearance.ExtensionVersion == 1 {
@@ -139,6 +170,10 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 		level.EnvConfig.SideBlock = cpe.EnvMapAppearance.SideBlock
 		level.EnvConfig.EdgeBlock = cpe.EnvMapAppearance.EdgeBlock
 		level.EnvConfig.EdgeHeight = uint(cpe.EnvMapAppearance.SideLevel)
+	}
+
+	if cpe.EnvWeatherType.ExtensionVersion == 1 {
+		level.EnvConfig.Weather = cpe.EnvWeatherType.WeatherType
 	}
 
 	level.Metadata = cw.Metadata.NbtUnknown
@@ -159,6 +194,14 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 
 	cpe := cwCPE{
 		level.MetadataCPE,
+		cwEnvColors{
+			1,
+			encodeColor(level.EnvConfig.SkyColor),
+			encodeColor(level.EnvConfig.CloudColor),
+			encodeColor(level.EnvConfig.FogColor),
+			encodeColor(level.EnvConfig.AmbientColor),
+			encodeColor(level.EnvConfig.DiffuseColor),
+		},
 		cwEnvMapAppearance{
 			1,
 			level.EnvConfig.TexturePack,
