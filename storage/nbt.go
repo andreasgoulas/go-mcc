@@ -30,11 +30,6 @@ const (
 	NbtTagCount = NbtTagMax + 1
 )
 
-// NbtUnknown collects all unknown fields of an NBT object.
-type NbtUnknown map[string]interface{}
-
-var nbtUnknownType = reflect.TypeOf(NbtUnknown{})
-
 // NbtMarshal writes the NBT representation of v into w.
 // name specifies the name of the root tag.
 func NbtMarshal(w io.Writer, name string, v interface{}) error {
@@ -175,15 +170,13 @@ func (nbt *nbtEncoder) writeCompound(v reflect.Value) error {
 	case reflect.Struct:
 		for i := 0; i < v.Type().NumField(); i++ {
 			field := v.Type().Field(i)
-			if field.Type == nbtUnknownType {
-				if err := nbt.writeCompound(v.Field(i)); err != nil {
-					return err
+			if field.Anonymous {
+				if field.Type.Kind() == reflect.Map {
+					if err := nbt.writeCompound(v.Field(i)); err != nil {
+						return err
+					}
 				}
 
-				continue
-			}
-
-			if field.Anonymous {
 				continue
 			}
 
@@ -496,7 +489,7 @@ func (nbt *nbtDecoder) readTag(v reflect.Value) (tagType byte, err error) {
 
 		for i := 0; i < v.NumField(); i++ {
 			field := v.Type().Field(i)
-			if field.Type == nbtUnknownType {
+			if field.Anonymous && field.Type.Kind() == reflect.Map {
 				target = v.Field(i)
 				break
 			}
@@ -507,6 +500,11 @@ func (nbt *nbtDecoder) readTag(v reflect.Value) (tagType byte, err error) {
 		}
 
 		v = target
+		if v.Type().Key().Kind() != reflect.String {
+			err = errors.New("nbt: invalid type")
+			return
+		}
+
 		if v.IsNil() {
 			v.Set(reflect.MakeMap(v.Type()))
 		}

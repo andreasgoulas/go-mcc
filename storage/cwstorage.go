@@ -6,6 +6,7 @@ package storage
 import (
 	"compress/gzip"
 	"errors"
+	"fmt"
 	"image/color"
 	"os"
 	"time"
@@ -61,16 +62,41 @@ type cwEnvWeatherType struct {
 	WeatherType      byte
 }
 
+type cwBlockDefinition struct {
+	ID             byte
+	Name           string
+	Speed          float32
+	CollideType    byte
+	Textures       []byte
+	TransmitsLight byte
+	FullBright     byte
+	WalkSound      byte
+	Shape          byte
+	BlockDraw      byte
+	Fog            []byte
+	Coords         []byte
+}
+
+type CwBlockDefinitionMap map[string]cwBlockDefinition
+
+type cwBlockDefinitions struct {
+	ExtensionVersion int32
+	CwBlockDefinitionMap
+}
+
+type CwMetadataMap map[string]interface{}
+
 type cwCPE struct {
-	NbtUnknown
+	CwMetadataMap
 	ClickDistance    cwClickDistance
 	EnvColors        cwEnvColors
 	EnvMapAppearance cwEnvMapAppearance
 	EnvWeatherType   cwEnvWeatherType
+	BlockDefinitions cwBlockDefinitions
 }
 
 type cwMetadata struct {
-	NbtUnknown
+	CwMetadataMap
 	CPE cwCPE
 }
 
@@ -186,8 +212,65 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 		level.EnvConfig.Weather = cpe.EnvWeatherType.WeatherType
 	}
 
-	level.Metadata = cw.Metadata.NbtUnknown
-	level.MetadataCPE = cpe.NbtUnknown
+	if cpe.BlockDefinitions.ExtensionVersion == 1 {
+		count := 0
+		for _, v := range cpe.BlockDefinitions.CwBlockDefinitionMap {
+			if int(v.ID) >= count {
+				count = int(v.ID) + 1
+			}
+		}
+
+		if count > 0 {
+			level.BlockDefs = make([]*gomcc.BlockDefinition, count)
+		}
+
+		for _, v := range cpe.BlockDefinitions.CwBlockDefinitionMap {
+			def := &gomcc.BlockDefinition{
+				Name:        v.Name,
+				Speed:       float64(v.Speed),
+				CollideMode: v.CollideType,
+				WalkSound:   v.WalkSound,
+				BlockLight:  true,
+				FullBright:  false,
+				DrawMode:    v.BlockDraw,
+				Shape:       v.Shape,
+			}
+
+			if v.TransmitsLight == 1 {
+				def.BlockLight = false
+			}
+
+			if v.FullBright == 0 {
+				def.FullBright = false
+			}
+
+			if len(v.Textures) == 6 {
+				def.Textures[gomcc.BlockFacePosY] = uint(v.Textures[0])
+				def.Textures[gomcc.BlockFaceNegY] = uint(v.Textures[1])
+				def.Textures[gomcc.BlockFaceNegX] = uint(v.Textures[2])
+				def.Textures[gomcc.BlockFacePosX] = uint(v.Textures[3])
+				def.Textures[gomcc.BlockFaceNegZ] = uint(v.Textures[4])
+				def.Textures[gomcc.BlockFacePosZ] = uint(v.Textures[5])
+			}
+
+			if len(v.Fog) == 4 {
+				def.FogDensity = v.Fog[0]
+				def.Fog = color.RGBA{v.Fog[1], v.Fog[2], v.Fog[3], 0xff}
+			}
+
+			if len(v.Coords) == 6 {
+				def.AABB = gomcc.AABB{
+					gomcc.Vector3U{uint(v.Coords[0]), uint(v.Coords[1]), uint(v.Coords[2])},
+					gomcc.Vector3U{uint(v.Coords[3]), uint(v.Coords[4]), uint(v.Coords[5])},
+				}
+			}
+
+			level.BlockDefs[v.ID] = def
+		}
+	}
+
+	level.Metadata = cw.Metadata.CwMetadataMap
+	level.MetadataCPE = cw.Metadata.CPE.CwMetadataMap
 	return
 }
 
@@ -201,6 +284,51 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 	writer := gzip.NewWriter(file)
 	defer file.Close()
 	defer writer.Close()
+
+	var defs CwBlockDefinitionMap
+	if level.BlockDefs != nil {
+		defs = make(CwBlockDefinitionMap)
+	}
+
+	for i, v := range level.BlockDefs {
+		if v != nil {
+			key := fmt.Sprintf("Block%d", i)
+			def := cwBlockDefinition{
+				ID:          byte(i),
+				Name:        v.Name,
+				Speed:       float32(v.Speed),
+				CollideType: v.CollideMode,
+				Textures: []byte{
+					byte(v.Textures[gomcc.BlockFacePosY]),
+					byte(v.Textures[gomcc.BlockFaceNegY]),
+					byte(v.Textures[gomcc.BlockFaceNegX]),
+					byte(v.Textures[gomcc.BlockFacePosX]),
+					byte(v.Textures[gomcc.BlockFaceNegZ]),
+					byte(v.Textures[gomcc.BlockFacePosZ]),
+				},
+				TransmitsLight: 1,
+				FullBright:     0,
+				WalkSound:      v.WalkSound,
+				Shape:          v.Shape,
+				BlockDraw:      v.DrawMode,
+				Fog:            []byte{v.FogDensity, v.Fog.R, v.Fog.G, v.Fog.B},
+				Coords: []byte{
+					byte(v.AABB.Min.X), byte(v.AABB.Min.Y), byte(v.AABB.Min.Z),
+					byte(v.AABB.Max.X), byte(v.AABB.Max.Y), byte(v.AABB.Max.Z),
+				},
+			}
+
+			if v.BlockLight {
+				def.TransmitsLight = 0
+			}
+
+			if v.FullBright {
+				def.FullBright = 1
+			}
+
+			defs[key] = def
+		}
+	}
 
 	cpe := cwCPE{
 		level.MetadataCPE,
@@ -221,6 +349,7 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 			int16(level.EnvConfig.EdgeHeight),
 		},
 		cwEnvWeatherType{1, level.EnvConfig.Weather},
+		cwBlockDefinitions{1, defs},
 	}
 
 	return NbtMarshal(writer, "ClassicWorld", cwLevel{
