@@ -77,6 +77,12 @@ type cwBlockDefinition struct {
 	Coords         []byte
 }
 
+var cwFaceIndices = []uint{
+	gomcc.FacePosY, gomcc.FaceNegY,
+	gomcc.FaceNegX, gomcc.FacePosX,
+	gomcc.FaceNegZ, gomcc.FacePosZ,
+}
+
 type CwBlockDefinitionMap map[string]cwBlockDefinition
 
 type cwBlockDefinitions struct {
@@ -244,13 +250,14 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 				def.FullBright = false
 			}
 
-			if len(v.Textures) == 6 {
-				def.Textures[gomcc.BlockFacePosY] = uint(v.Textures[0])
-				def.Textures[gomcc.BlockFaceNegY] = uint(v.Textures[1])
-				def.Textures[gomcc.BlockFaceNegX] = uint(v.Textures[2])
-				def.Textures[gomcc.BlockFacePosX] = uint(v.Textures[3])
-				def.Textures[gomcc.BlockFaceNegZ] = uint(v.Textures[4])
-				def.Textures[gomcc.BlockFacePosZ] = uint(v.Textures[5])
+			if len(v.Textures) >= 6 {
+				extTex := len(v.Textures) >= 12
+				for i, face := range cwFaceIndices {
+					def.Textures[face] = uint(v.Textures[i])
+					if extTex {
+						def.Textures[face] |= uint(v.Textures[i+6]) << 8
+					}
+				}
 			}
 
 			if len(v.Fog) == 4 {
@@ -292,20 +299,12 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 
 	for i, v := range level.BlockDefs {
 		if v != nil {
-			key := fmt.Sprintf("Block%d", i)
 			def := cwBlockDefinition{
-				ID:          byte(i),
-				Name:        v.Name,
-				Speed:       float32(v.Speed),
-				CollideType: v.CollideMode,
-				Textures: []byte{
-					byte(v.Textures[gomcc.BlockFacePosY]),
-					byte(v.Textures[gomcc.BlockFaceNegY]),
-					byte(v.Textures[gomcc.BlockFaceNegX]),
-					byte(v.Textures[gomcc.BlockFacePosX]),
-					byte(v.Textures[gomcc.BlockFaceNegZ]),
-					byte(v.Textures[gomcc.BlockFacePosZ]),
-				},
+				ID:             byte(i),
+				Name:           v.Name,
+				Speed:          float32(v.Speed),
+				CollideType:    v.CollideMode,
+				Textures:       make([]byte, 12),
 				TransmitsLight: 1,
 				FullBright:     0,
 				WalkSound:      v.WalkSound,
@@ -318,6 +317,11 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 				},
 			}
 
+			for i, face := range cwFaceIndices {
+				def.Textures[i] = byte(v.Textures[face])
+				def.Textures[i+6] = byte(v.Textures[face] >> 8)
+			}
+
 			if v.BlockLight {
 				def.TransmitsLight = 0
 			}
@@ -326,6 +330,7 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 				def.FullBright = 1
 			}
 
+			key := fmt.Sprintf("Block%d", i)
 			defs[key] = def
 		}
 	}

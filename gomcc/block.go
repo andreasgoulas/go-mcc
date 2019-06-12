@@ -140,15 +140,12 @@ func FallbackBlock(block byte) byte {
 }
 
 const (
-	BlockFacePosX = 0
-	BlockFaceNegX = 1
-	BlockFacePosY = 2
-	BlockFaceNegY = 3
-	BlockFacePosZ = 4
-	BlockFaceNegZ = 5
-
-	BlockFaceMax   = BlockFaceNegZ
-	BlockFaceCount = BlockFaceMax + 1
+	FacePosX = 0
+	FaceNegX = 1
+	FacePosY = 2
+	FaceNegY = 3
+	FacePosZ = 4
+	FaceNegZ = 5
 )
 
 const (
@@ -195,7 +192,7 @@ type BlockDefinition struct {
 	BlockLight bool
 	FullBright bool
 	DrawMode   byte
-	Textures   [BlockFaceCount]uint
+	Textures   [6]uint
 
 	Shape byte
 	AABB  AABB

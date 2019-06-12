@@ -591,16 +591,16 @@ func (packet *Packet) defineBlock(id byte, block *BlockDefinition, ext bool, ext
 		byte(64*math.Log2(block.Speed) + 128),
 	})
 
-	packet.textureID(block.Textures[BlockFacePosY], extTex)
+	packet.textureID(block.Textures[FacePosY], extTex)
 	if ext {
-		packet.textureID(block.Textures[BlockFaceNegX], extTex)
-		packet.textureID(block.Textures[BlockFacePosX], extTex)
-		packet.textureID(block.Textures[BlockFaceNegZ], extTex)
-		packet.textureID(block.Textures[BlockFacePosZ], extTex)
+		packet.textureID(block.Textures[FaceNegX], extTex)
+		packet.textureID(block.Textures[FacePosX], extTex)
+		packet.textureID(block.Textures[FaceNegZ], extTex)
+		packet.textureID(block.Textures[FacePosZ], extTex)
 	} else {
-		packet.textureID(block.Textures[BlockFacePosX], extTex)
+		packet.textureID(block.Textures[FacePosX], extTex)
 	}
-	packet.textureID(block.Textures[BlockFaceNegY], extTex)
+	packet.textureID(block.Textures[FaceNegY], extTex)
 
 	transmitsLight := byte(1)
 	if block.BlockLight {
