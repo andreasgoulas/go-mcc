@@ -91,24 +91,23 @@ func (plugin *CorePlugin) handleRank(sender gomcc.CommandSender, command *gomcc.
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
-		if player := plugin.Players.OfflinePlayer(args[0]); player != nil {
-			sender.SendMessage("The rank of " + args[0] + " is " + player.Rank)
+		if info := plugin.Players.Find(args[0]); info != nil {
+			sender.SendMessage("The rank of " + args[0] + " is " + info.Rank)
 		} else {
 			sender.SendMessage("Player " + args[0] + " not found")
 		}
 
 	case 2:
-		if player := plugin.Players.OfflinePlayer(args[0]); player != nil {
-			if plugin.Ranks.Rank(args[1]) == nil {
+		if info := plugin.Players.Find(args[0]); info != nil {
+			if plugin.Ranks.Find(args[1]) == nil {
 				sender.SendMessage("Rank " + args[1] + " not found")
 				return
 			}
 
-			player.Rank = args[1]
+			info.Rank = args[1]
 			sender.SendMessage("Rank of " + args[0] + " set to " + args[1])
-
-			if player := plugin.Players.Player(args[0]); player != nil {
-				plugin.Ranks.Update(player)
+			if info.Player != nil {
+				plugin.Ranks.SetPermissions(info)
 			}
 		} else {
 			sender.SendMessage("Player " + args[0] + " not found")

@@ -109,8 +109,8 @@ func (plugin *CorePlugin) handleSeen(sender gomcc.CommandSender, command *gomcc.
 		return
 	}
 
-	if cplayer := plugin.Players.OfflinePlayer(args[0]); cplayer != nil {
-		dt := time.Now().Sub(cplayer.LastLogin)
+	if info := plugin.Players.Find(args[0]); info != nil {
+		dt := time.Now().Sub(info.LastLogin)
 		sender.SendMessage("Player " + args[0] + " was last seen " + fmtDuration(dt) + " ago")
 	} else {
 		sender.SendMessage("Player " + args[0] + " not found")

@@ -10,7 +10,7 @@ import (
 	"github.com/structinf/Go-MCC/gomcc"
 )
 
-type OfflinePlayer struct {
+type PlayerInfo struct {
 	Rank        string    `json:"rank"`
 	FirstLogin  time.Time `json:"first-login"`
 	LastLogin   time.Time `json:"last-login"`
@@ -18,9 +18,11 @@ type OfflinePlayer struct {
 	Permissions []string  `json:"permissions,omitempty"`
 	Ignore      []string  `json:"ignore,omitempty"`
 	Mute        bool      `json:"mute"`
+
+	Player *Player `json:"-"`
 }
 
-func (player *OfflinePlayer) IsIgnored(name string) bool {
+func (player *PlayerInfo) IsIgnored(name string) bool {
 	for _, p := range player.Ignore {
 		if p == name {
 			return true
@@ -31,9 +33,7 @@ func (player *OfflinePlayer) IsIgnored(name string) bool {
 }
 
 type Player struct {
-	*OfflinePlayer
-
-	Player    *gomcc.Player
+	*gomcc.Player
 	PermGroup *gomcc.PermissionGroup
 
 	LastSender   string
@@ -42,60 +42,50 @@ type Player struct {
 }
 
 type PlayerManager struct {
-	Lock           sync.RWMutex
-	Players        map[string]*Player
-	OfflinePlayers map[string]*OfflinePlayer
+	Lock    sync.RWMutex
+	Players map[string]*PlayerInfo
 }
 
 func (manager *PlayerManager) Load(path string) {
 	manager.Lock.Lock()
-	manager.Players = make(map[string]*Player)
-	loadJson(path, &manager.OfflinePlayers)
+	manager.Players = make(map[string]*PlayerInfo)
+	loadJson(path, &manager.Players)
 	manager.Lock.Unlock()
 }
 
 func (manager *PlayerManager) Save(path string) {
 	manager.Lock.RLock()
-	saveJson(path, &manager.OfflinePlayers)
+	saveJson(path, &manager.Players)
 	manager.Lock.RUnlock()
 }
 
-func (manager *PlayerManager) OfflinePlayer(name string) *OfflinePlayer {
-	manager.Lock.RLock()
-	defer manager.Lock.RUnlock()
-	return manager.OfflinePlayers[name]
-}
-
-func (manager *PlayerManager) Player(name string) *Player {
+func (manager *PlayerManager) Find(name string) *PlayerInfo {
 	manager.Lock.RLock()
 	defer manager.Lock.RUnlock()
 	return manager.Players[name]
 }
 
-func (manager *PlayerManager) Add(player *gomcc.Player) (cplayer *Player, ok bool) {
+func (manager *PlayerManager) Add(player *gomcc.Player) (info *PlayerInfo, firstLogin bool) {
 	name := player.Name()
-
 	manager.Lock.RLock()
-	data, ok := manager.OfflinePlayers[name]
-	manager.Lock.RUnlock()
+	defer manager.Lock.RUnlock()
 
+	info, ok := manager.Players[name]
 	if !ok {
-		manager.Lock.Lock()
-		data = &OfflinePlayer{}
-		manager.OfflinePlayers[name] = data
-		manager.Lock.Unlock()
+		info = &PlayerInfo{}
+		manager.Players[name] = info
 	}
 
-	manager.Lock.Lock()
-	cplayer = &Player{OfflinePlayer: data, Player: player}
-	manager.Players[name] = cplayer
-	manager.Lock.Unlock()
-
-	return
+	info.Player = &Player{Player: player}
+	return info, !ok
 }
 
 func (manager *PlayerManager) Remove(player *gomcc.Player) {
+	name := player.Name()
 	manager.Lock.Lock()
-	delete(manager.Players, player.Name())
-	manager.Lock.Unlock()
+	defer manager.Lock.Unlock()
+
+	if info, ok := manager.Players[name]; ok {
+		info.Player = nil
+	}
 }

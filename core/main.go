@@ -302,18 +302,18 @@ func (plugin *CorePlugin) handlePlayerLogin(eventType gomcc.EventType, event int
 
 func (plugin *CorePlugin) handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerJoin)
-	cplayer, ok := plugin.Players.Add(e.Player)
-	if !ok {
-		cplayer.FirstLogin = time.Now()
-		cplayer.Rank = plugin.Ranks.Default
+	info, firstLogin := plugin.Players.Add(e.Player)
+	if firstLogin {
+		info.FirstLogin = time.Now()
+		info.Rank = plugin.Ranks.Default
 	}
 
-	cplayer.LastLogin = time.Now()
-	if len(cplayer.Nickname) != 0 {
-		e.Player.Nickname = cplayer.Nickname
+	info.LastLogin = time.Now()
+	if len(info.Nickname) != 0 {
+		e.Player.Nickname = info.Nickname
 	}
 
-	plugin.Ranks.Update(cplayer)
+	plugin.Ranks.SetPermissions(info)
 }
 
 func (plugin *CorePlugin) handlePlayerQuit(eventType gomcc.EventType, event interface{}) {
@@ -325,19 +325,19 @@ func (plugin *CorePlugin) handlePlayerChat(eventType gomcc.EventType, event inte
 	e := event.(*gomcc.EventPlayerChat)
 	name := e.Player.Name()
 
-	player := plugin.Players.Player(name)
-	if player.Mute {
+	info := plugin.Players.Find(name)
+	if info.Mute {
 		e.Player.SendMessage("You are muted")
 		e.Cancel = true
 		return
 	}
 
-	if rank := plugin.Ranks.Rank(player.Rank); rank != nil {
+	if rank := plugin.Ranks.Find(info.Rank); rank != nil {
 		e.Format = fmt.Sprintf("%s%%s%s: &f%%s", rank.Prefix, rank.Suffix)
 	}
 
 	for i := len(e.Targets) - 1; i >= 0; i-- {
-		if plugin.Players.Player(e.Targets[i].Name()).IsIgnored(name) {
+		if plugin.Players.Find(e.Targets[i].Name()).IsIgnored(name) {
 			e.Targets = append(e.Targets[:i], e.Targets[i+1:]...)
 		}
 	}

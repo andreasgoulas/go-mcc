@@ -33,24 +33,25 @@ func (manager *RankManager) Save(path string) {
 	manager.Lock.RUnlock()
 }
 
-func (manager *RankManager) Rank(name string) *Rank {
+func (manager *RankManager) Find(name string) *Rank {
 	manager.Lock.Lock()
 	defer manager.Lock.Unlock()
 	return manager.Ranks[name]
 }
 
-func (manager *RankManager) Update(player *Player) {
+func (manager *RankManager) SetPermissions(info *PlayerInfo) {
+	player := info.Player
 	if player.PermGroup == nil {
 		player.PermGroup = &gomcc.PermissionGroup{}
-		player.Player.AddPermissionGroup(player.PermGroup)
+		player.AddPermissionGroup(player.PermGroup)
 	}
 
 	player.PermGroup.Clear()
-	for _, perm := range player.Permissions {
+	for _, perm := range info.Permissions {
 		player.PermGroup.AddPermission(perm)
 	}
 
-	if rank := manager.Rank(player.Rank); rank != nil {
+	if rank := manager.Find(info.Rank); rank != nil {
 		for _, perm := range rank.Permissions {
 			player.PermGroup.AddPermission(perm)
 		}
