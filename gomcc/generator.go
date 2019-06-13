@@ -37,7 +37,7 @@ func newFlatGenerator(args ...string) Generator {
 func (generator *FlatGenerator) Generate(level *Level) {
 	grassHeight := uint(generator.GrassHeight)
 	if generator.GrassHeight < 0 {
-		grassHeight = level.height / 2
+		grassHeight = level.Height / 2
 	}
 
 	level.FillLayers(grassHeight, grassHeight, generator.SurfaceBlock)

@@ -84,14 +84,14 @@ type HackConfig struct {
 // Level represents a level, which contains blocks and various metadata.
 type Level struct {
 	server *Server
-	name   string
 
-	width  uint
-	height uint
-	length uint
+	Width  uint
+	Height uint
+	Length uint
 	Blocks []byte
 	Dirty  bool
 
+	Name        string
 	UUID        [16]byte
 	TimeCreated time.Time
 	MOTD        string
@@ -111,12 +111,12 @@ func NewLevel(name string, width, height, length uint) *Level {
 	}
 
 	return &Level{
-		name:        name,
-		width:       width,
-		height:      height,
-		length:      length,
+		Width:       width,
+		Height:      height,
+		Length:      length,
 		Blocks:      make([]byte, width*height*length),
 		Dirty:       true,
+		Name:        name,
 		UUID:        RandomUUID(),
 		TimeCreated: time.Now(),
 		Spawn: Location{
@@ -162,7 +162,7 @@ func (level Level) Clone(name string) *Level {
 
 	newLevel := level
 	newLevel.server = nil
-	newLevel.name = name
+	newLevel.Name = name
 	newLevel.Dirty = true
 	newLevel.UUID = RandomUUID()
 	newLevel.TimeCreated = time.Now()
@@ -176,49 +176,33 @@ func (level *Level) Server() *Server {
 	return level.server
 }
 
-func (level *Level) Name() string {
-	return level.name
-}
-
-func (level *Level) Width() uint {
-	return level.width
-}
-
-func (level *Level) Height() uint {
-	return level.height
-}
-
-func (level *Level) Length() uint {
-	return level.length
-}
-
 // Size returns the number of blocks.
 func (level *Level) Size() uint {
-	return level.width * level.height * level.length
+	return level.Width * level.Height * level.Length
 }
 
 // Index converts the specified coordinates to an array index.
 func (level *Level) Index(x, y, z uint) uint {
-	return x + level.width*(z+level.length*y)
+	return x + level.Width*(z+level.Length*y)
 }
 
 // Position converts the specified array index to block coordinates.
 func (level *Level) Position(index uint) (x, y, z uint) {
-	x = index % level.width
-	y = (index / level.width) / level.length
-	z = (index / level.width) % level.length
+	x = index % level.Width
+	y = (index / level.Width) / level.Length
+	z = (index / level.Width) % level.Length
 	return
 }
 
 // InBounds reports whether the specified coordinates are within the bounds of
 // the level.
 func (level *Level) InBounds(x, y, z uint) bool {
-	return x < level.width && y < level.height && z < level.length
+	return x < level.Width && y < level.Height && z < level.Length
 }
 
 // GetBlock returns the block at the specified coordinates.
 func (level *Level) GetBlock(x, y, z uint) byte {
-	if x < level.width && y < level.height && z < level.length {
+	if x < level.Width && y < level.Height && z < level.Length {
 		return level.Blocks[level.Index(x, y, z)]
 	}
 
@@ -228,7 +212,7 @@ func (level *Level) GetBlock(x, y, z uint) byte {
 // SetBlock sets the block at the specified coordinates.
 // broadcast controls whether the block change is sent to the players.
 func (level *Level) SetBlock(x, y, z uint, block byte, broadcast bool) {
-	if x < level.width && y < level.height && z < level.length {
+	if x < level.Width && y < level.Height && z < level.Length {
 		level.Dirty = true
 		level.Blocks[level.Index(x, y, z)] = block
 		if broadcast {
@@ -241,8 +225,8 @@ func (level *Level) SetBlock(x, y, z uint, block byte, broadcast bool) {
 
 // FillLayers fills the specified range of layers with block.
 func (level *Level) FillLayers(yStart, yEnd uint, block byte) {
-	start := yStart * level.width * level.length
-	end := (yEnd + 1) * level.width * level.length
+	start := yStart * level.Width * level.Length
+	end := (yEnd + 1) * level.Width * level.Length
 	for i := start; i < end; i++ {
 		level.Blocks[i] = block
 	}

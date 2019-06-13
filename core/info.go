@@ -61,7 +61,7 @@ func (plugin *CorePlugin) handleLevels(sender gomcc.CommandSender, command *gomc
 
 	var levels []string
 	sender.Server().ForEachLevel(func(level *gomcc.Level) {
-		levels = append(levels, level.Name())
+		levels = append(levels, level.Name)
 	})
 
 	sort.Strings(levels)

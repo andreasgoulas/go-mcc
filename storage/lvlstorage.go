@@ -80,7 +80,7 @@ func (storage *LvlStorage) Load(name string) (level *gomcc.Level, err error) {
 
 // Save implements gomcc.LevelStorage.
 func (storage *LvlStorage) Save(level *gomcc.Level) (err error) {
-	file, err := os.Create(storage.getPath(level.Name()))
+	file, err := os.Create(storage.getPath(level.Name))
 	if err != nil {
 		return
 	}
@@ -91,9 +91,9 @@ func (storage *LvlStorage) Save(level *gomcc.Level) (err error) {
 
 	if err = binary.Write(writer, binary.BigEndian, lvlHeader{
 		1874,
-		uint16(level.Width()),
-		uint16(level.Height()),
-		uint16(level.Length()),
+		uint16(level.Width),
+		uint16(level.Height),
+		uint16(level.Length),
 		uint16(level.Spawn.X),
 		uint16(level.Spawn.Y),
 		uint16(level.Spawn.Z),

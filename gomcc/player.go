@@ -382,7 +382,7 @@ func (player *Player) sendLevel(level *Level) {
 	player.sendHackConfig(level)
 
 	var packet Packet
-	packet.levelFinalize(level.width, level.height, level.length)
+	packet.levelFinalize(level.Width, level.Height, level.Length)
 	player.sendPacket(packet)
 }
 
@@ -916,7 +916,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 	block := packet.BlockType
 
 	level := player.level
-	if x >= level.width || y >= level.height || z >= level.length {
+	if !level.InBounds(x, y, z) {
 		return
 	}
 

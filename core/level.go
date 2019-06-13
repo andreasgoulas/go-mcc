@@ -54,7 +54,7 @@ func (plugin *CorePlugin) handleGoto(sender gomcc.CommandSender, command *gomcc.
 	}
 
 	if level == player.Level() {
-		sender.SendMessage("You are already in " + level.Name())
+		sender.SendMessage("You are already in " + level.Name)
 		return
 	}
 
@@ -81,7 +81,7 @@ func (plugin *CorePlugin) handleMain(sender gomcc.CommandSender, command *gomcc.
 	args := strings.Fields(message)
 	switch len(args) {
 	case 0:
-		sender.SendMessage("Main level is " + sender.Server().MainLevel.Name())
+		sender.SendMessage("Main level is " + sender.Server().MainLevel.Name)
 
 	case 1:
 		level := sender.Server().FindLevel(args[0])
@@ -91,7 +91,7 @@ func (plugin *CorePlugin) handleMain(sender gomcc.CommandSender, command *gomcc.
 		}
 
 		sender.Server().MainLevel = level
-		sender.SendMessage("Set main level to " + level.Name())
+		sender.SendMessage("Set main level to " + level.Name)
 
 	default:
 		sender.SendMessage("Usage: " + command.Name + " <level>")
@@ -145,7 +145,7 @@ func (plugin *CorePlugin) handleNewLvl(sender gomcc.CommandSender, command *gomc
 	generator.Generate(level)
 
 	sender.Server().AddLevel(level)
-	sender.SendMessage("Level " + level.Name() + " created")
+	sender.SendMessage("Level " + level.Name + " created")
 }
 
 func (plugin *CorePlugin) handleSave(sender gomcc.CommandSender, command *gomcc.Command, message string) {
@@ -170,7 +170,7 @@ func (plugin *CorePlugin) handleSave(sender gomcc.CommandSender, command *gomcc.
 	}
 
 	sender.Server().SaveLevel(level)
-	sender.SendMessage("Level " + level.Name() + " saved")
+	sender.SendMessage("Level " + level.Name + " saved")
 }
 
 func (plugin *CorePlugin) handleSetSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {

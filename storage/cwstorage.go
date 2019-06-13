@@ -236,18 +236,10 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 				Speed:       float64(v.Speed),
 				CollideMode: v.CollideType,
 				WalkSound:   v.WalkSound,
-				BlockLight:  true,
-				FullBright:  false,
+				BlockLight:  v.TransmitsLight == 0,
+				FullBright:  v.FullBright == 1,
 				DrawMode:    v.BlockDraw,
 				Shape:       v.Shape,
-			}
-
-			if v.TransmitsLight == 1 {
-				def.BlockLight = false
-			}
-
-			if v.FullBright == 0 {
-				def.FullBright = false
 			}
 
 			if len(v.Textures) >= 6 {
@@ -283,7 +275,7 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 
 // Save implements gomcc.LevelStorage.
 func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
-	file, err := os.Create(storage.getPath(level.Name()))
+	file, err := os.Create(storage.getPath(level.Name))
 	if err != nil {
 		return
 	}
@@ -359,11 +351,11 @@ func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
 
 	return NbtMarshal(writer, "ClassicWorld", cwLevel{
 		1,
-		level.Name(),
+		level.Name,
 		level.UUID[:],
-		int16(level.Width()),
-		int16(level.Height()),
-		int16(level.Length()),
+		int16(level.Width),
+		int16(level.Height),
+		int16(level.Length),
 		level.TimeCreated.Unix(),
 		cwSpawn{
 			int16(level.Spawn.X * 32),

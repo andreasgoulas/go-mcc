@@ -199,7 +199,7 @@ func (server *Server) FindLevel(name string) *Level {
 	defer server.levelsLock.RUnlock()
 
 	for _, level := range server.levels {
-		if level.name == name {
+		if level.Name == name {
 			return level
 		}
 	}
