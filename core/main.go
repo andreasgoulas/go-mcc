@@ -91,6 +91,13 @@ func (plugin *CorePlugin) Enable(server *gomcc.Server) {
 	})
 
 	server.RegisterCommand(&gomcc.Command{
+		Name:        "env",
+		Description: "Change the environment of the current level.",
+		Permission:  "core.env",
+		Handler:     plugin.handleEnv,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
 		Name:        "goto",
 		Description: "Move to another level.",
 		Permission:  "core.goto",

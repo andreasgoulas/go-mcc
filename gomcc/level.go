@@ -110,7 +110,7 @@ func NewLevel(name string, width, height, length uint) *Level {
 		return nil
 	}
 
-	return &Level{
+	level := &Level{
 		Width:       width,
 		Height:      height,
 		Length:      length,
@@ -124,24 +124,6 @@ func NewLevel(name string, width, height, length uint) *Level {
 			Y: float64(height) * 3 / 4,
 			Z: float64(length) / 2,
 		},
-		EnvConfig: EnvConfig{
-			Weather:         WeatherSunny,
-			SideBlock:       BlockBedrock,
-			EdgeBlock:       BlockActiveWater,
-			EdgeHeight:      height / 2,
-			CloudHeight:     height + 2,
-			MaxViewDistance: 0,
-			CloudSpeed:      1.0,
-			WeatherSpeed:    1.0,
-			WeatherFade:     1.0,
-			ExpFog:          false,
-			SideOffset:      -2,
-			SkyColor:        DefaultColor,
-			CloudColor:      DefaultColor,
-			FogColor:        DefaultColor,
-			AmbientColor:    DefaultColor,
-			DiffuseColor:    DefaultColor,
-		},
 		HackConfig: HackConfig{
 			ReachDistance:   5,
 			Flying:          false,
@@ -152,6 +134,9 @@ func NewLevel(name string, width, height, length uint) *Level {
 			JumpHeight:      -1,
 		},
 	}
+
+	level.EnvConfig = level.DefaultEnv()
+	return level
 }
 
 // Clone returns a duplicate of the level.
@@ -174,6 +159,28 @@ func (level Level) Clone(name string) *Level {
 
 func (level *Level) Server() *Server {
 	return level.server
+}
+
+// DefaultEnv returns the default EnvConfig for this level.
+func (level *Level) DefaultEnv() EnvConfig {
+	return EnvConfig{
+		Weather:         WeatherSunny,
+		SideBlock:       BlockBedrock,
+		EdgeBlock:       BlockActiveWater,
+		EdgeHeight:      level.Height / 2,
+		CloudHeight:     level.Height + 2,
+		MaxViewDistance: 0,
+		CloudSpeed:      1.0,
+		WeatherSpeed:    1.0,
+		WeatherFade:     1.0,
+		ExpFog:          false,
+		SideOffset:      -2,
+		SkyColor:        DefaultColor,
+		CloudColor:      DefaultColor,
+		FogColor:        DefaultColor,
+		AmbientColor:    DefaultColor,
+		DiffuseColor:    DefaultColor,
+	}
 }
 
 // Size returns the number of blocks.
