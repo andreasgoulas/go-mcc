@@ -942,7 +942,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 			return
 		}
 
-		level.SetBlock(x, y, z, BlockAir, true)
+		level.SetBlock(x, y, z, BlockAir)
 
 	case 0x01:
 		if block > player.maxBlockID {
@@ -964,7 +964,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 			return
 		}
 
-		level.SetBlock(x, y, z, block, true)
+		level.SetBlock(x, y, z, block)
 	}
 }
 

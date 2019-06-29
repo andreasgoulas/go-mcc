@@ -5,6 +5,7 @@ package gomcc
 
 import (
 	"image/color"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,10 @@ type LevelStorage interface {
 	Load(name string) (*Level, error)
 	Save(level *Level) error
 }
+
+// Simulator is the interface that must be implemented by block-based physics
+// simulators.
+type Simulator func(level *Level, block byte, x, y, z uint)
 
 const (
 	WeatherSunny   = 0
@@ -102,6 +107,9 @@ type Level struct {
 	Inventory   []byte
 
 	Metadata, MetadataCPE map[string]interface{}
+
+	blockUpdates     []uint
+	blockUpdatesLock sync.Mutex
 }
 
 // NewLevel creates a new empty Level with the specified name and dimensions.
@@ -217,16 +225,19 @@ func (level *Level) GetBlock(x, y, z uint) byte {
 }
 
 // SetBlock sets the block at the specified coordinates.
-// broadcast controls whether the block change is sent to the players.
-func (level *Level) SetBlock(x, y, z uint, block byte, broadcast bool) {
-	if x < level.Width && y < level.Height && z < level.Length {
+func (level *Level) SetBlock(x, y, z uint, block byte) {
+	if level.InBounds(x, y, z) {
+		index := level.Index(x, y, z)
+		level.Blocks[index] = block
 		level.Dirty = true
-		level.Blocks[level.Index(x, y, z)] = block
-		if broadcast {
-			level.ForEachPlayer(func(player *Player) {
-				player.sendBlockChange(x, y, z, block)
-			})
-		}
+
+		level.blockUpdatesLock.Lock()
+		level.blockUpdates = append(level.blockUpdates, index)
+		level.blockUpdatesLock.Unlock()
+
+		level.ForEachPlayer(func(player *Player) {
+			player.sendBlockChange(x, y, z, block)
+		})
 	}
 }
 
@@ -292,6 +303,24 @@ func (level *Level) SendMOTD() {
 			player.level = level
 		}
 	})
+}
+
+func (level *Level) update() {
+	level.blockUpdatesLock.Lock()
+	blockUpdates := make([]uint, len(level.blockUpdates))
+	copy(blockUpdates, level.blockUpdates)
+	level.blockUpdates = nil
+	level.blockUpdatesLock.Unlock()
+
+	level.server.simulatorsLock.RLock()
+	for _, index := range blockUpdates {
+		block := level.Blocks[index]
+		x, y, z := level.Position(index)
+		for _, simulator := range level.server.simulators {
+			simulator(level, block, x, y, z)
+		}
+	}
+	level.server.simulatorsLock.RUnlock()
 }
 
 // BlockBuffer is a queue of block changes to apply to a level.

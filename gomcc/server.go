@@ -75,6 +75,9 @@ type Server struct {
 	plugins     []Plugin
 	pluginsLock sync.RWMutex
 
+	simulators     []Simulator
+	simulatorsLock sync.RWMutex
+
 	listener net.Listener
 	stopChan chan bool
 
@@ -477,6 +480,13 @@ func (server *Server) RegisterPlugin(plugin Plugin) {
 	plugin.Enable(server)
 }
 
+// RegisterSimulator registers a physics simulator.
+func (server *Server) RegisterSimulator(simulator Simulator) {
+	server.simulatorsLock.Lock()
+	server.simulators = append(server.simulators, simulator)
+	server.simulatorsLock.Unlock()
+}
+
 func (server *Server) generateSalt() {
 	const charset = "abcdefghijklmnopqrstuvwxyz" +
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
@@ -512,6 +522,10 @@ func (server *Server) run(wg *sync.WaitGroup) {
 		for range server.updateTicker.C {
 			server.ForEachEntity(func(entity *Entity) {
 				entity.update()
+			})
+
+			server.ForEachLevel(func(level *Level) {
+				level.update()
 			})
 		}
 	}()

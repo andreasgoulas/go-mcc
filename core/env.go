@@ -221,7 +221,6 @@ func (plugin *CorePlugin) handleEnv(sender gomcc.CommandSender, command *gomcc.C
 		defaultEnv := level.DefaultEnv()
 		if mask := fn(&level.EnvConfig, &defaultEnv, args[1]); mask == 0 {
 			sender.SendMessage("Invalid value")
-			return
 		} else {
 			level.SendEnvConfig(mask)
 		}

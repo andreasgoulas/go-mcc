@@ -283,6 +283,8 @@ func (plugin *CorePlugin) Enable(server *gomcc.Server) {
 	server.RegisterHandler(gomcc.EventTypePlayerJoin, plugin.handlePlayerJoin)
 	server.RegisterHandler(gomcc.EventTypePlayerQuit, plugin.handlePlayerQuit)
 	server.RegisterHandler(gomcc.EventTypePlayerChat, plugin.handlePlayerChat)
+
+	server.RegisterSimulator(plugin.handlePhysics)
 }
 
 func (plugin *CorePlugin) Disable(server *gomcc.Server) {

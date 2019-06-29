@@ -386,8 +386,6 @@ func (nbt *nbtDecoder) readCompound(v reflect.Value) (err error) {
 			return err
 		}
 	}
-
-	return
 }
 
 func (nbt *nbtDecoder) readIntArray() (tag []int32, err error) {

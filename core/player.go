@@ -10,6 +10,15 @@ import (
 	"github.com/structinf/Go-MCC/gomcc"
 )
 
+type Player struct {
+	*gomcc.Player
+	PermGroup *gomcc.PermissionGroup
+
+	LastSender   string
+	LastLevel    *gomcc.Level
+	LastLocation gomcc.Location
+}
+
 type PlayerInfo struct {
 	Rank        string    `json:"rank"`
 	FirstLogin  time.Time `json:"first-login"`
@@ -30,15 +39,6 @@ func (player *PlayerInfo) IsIgnored(name string) bool {
 	}
 
 	return false
-}
-
-type Player struct {
-	*gomcc.Player
-	PermGroup *gomcc.PermissionGroup
-
-	LastSender   string
-	LastLevel    *gomcc.Level
-	LastLocation gomcc.Location
 }
 
 type PlayerManager struct {
