@@ -55,11 +55,17 @@ type WaterSimulator struct {
 func (simulator *WaterSimulator) Update(block, old byte, index int) {
 	if block == gomcc.BlockActiveWater || (block == gomcc.BlockWater && block == old) {
 		simulator.queue.Add(index, 5)
-	} else if block != old {
-		if block == gomcc.BlockSponge {
-			simulator.placeSponge(index)
-		} else if old == gomcc.BlockSponge {
-			simulator.breakSponge(index)
+	} else {
+		level := simulator.Level
+		x, y, z := level.Position(index)
+		if block == gomcc.BlockAir && simulator.checkEdge(x, y, z) {
+			level.SetBlock(x, y, z, gomcc.BlockActiveWater)
+		} else if block != old {
+			if block == gomcc.BlockSponge {
+				simulator.placeSponge(x, y, z)
+			} else if old == gomcc.BlockSponge {
+				simulator.breakSponge(x, y, z)
+			}
 		}
 	}
 }
@@ -91,6 +97,14 @@ func (simulator *WaterSimulator) Tick() {
 	}
 }
 
+func (simulator *WaterSimulator) checkEdge(x, y, z int) bool {
+	level := simulator.Level
+	env := level.EnvConfig
+	return (env.EdgeBlock == gomcc.BlockActiveWater || env.EdgeBlock == gomcc.BlockWater) &&
+		y >= (env.EdgeHeight+env.SideOffset) && y < env.EdgeHeight &&
+		(x == 0 || z == 0 || x == level.Width-1 || z == level.Length-1)
+}
+
 func (simulator *WaterSimulator) spread(x, y, z int) {
 	level := simulator.Level
 	switch level.GetBlock(x, y, z) {
@@ -112,9 +126,8 @@ func (simulator *WaterSimulator) spread(x, y, z int) {
 	}
 }
 
-func (simulator *WaterSimulator) placeSponge(index int) {
+func (simulator *WaterSimulator) placeSponge(x, y, z int) {
 	level := simulator.Level
-	x, y, z := level.Position(index)
 	for yy := max(y-2, 0); yy <= min(y+2, level.Height-1); yy++ {
 		for zz := max(z-2, 0); zz <= min(z+2, level.Length-1); zz++ {
 			for xx := max(x-2, 0); xx <= min(x+2, level.Width-1); xx++ {
@@ -127,9 +140,8 @@ func (simulator *WaterSimulator) placeSponge(index int) {
 	}
 }
 
-func (simulator *WaterSimulator) breakSponge(index int) {
+func (simulator *WaterSimulator) breakSponge(x, y, z int) {
 	level := simulator.Level
-	x, y, z := level.Position(index)
 	for yy := max(y-3, 0); yy <= min(y+3, level.Height-1); yy++ {
 		for zz := max(z-3, 0); zz <= min(z+3, level.Length-1); zz++ {
 			for xx := max(x-3, 0); xx <= min(x+3, level.Width-1); xx++ {
