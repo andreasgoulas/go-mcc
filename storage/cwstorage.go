@@ -77,7 +77,7 @@ type cwBlockDefinition struct {
 	Coords         []byte
 }
 
-var cwFaceIndices = []uint{
+var cwFaceIndices = []int{
 	gomcc.FacePosY, gomcc.FaceNegY,
 	gomcc.FaceNegX, gomcc.FacePosX,
 	gomcc.FaceNegZ, gomcc.FacePosZ,
@@ -164,7 +164,7 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 		return nil, errors.New("cwstorage: invalid format")
 	}
 
-	level = gomcc.NewLevel(name, uint(cw.X), uint(cw.Y), uint(cw.Z))
+	level = gomcc.NewLevel(name, int(cw.X), int(cw.Y), int(cw.Z))
 	if level == nil {
 		return nil, errors.New("cwstorage: level creation failed")
 	}
@@ -184,7 +184,7 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 	level.Spawn.Pitch = float64(cw.Spawn.P) * 360 / 256
 	copy(level.UUID[:], cw.UUID)
 
-	if uint(len(cw.BlockArray)) == level.Size() {
+	if len(cw.BlockArray) == level.Size() {
 		level.Blocks = cw.BlockArray
 	}
 
@@ -211,7 +211,7 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 		level.EnvConfig.TexturePack = cpe.EnvMapAppearance.TextureURL
 		level.EnvConfig.SideBlock = cpe.EnvMapAppearance.SideBlock
 		level.EnvConfig.EdgeBlock = cpe.EnvMapAppearance.EdgeBlock
-		level.EnvConfig.EdgeHeight = uint(cpe.EnvMapAppearance.SideLevel)
+		level.EnvConfig.EdgeHeight = int(cpe.EnvMapAppearance.SideLevel)
 	}
 
 	if cpe.EnvWeatherType.ExtensionVersion == 1 {
@@ -245,9 +245,9 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 			if len(v.Textures) >= 6 {
 				extTex := len(v.Textures) >= 12
 				for i, face := range cwFaceIndices {
-					def.Textures[face] = uint(v.Textures[i])
+					def.Textures[face] = int(v.Textures[i])
 					if extTex {
-						def.Textures[face] |= uint(v.Textures[i+6]) << 8
+						def.Textures[face] |= int(v.Textures[i+6]) << 8
 					}
 				}
 			}
@@ -259,8 +259,8 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 
 			if len(v.Coords) == 6 {
 				def.AABB = gomcc.AABB{
-					gomcc.Vector3U{uint(v.Coords[0]), uint(v.Coords[1]), uint(v.Coords[2])},
-					gomcc.Vector3U{uint(v.Coords[3]), uint(v.Coords[4]), uint(v.Coords[5])},
+					gomcc.Vector3{int(v.Coords[0]), int(v.Coords[1]), int(v.Coords[2])},
+					gomcc.Vector3{int(v.Coords[3]), int(v.Coords[4]), int(v.Coords[5])},
 				}
 			}
 

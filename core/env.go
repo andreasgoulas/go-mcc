@@ -12,93 +12,14 @@ import (
 	"github.com/structinf/Go-MCC/gomcc"
 )
 
-func envBlock(mask uint32, v *byte, def byte, arg string) uint32 {
-	if arg == "reset" {
-		*v = def
-	} else {
-		if tmp, err := strconv.ParseUint(arg, 10, 8); err != nil || tmp >= gomcc.BlockMax {
-			return 0
-		} else {
-			*v = byte(tmp)
-		}
-	}
-
-	return mask
+func parseColor(arg string) (c color.RGBA, err error) {
+	c.A = 0xff
+	_, err = fmt.Sscanf(arg, "#%02x%02x%02x", &c.R, &c.G, &c.B)
+	return
 }
 
-func envUint(mask uint32, v *uint, def uint, arg string) uint32 {
-	if arg == "reset" {
-		*v = def
-	} else {
-		if tmp, err := strconv.ParseUint(arg, 10, 64); err != nil {
-			return 0
-		} else {
-			*v = uint(tmp)
-		}
-	}
-
-	return mask
-}
-
-func envInt(mask uint32, v *int, def int, arg string) uint32 {
-	if arg == "reset" {
-		*v = def
-	} else {
-		if tmp, err := strconv.ParseInt(arg, 10, 64); err != nil {
-			return 0
-		} else {
-			*v = int(tmp)
-		}
-	}
-
-	return mask
-}
-
-func envFloat(mask uint32, v *float64, def float64, arg string) uint32 {
-	if arg == "reset" {
-		*v = def
-	} else {
-		if tmp, err := strconv.ParseFloat(arg, 64); err != nil {
-			return 0
-		} else {
-			*v = tmp
-		}
-	}
-
-	return mask
-}
-
-func envBool(mask uint32, v *bool, def bool, arg string) uint32 {
-	if arg == "reset" {
-		*v = def
-	} else {
-		if tmp, err := strconv.ParseBool(arg); err != nil {
-			return 0
-		} else {
-			*v = tmp
-		}
-	}
-
-	return mask
-}
-
-func envColor(mask uint32, v *color.RGBA, def color.RGBA, arg string) uint32 {
-	if arg == "reset" {
-		*v = def
-	} else {
-		v.A = 0xff
-		if _, err := fmt.Sscanf(arg, "#%02x%02x%02x", &v.R, &v.G, &v.B); err != nil {
-			return 0
-		}
-	}
-
-	return mask
-}
-
-func envWeather(config, def *gomcc.EnvConfig, arg string) uint32 {
+func envWeather(config *gomcc.EnvConfig, arg string) bool {
 	switch strings.ToLower(arg) {
-	case "reset":
-		config.Weather = def.Weather
 	case "sun":
 		config.Weather = gomcc.WeatherSunny
 	case "rain":
@@ -106,91 +27,167 @@ func envWeather(config, def *gomcc.EnvConfig, arg string) uint32 {
 	case "snow":
 		config.Weather = gomcc.WeatherSnowing
 	default:
-		return 0
+		return false
 	}
 
-	return gomcc.EnvPropWeather
+	return true
 }
 
-func envSideBlock(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envBlock(gomcc.EnvPropSideBlock, &config.SideBlock, def.SideBlock, arg)
+func envSideBlock(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := strconv.ParseUint(arg, 10, 64); err != nil || v > gomcc.BlockMax {
+		return false
+	} else {
+		config.SideBlock = byte(v)
+		return true
+	}
 }
 
-func envEdgeBlock(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envBlock(gomcc.EnvPropEdgeBlock, &config.EdgeBlock, def.EdgeBlock, arg)
+func envEdgeBlock(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := strconv.ParseUint(arg, 10, 64); err != nil || v > gomcc.BlockMax {
+		return false
+	} else {
+		config.EdgeBlock = byte(v)
+		return true
+	}
 }
 
-func envEdgeHeight(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envUint(gomcc.EnvPropEdgeHeight, &config.EdgeHeight, def.EdgeHeight, arg)
+func envEdgeHeight(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := strconv.ParseUint(arg, 10, 64); err != nil {
+		return false
+	} else {
+		config.EdgeHeight = int(v)
+		return true
+	}
 }
 
-func envCloudHeight(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envUint(gomcc.EnvPropCloudHeight, &config.CloudHeight, def.CloudHeight, arg)
+func envCloudHeight(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := strconv.ParseUint(arg, 10, 64); err != nil {
+		return false
+	} else {
+		config.CloudHeight = int(v)
+		return true
+	}
 }
 
-func envMaxViewDistance(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envUint(gomcc.EnvPropMaxViewDistance, &config.MaxViewDistance, def.MaxViewDistance, arg)
+func envMaxViewDistance(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := strconv.ParseUint(arg, 10, 64); err != nil {
+		return false
+	} else {
+		config.MaxViewDistance = int(v)
+		return true
+	}
 }
 
-func envCloudSpeed(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envFloat(gomcc.EnvPropCloudSpeed, &config.CloudSpeed, def.CloudSpeed, arg)
+func envCloudSpeed(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := strconv.ParseFloat(arg, 64); err != nil {
+		return false
+	} else {
+		config.CloudSpeed = v
+		return true
+	}
 }
 
-func envWeatherSpeed(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envFloat(gomcc.EnvPropWeatherSpeed, &config.WeatherSpeed, def.WeatherSpeed, arg)
+func envWeatherSpeed(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := strconv.ParseFloat(arg, 64); err != nil {
+		return false
+	} else {
+		config.WeatherSpeed = v
+		return true
+	}
 }
 
-func envWeatherFade(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envFloat(gomcc.EnvPropWeatherFade, &config.WeatherFade, def.WeatherFade, arg)
+func envWeatherFade(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := strconv.ParseFloat(arg, 64); err != nil || v < 0.0 {
+		return false
+	} else {
+		config.WeatherFade = v
+		return true
+	}
 }
 
-func envExpFog(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envBool(gomcc.EnvPropExpFog, &config.ExpFog, def.ExpFog, arg)
+func envExpFog(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := strconv.ParseBool(arg); err != nil {
+		return false
+	} else {
+		config.ExpFog = v
+		return true
+	}
 }
 
-func envSideOffset(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envInt(gomcc.EnvPropSideOffset, &config.SideOffset, def.SideOffset, arg)
+func envSideOffset(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := strconv.ParseInt(arg, 10, 64); err != nil {
+		return false
+	} else {
+		config.SideOffset = int(v)
+		return true
+	}
 }
 
-func envSkyColor(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envColor(gomcc.EnvPropSkyColor, &config.SkyColor, def.SkyColor, arg)
+func envSkyColor(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := parseColor(arg); err != nil {
+		return false
+	} else {
+		config.SkyColor = v
+		return true
+	}
 }
 
-func envCloudColor(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envColor(gomcc.EnvPropCloudColor, &config.CloudColor, def.CloudColor, arg)
+func envCloudColor(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := parseColor(arg); err != nil {
+		return false
+	} else {
+		config.CloudColor = v
+		return true
+	}
 }
 
-func envFogColor(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envColor(gomcc.EnvPropFogColor, &config.FogColor, def.FogColor, arg)
+func envFogColor(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := parseColor(arg); err != nil {
+		return false
+	} else {
+		config.FogColor = v
+		return true
+	}
 }
 
-func envAmbientColor(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envColor(gomcc.EnvPropAmbientColor, &config.AmbientColor, def.AmbientColor, arg)
+func envAmbientColor(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := parseColor(arg); err != nil {
+		return false
+	} else {
+		config.AmbientColor = v
+		return true
+	}
 }
 
-func envDiffuseColor(config, def *gomcc.EnvConfig, arg string) uint32 {
-	return envColor(gomcc.EnvPropDiffuseColor, &config.DiffuseColor, def.DiffuseColor, arg)
+func envDiffuseColor(config *gomcc.EnvConfig, arg string) bool {
+	if v, err := parseColor(arg); err != nil {
+		return false
+	} else {
+		config.DiffuseColor = v
+		return true
+	}
 }
 
-type envFunc func(config, def *gomcc.EnvConfig, arg string) uint32
-
-var envOptions = map[string]envFunc{
-	"weather":         envWeather,
-	"sideblock":       envSideBlock,
-	"edgeblock":       envEdgeBlock,
-	"edgeheight":      envEdgeHeight,
-	"cloudheight":     envCloudHeight,
-	"maxviewdistance": envMaxViewDistance,
-	"cloudspeed":      envCloudSpeed,
-	"weatherspeed":    envWeatherSpeed,
-	"weatherfade":     envWeatherFade,
-	"expfog":          envExpFog,
-	"sideoffset":      envSideOffset,
-	"skycolor":        envSkyColor,
-	"cloudcolor":      envCloudColor,
-	"fogcolor":        envFogColor,
-	"ambientcolor":    envAmbientColor,
-	"diffusecolor":    envDiffuseColor,
+var envOptions = map[string]struct {
+	Set  func(config *gomcc.EnvConfig, arg string) bool
+	Mask uint32
+}{
+	"weather":         {envWeather, gomcc.EnvPropWeather},
+	"sideblock":       {envSideBlock, gomcc.EnvPropSideBlock},
+	"edgeblock":       {envEdgeBlock, gomcc.EnvPropEdgeBlock},
+	"edgeheight":      {envEdgeHeight, gomcc.EnvPropEdgeHeight},
+	"cloudheight":     {envCloudHeight, gomcc.EnvPropCloudHeight},
+	"maxviewdistance": {envMaxViewDistance, gomcc.EnvPropMaxViewDistance},
+	"cloudspeed":      {envCloudSpeed, gomcc.EnvPropCloudSpeed},
+	"weatherspeed":    {envWeatherSpeed, gomcc.EnvPropWeatherSpeed},
+	"weatherfade":     {envWeatherFade, gomcc.EnvPropWeatherFade},
+	"expfog":          {envExpFog, gomcc.EnvPropExpFog},
+	"sideoffset":      {envSideOffset, gomcc.EnvPropSideOffset},
+	"skycolor":        {envSkyColor, gomcc.EnvPropSkyColor},
+	"cloudcolor":      {envCloudColor, gomcc.EnvPropCloudColor},
+	"fogcolor":        {envFogColor, gomcc.EnvPropFogColor},
+	"ambientcolor":    {envAmbientColor, gomcc.EnvPropAmbientColor},
+	"diffusecolor":    {envDiffuseColor, gomcc.EnvPropDiffuseColor},
 }
 
 func (plugin *CorePlugin) handleEnv(sender gomcc.CommandSender, command *gomcc.Command, message string) {
@@ -211,18 +208,17 @@ func (plugin *CorePlugin) handleEnv(sender gomcc.CommandSender, command *gomcc.C
 		}
 
 	case 2:
-		fn, ok := envOptions[strings.ToLower(args[0])]
+		opt, ok := envOptions[strings.ToLower(args[0])]
 		if !ok {
 			sender.SendMessage("Unknown option")
 			return
 		}
 
 		level := player.Level()
-		defaultEnv := level.DefaultEnv()
-		if mask := fn(&level.EnvConfig, &defaultEnv, args[1]); mask == 0 {
-			sender.SendMessage("Invalid value")
+		if opt.Set(&level.EnvConfig, args[1]) {
+			level.SendEnvConfig(opt.Mask)
 		} else {
-			level.SendEnvConfig(mask)
+			sender.SendMessage("Invalid value")
 		}
 
 		return

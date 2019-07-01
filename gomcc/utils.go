@@ -22,14 +22,14 @@ type Location struct {
 	X, Y, Z, Yaw, Pitch float64
 }
 
-// Vector3U represents a three-dimensional integer vector.
-type Vector3U struct {
-	X, Y, Z uint
+// Vector3 represents a three-dimensional integer vector.
+type Vector3 struct {
+	X, Y, Z int
 }
 
 // AABB represents an axis-aligned bounding box.
 type AABB struct {
-	Min, Max Vector3U
+	Min, Max Vector3
 }
 
 // IsValidName reports whether name is a valid entity name.

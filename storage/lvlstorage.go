@@ -14,9 +14,9 @@ import (
 )
 
 type lvlHeader struct {
-	Version                          uint16
-	Width, Height, Length            uint16
-	SpawnX, SpawnY, SpawnZ           uint16
+	Version                          int16
+	Width, Height, Length            int16
+	SpawnX, SpawnY, SpawnZ           int16
 	SpawnYaw, SpawnPitch             byte
 	PermissionVisit, PermissionBuild byte
 }
@@ -61,7 +61,7 @@ func (storage *LvlStorage) Load(name string) (level *gomcc.Level, err error) {
 		return nil, errors.New("lvlstorage: invalid format")
 	}
 
-	level = gomcc.NewLevel(name, uint(header.Width), uint(header.Height), uint(header.Length))
+	level = gomcc.NewLevel(name, int(header.Width), int(header.Height), int(header.Length))
 	if level == nil {
 		return nil, errors.New("lvlstorage: level creation failed")
 	}
@@ -91,12 +91,12 @@ func (storage *LvlStorage) Save(level *gomcc.Level) (err error) {
 
 	if err = binary.Write(writer, binary.BigEndian, lvlHeader{
 		1874,
-		uint16(level.Width),
-		uint16(level.Height),
-		uint16(level.Length),
-		uint16(level.Spawn.X),
-		uint16(level.Spawn.Y),
-		uint16(level.Spawn.Z),
+		int16(level.Width),
+		int16(level.Height),
+		int16(level.Length),
+		int16(level.Spawn.X),
+		int16(level.Spawn.Y),
+		int16(level.Spawn.Z),
 		byte(level.Spawn.Yaw * 256 / 360),
 		byte(level.Spawn.Pitch * 256 / 360),
 		0, 0,

@@ -3,7 +3,7 @@
 
 package gomcc
 
-type EventType uint
+type EventType int
 
 const (
 	ButtonLeft   = 0
@@ -71,7 +71,7 @@ type EventPlayerClick struct {
 	Button, Action         byte
 	Yaw, Pitch             float64
 	Target                 *Entity
-	BlockX, BlockY, BlockZ uint
+	BlockX, BlockY, BlockZ int
 	BlockFace              byte
 }
 
@@ -95,7 +95,7 @@ type EventBlockPlace struct {
 	Player  *Player
 	Level   *Level
 	Block   byte
-	X, Y, Z uint
+	X, Y, Z int
 	Cancel  bool
 }
 
@@ -105,7 +105,7 @@ type EventBlockBreak struct {
 	Player  *Player
 	Level   *Level
 	Block   byte
-	X, Y, Z uint
+	X, Y, Z int
 	Cancel  bool
 }
 

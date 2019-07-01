@@ -105,19 +105,19 @@ func (plugin *CorePlugin) handleNewLvl(sender gomcc.CommandSender, command *gomc
 		return
 	}
 
-	width, err := strconv.ParseUint(args[1], 10, 0)
+	width, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
 		sender.SendMessage(args[1] + " is not a valid number")
 		return
 	}
 
-	height, err := strconv.ParseUint(args[2], 10, 0)
+	height, err := strconv.ParseUint(args[2], 10, 64)
 	if err != nil {
 		sender.SendMessage(args[2] + " is not a valid number")
 		return
 	}
 
-	length, err := strconv.ParseUint(args[3], 10, 0)
+	length, err := strconv.ParseUint(args[3], 10, 64)
 	if err != nil {
 		sender.SendMessage(args[3] + " is not a valid number")
 		return
@@ -135,7 +135,7 @@ func (plugin *CorePlugin) handleNewLvl(sender gomcc.CommandSender, command *gomc
 		return
 	}
 
-	level = gomcc.NewLevel(args[0], uint(width), uint(height), uint(length))
+	level = gomcc.NewLevel(args[0], int(width), int(height), int(length))
 	if level == nil {
 		sender.SendMessage("Could not create level")
 		return

@@ -18,7 +18,10 @@ type LevelStorage interface {
 
 // Simulator is the interface that must be implemented by block-based physics
 // simulators.
-type Simulator func(level *Level, block byte, x, y, z uint)
+type Simulator interface {
+	Update(block, old byte, index int)
+	Tick()
+}
 
 const (
 	WeatherSunny   = 0
@@ -33,9 +36,9 @@ type EnvConfig struct {
 
 	SideBlock       byte
 	EdgeBlock       byte
-	EdgeHeight      uint
-	CloudHeight     uint
-	MaxViewDistance uint
+	EdgeHeight      int
+	CloudHeight     int
+	MaxViewDistance int
 	CloudSpeed      float64
 	WeatherSpeed    float64
 	WeatherFade     float64
@@ -90,9 +93,9 @@ type HackConfig struct {
 type Level struct {
 	server *Server
 
-	Width  uint
-	Height uint
-	Length uint
+	Width  int
+	Height int
+	Length int
 	Blocks []byte
 	Dirty  bool
 
@@ -108,12 +111,12 @@ type Level struct {
 
 	Metadata, MetadataCPE map[string]interface{}
 
-	blockUpdates     []uint
-	blockUpdatesLock sync.Mutex
+	simulators     []Simulator
+	simulatorsLock sync.RWMutex
 }
 
 // NewLevel creates a new empty Level with the specified name and dimensions.
-func NewLevel(name string, width, height, length uint) *Level {
+func NewLevel(name string, width, height, length int) *Level {
 	if len(name) == 0 {
 		return nil
 	}
@@ -192,17 +195,17 @@ func (level *Level) DefaultEnv() EnvConfig {
 }
 
 // Size returns the number of blocks.
-func (level *Level) Size() uint {
+func (level *Level) Size() int {
 	return level.Width * level.Height * level.Length
 }
 
 // Index converts the specified coordinates to an array index.
-func (level *Level) Index(x, y, z uint) uint {
+func (level *Level) Index(x, y, z int) int {
 	return x + level.Width*(z+level.Length*y)
 }
 
 // Position converts the specified array index to block coordinates.
-func (level *Level) Position(index uint) (x, y, z uint) {
+func (level *Level) Position(index int) (x, y, z int) {
 	x = index % level.Width
 	y = (index / level.Width) / level.Length
 	z = (index / level.Width) % level.Length
@@ -211,12 +214,12 @@ func (level *Level) Position(index uint) (x, y, z uint) {
 
 // InBounds reports whether the specified coordinates are within the bounds of
 // the level.
-func (level *Level) InBounds(x, y, z uint) bool {
+func (level *Level) InBounds(x, y, z int) bool {
 	return x < level.Width && y < level.Height && z < level.Length
 }
 
 // GetBlock returns the block at the specified coordinates.
-func (level *Level) GetBlock(x, y, z uint) byte {
+func (level *Level) GetBlock(x, y, z int) byte {
 	if x < level.Width && y < level.Height && z < level.Length {
 		return level.Blocks[level.Index(x, y, z)]
 	}
@@ -224,25 +227,59 @@ func (level *Level) GetBlock(x, y, z uint) byte {
 	return BlockAir
 }
 
-// SetBlock sets the block at the specified coordinates.
-func (level *Level) SetBlock(x, y, z uint, block byte) {
+// SetBlockFast sets the block at the specified coordinates without notifying
+// the physics simulators.
+func (level *Level) SetBlockFast(x, y, z int, block byte) {
 	if level.InBounds(x, y, z) {
-		index := level.Index(x, y, z)
-		level.Blocks[index] = block
 		level.Dirty = true
-
-		level.blockUpdatesLock.Lock()
-		level.blockUpdates = append(level.blockUpdates, index)
-		level.blockUpdatesLock.Unlock()
-
+		level.Blocks[level.Index(x, y, z)] = block
 		level.ForEachPlayer(func(player *Player) {
 			player.sendBlockChange(x, y, z, block)
 		})
 	}
 }
 
+// SetBlock sets the block at the specified coordinates.
+func (level *Level) SetBlock(x, y, z int, block byte) {
+	if level.InBounds(x, y, z) {
+		index := level.Index(x, y, z)
+		old := level.Blocks[index]
+
+		level.Dirty = true
+		level.Blocks[index] = block
+		level.ForEachPlayer(func(player *Player) {
+			player.sendBlockChange(x, y, z, block)
+		})
+
+		level.simulatorsLock.RLock()
+		for _, simulator := range level.simulators {
+			simulator.Update(block, old, index)
+		}
+		level.simulatorsLock.RUnlock()
+
+		if x < level.Width-1 {
+			level.UpdateBlock(x+1, y, z)
+		}
+		if x > 0 {
+			level.UpdateBlock(x-1, y, z)
+		}
+		if y < level.Height-1 {
+			level.UpdateBlock(x, y+1, z)
+		}
+		if y > 0 {
+			level.UpdateBlock(x, y-1, z)
+		}
+		if z < level.Length-1 {
+			level.UpdateBlock(x, y, z+1)
+		}
+		if z > 0 {
+			level.UpdateBlock(x, y, z-1)
+		}
+	}
+}
+
 // FillLayers fills the specified range of layers with block.
-func (level *Level) FillLayers(yStart, yEnd uint, block byte) {
+func (level *Level) FillLayers(yStart, yEnd int, block byte) {
 	start := yStart * level.Width * level.Length
 	end := (yEnd + 1) * level.Width * level.Length
 	for i := start; i < end; i++ {
@@ -305,28 +342,40 @@ func (level *Level) SendMOTD() {
 	})
 }
 
-func (level *Level) update() {
-	level.blockUpdatesLock.Lock()
-	blockUpdates := make([]uint, len(level.blockUpdates))
-	copy(blockUpdates, level.blockUpdates)
-	level.blockUpdates = nil
-	level.blockUpdatesLock.Unlock()
+// RegisterSimulator registers a physics simulator.
+func (level *Level) RegisterSimulator(simulator Simulator) {
+	level.simulatorsLock.Lock()
+	level.simulators = append(level.simulators, simulator)
+	level.simulatorsLock.Unlock()
 
-	level.server.simulatorsLock.RLock()
-	for _, index := range blockUpdates {
-		block := level.Blocks[index]
-		x, y, z := level.Position(index)
-		for _, simulator := range level.server.simulators {
-			simulator(level, block, x, y, z)
-		}
+	for index, block := range level.Blocks {
+		simulator.Update(block, block, index)
 	}
-	level.server.simulatorsLock.RUnlock()
+}
+
+// UpdateBlock updates the block at the specified coordinates.
+func (level *Level) UpdateBlock(x, y, z int) {
+	index := level.Index(x, y, z)
+	block := level.Blocks[index]
+	level.simulatorsLock.RLock()
+	for _, simulator := range level.simulators {
+		simulator.Update(block, block, index)
+	}
+	level.simulatorsLock.RUnlock()
+}
+
+func (level *Level) update() {
+	level.simulatorsLock.RLock()
+	for _, simulator := range level.simulators {
+		simulator.Tick()
+	}
+	level.simulatorsLock.RUnlock()
 }
 
 // BlockBuffer is a queue of block changes to apply to a level.
 type BlockBuffer struct {
 	level   *Level
-	count   uint
+	count   int
 	indices [256]int32
 	blocks  [256]byte
 }
@@ -337,7 +386,7 @@ func NewBlockBuffer(level *Level) *BlockBuffer {
 }
 
 // Set sets the block at the specified coordinates.
-func (buffer *BlockBuffer) Set(x, y, z uint, block byte) {
+func (buffer *BlockBuffer) Set(x, y, z int, block byte) {
 	buffer.indices[buffer.count] = int32(buffer.level.Index(x, y, z))
 	buffer.blocks[buffer.count] = block
 	buffer.count++
@@ -348,7 +397,7 @@ func (buffer *BlockBuffer) Set(x, y, z uint, block byte) {
 
 // Flush flushes any pending changes to the underlying level.
 func (buffer *BlockBuffer) Flush() {
-	for i := uint(0); i < buffer.count; i++ {
+	for i := 0; i < buffer.count; i++ {
 		index := buffer.indices[i]
 		buffer.level.Blocks[index] = buffer.blocks[i]
 	}
@@ -356,7 +405,7 @@ func (buffer *BlockBuffer) Flush() {
 	buffer.level.Dirty = true
 	buffer.level.ForEachPlayer(func(player *Player) {
 		var blocks [256]byte
-		for i := uint(0); i < buffer.count; i++ {
+		for i := 0; i < buffer.count; i++ {
 			blocks[i] = player.convertBlock(buffer.blocks[i], buffer.level)
 		}
 
@@ -364,8 +413,8 @@ func (buffer *BlockBuffer) Flush() {
 		if player.cpe[CpeBulkBlockUpdate] {
 			packet.bulkBlockUpdate(buffer.indices[:], blocks[:buffer.count])
 		} else {
-			for i := uint(0); i < buffer.count; i++ {
-				x, y, z := buffer.level.Position(uint(buffer.indices[i]))
+			for i := 0; i < buffer.count; i++ {
+				x, y, z := buffer.level.Position(int(buffer.indices[i]))
 				packet.setBlock(x, y, z, blocks[i])
 			}
 		}

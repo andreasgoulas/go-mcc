@@ -21,7 +21,7 @@ import (
 const (
 	ServerSoftware = "Go-MCC"
 
-	UpdateInterval    = 100 * time.Millisecond
+	UpdateInterval    = 50 * time.Millisecond
 	HeartbeatInterval = 45 * time.Second
 	SaveInterval      = 5 * time.Minute
 )
@@ -74,9 +74,6 @@ type Server struct {
 
 	plugins     []Plugin
 	pluginsLock sync.RWMutex
-
-	simulators     []Simulator
-	simulatorsLock sync.RWMutex
 
 	listener net.Listener
 	stopChan chan bool
@@ -478,13 +475,6 @@ func (server *Server) RegisterPlugin(plugin Plugin) {
 	server.pluginsLock.Unlock()
 
 	plugin.Enable(server)
-}
-
-// RegisterSimulator registers a physics simulator.
-func (server *Server) RegisterSimulator(simulator Simulator) {
-	server.simulatorsLock.Lock()
-	server.simulators = append(server.simulators, simulator)
-	server.simulatorsLock.Unlock()
 }
 
 func (server *Server) generateSalt() {

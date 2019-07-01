@@ -13,6 +13,27 @@ import (
 	"github.com/structinf/Go-MCC/gomcc"
 )
 
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
+}
+
 func loadJson(path string, v interface{}) {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -283,8 +304,11 @@ func (plugin *CorePlugin) Enable(server *gomcc.Server) {
 	server.RegisterHandler(gomcc.EventTypePlayerJoin, plugin.handlePlayerJoin)
 	server.RegisterHandler(gomcc.EventTypePlayerQuit, plugin.handlePlayerQuit)
 	server.RegisterHandler(gomcc.EventTypePlayerChat, plugin.handlePlayerChat)
+	server.RegisterHandler(gomcc.EventTypeLevelLoad, plugin.handleLevelLoad)
 
-	server.RegisterSimulator(plugin.handlePhysics)
+	server.ForEachLevel(func(level *gomcc.Level) {
+		plugin.initPhysics(level)
+	})
 }
 
 func (plugin *CorePlugin) Disable(server *gomcc.Server) {
@@ -350,4 +374,9 @@ func (plugin *CorePlugin) handlePlayerChat(eventType gomcc.EventType, event inte
 			e.Targets = append(e.Targets[:i], e.Targets[i+1:]...)
 		}
 	}
+}
+
+func (plugin *CorePlugin) handleLevelLoad(eventType gomcc.EventType, event interface{}) {
+	e := event.(*gomcc.EventLevelLoad)
+	plugin.initPhysics(e.Level)
 }

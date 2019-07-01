@@ -45,7 +45,7 @@ const (
 // HotKeyDesc describes a text hotkey.
 type HotkeyDesc struct {
 	Label, Action string
-	Key           uint
+	Key           int
 	KeyMods       byte
 }
 

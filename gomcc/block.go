@@ -192,7 +192,7 @@ type BlockDefinition struct {
 	BlockLight bool
 	FullBright bool
 	DrawMode   byte
-	Textures   [6]uint
+	Textures   [6]int
 
 	Shape byte
 	AABB  AABB

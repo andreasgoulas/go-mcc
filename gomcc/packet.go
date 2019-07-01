@@ -158,7 +158,7 @@ func (packet *Packet) position(location Location, extPos bool) {
 	}
 }
 
-func (packet *Packet) textureID(textureID uint, extTex bool) {
+func (packet *Packet) textureID(textureID int, extTex bool) {
 	if extTex {
 		binary.Write(packet, binary.BigEndian, int16(textureID))
 	} else {
@@ -195,21 +195,21 @@ func (packet *Packet) levelInitialize() {
 	packet.WriteByte(packetTypeLevelInitialize)
 }
 
-func (packet *Packet) levelInitializeExt(size uint) {
+func (packet *Packet) levelInitializeExt(size int) {
 	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		Size     int32
 	}{packetTypeLevelInitialize, int32(size)})
 }
 
-func (packet *Packet) levelFinalize(x, y, z uint) {
+func (packet *Packet) levelFinalize(x, y, z int) {
 	binary.Write(packet, binary.BigEndian, struct {
 		PacketID byte
 		X, Y, Z  int16
 	}{packetTypeLevelFinalize, int16(x), int16(y), int16(z)})
 }
 
-func (packet *Packet) setBlock(x, y, z uint, block byte) {
+func (packet *Packet) setBlock(x, y, z int, block byte) {
 	binary.Write(packet, binary.BigEndian, struct {
 		PacketID  byte
 		X, Y, Z   int16

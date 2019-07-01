@@ -41,7 +41,7 @@ type Player struct {
 	permGroups     []*PermissionGroup
 
 	cpe           [CpeCount]bool
-	remExtensions uint
+	remExtensions int
 	message       string
 	maxBlockID    byte
 	cpeBlockLevel byte
@@ -117,7 +117,7 @@ func (player *Player) HasPermission(permission string) bool {
 }
 
 // HasExtension reports whther the player has the specified CPE extension.
-func (player *Player) HasExtension(extension uint) bool {
+func (player *Player) HasExtension(extension int) bool {
 	return player.cpe[extension]
 }
 
@@ -182,7 +182,7 @@ func (player *Player) SendBlockPermissions() {
 
 // CanReach reports whether the player can reach the block at the specified
 // coordinates.
-func (player *Player) CanReach(x, y, z uint) bool {
+func (player *Player) CanReach(x, y, z int) bool {
 	loc := player.location
 	dx := math.Min(math.Abs(loc.X-float64(x)), math.Abs(loc.X-float64(x+1)))
 	dy := math.Min(math.Abs(loc.Y-float64(y)), math.Abs(loc.Y-float64(y+1)))
@@ -443,7 +443,7 @@ func (player *Player) sendTeleport(entity *Entity) {
 	}
 }
 
-func (player *Player) sendBlockChange(x, y, z uint, block byte) {
+func (player *Player) sendBlockChange(x, y, z int, block byte) {
 	level := player.level
 	if player.state == stateGame && level != nil {
 		var packet Packet
@@ -699,7 +699,7 @@ func (player *Player) handle() {
 		}
 
 		id := buffer[0]
-		var size uint
+		var size int
 		switch player.state {
 		case stateLogin:
 			switch id {
@@ -900,7 +900,7 @@ func (player *Player) handleIdentification(reader io.Reader) {
 	}
 }
 
-func (player *Player) revertBlock(x, y, z uint) {
+func (player *Player) revertBlock(x, y, z int) {
 	player.sendBlockChange(x, y, z, player.level.GetBlock(x, y, z))
 }
 
@@ -912,7 +912,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 		BlockType byte
 	}{}
 	binary.Read(reader, binary.BigEndian, &packet)
-	x, y, z := uint(packet.X), uint(packet.Y), uint(packet.Z)
+	x, y, z := int(packet.X), int(packet.Y), int(packet.Z)
 	block := packet.BlockType
 
 	level := player.level
@@ -1064,7 +1064,7 @@ func (player *Player) handleExtInfo(reader io.Reader) {
 	}{}
 	binary.Read(reader, binary.BigEndian, &packet)
 
-	player.remExtensions = uint(packet.ExtensionCount)
+	player.remExtensions = int(packet.ExtensionCount)
 	if player.remExtensions == 0 {
 		player.login()
 	}
@@ -1131,7 +1131,7 @@ func (player *Player) handlePlayerClicked(reader io.Reader) {
 		float64(packet.Yaw) * 360 / 65536,
 		float64(packet.Pitch) * 360 / 65536,
 		target,
-		uint(packet.BlockX), uint(packet.BlockY), uint(packet.BlockZ),
+		int(packet.BlockX), int(packet.BlockY), int(packet.BlockZ),
 		packet.BlockFace,
 	}
 	player.server.FireEvent(EventTypePlayerClick, &event)
