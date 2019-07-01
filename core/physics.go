@@ -12,6 +12,7 @@ import (
 func (plugin *CorePlugin) initPhysics(level *gomcc.Level) {
 	level.RegisterSimulator(&WaterSimulator{Level: level})
 	level.RegisterSimulator(&LavaSimulator{Level: level})
+	level.RegisterSimulator(&SandSimulator{Level: level})
 }
 
 type blockUpdate struct {
@@ -189,5 +190,39 @@ func (simulator *LavaSimulator) spread(x, y, z int) {
 
 	case gomcc.BlockActiveWater, gomcc.BlockWater:
 		level.SetBlock(x, y, z, gomcc.BlockStone)
+	}
+}
+
+type SandSimulator struct {
+	Level *gomcc.Level
+}
+
+func (simulator *SandSimulator) Update(block, old byte, index int) {
+	if block != gomcc.BlockSand && block != gomcc.BlockGravel {
+		return
+	}
+
+	level := simulator.Level
+	x, y0, z := level.Position(index)
+	y1 := y0
+	for y1 >= 0 && simulator.check(x, y1-1, z) {
+		y1--
+	}
+
+	if y0 != y1 {
+		level.SetBlock(x, y0, z, gomcc.BlockAir)
+		level.SetBlock(x, y1, z, block)
+	}
+}
+
+func (simulator *SandSimulator) Tick() {}
+
+func (simulator *SandSimulator) check(x, y, z int) bool {
+	switch simulator.Level.GetBlock(x, y, z) {
+	case gomcc.BlockAir, gomcc.BlockActiveWater, gomcc.BlockWater,
+		gomcc.BlockActiveLava, gomcc.BlockLava:
+		return true
+	default:
+		return false
 	}
 }
