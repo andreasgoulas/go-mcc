@@ -202,7 +202,7 @@ func (plugin *CorePlugin) handleEnv(sender gomcc.CommandSender, command *gomcc.C
 	case 1:
 		if args[0] == "reset" {
 			level := player.Level()
-			level.EnvConfig = level.DefaultEnv()
+			level.EnvConfig = level.DefaultEnvConfig()
 			level.SendEnvConfig(gomcc.EnvPropAll)
 			return
 		}

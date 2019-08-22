@@ -166,9 +166,9 @@ func (packet *Packet) textureID(textureID int, extTex bool) {
 	}
 }
 
-func (packet *Packet) motd(player *Player, motd string) {
+func (packet *Packet) motd(player *Player, motd string, op bool) {
 	userType := byte(0x00)
-	if player.CanPlace[BlockBedrock] {
+	if op {
 		userType = 0x64
 	}
 
@@ -332,9 +332,9 @@ func (packet *Packet) kick(reason string) {
 	}{packetTypeKick, padString(reason)})
 }
 
-func (packet *Packet) updateUserType(player *Player) {
+func (packet *Packet) updateUserType(op bool) {
 	userType := byte(0x00)
-	if player.CanPlace[BlockBedrock] {
+	if op {
 		userType = 0x64
 	}
 

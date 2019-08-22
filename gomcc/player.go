@@ -31,8 +31,6 @@ type Player struct {
 	*Entity
 
 	Nickname string
-	CanPlace [BlockCount]bool
-	CanBreak [BlockCount]bool
 
 	conn  net.Conn
 	state uint32
@@ -53,24 +51,11 @@ type Player struct {
 
 // NewPlayer returns a new Player.
 func NewPlayer(conn net.Conn, server *Server) *Player {
-	player := &Player{
+	return &Player{
 		Entity: NewEntity("", server),
 		conn:   conn,
 		state:  stateClosed,
 	}
-
-	for i := 0; i < BlockCount; i++ {
-		player.CanPlace[i] = true
-		player.CanBreak[i] = true
-	}
-
-	banned := []byte{BlockBedrock, BlockActiveWater, BlockWater, BlockActiveLava, BlockLava}
-	for _, block := range banned {
-		player.CanPlace[block] = false
-		player.CanBreak[block] = false
-	}
-
-	return player
 }
 
 // AddPermissionGroup adds group to the permission groups of the player.
@@ -161,23 +146,6 @@ func (player *Player) Kick(reason string) {
 	player.sendPacket(packet)
 
 	player.Disconnect()
-}
-
-// SendBlockPermission sends the block permissions to the player.
-func (player *Player) SendBlockPermissions() {
-	if player.state != stateGame {
-		return
-	}
-
-	var packet Packet
-	packet.updateUserType(player)
-	if player.cpe[CpeBlockPermissions] {
-		for i := 0; i < BlockCount; i++ {
-			packet.setBlockPermission(byte(i), player.CanPlace[i], player.CanBreak[i])
-		}
-	}
-
-	player.sendPacket(packet)
 }
 
 // CanReach reports whether the player can reach the block at the specified
@@ -325,13 +293,15 @@ func (player *Player) convertBlock(block byte, level *Level) byte {
 }
 
 func (player *Player) sendMOTD(level *Level) {
+	op := level.HackConfig.CanPlace[BlockBedrock]
+
 	motd := level.MOTD
 	if len(motd) == 0 {
 		motd = player.server.Config.MOTD
 	}
 
 	var packet Packet
-	packet.motd(player, motd)
+	packet.motd(player, motd, op)
 	player.sendPacket(packet)
 }
 
@@ -375,7 +345,6 @@ func (player *Player) sendLevel(level *Level) {
 	}
 	stream.Close()
 
-	player.SendBlockPermissions()
 	player.sendBlockDefinitions(level)
 	player.sendInventory(level)
 	player.sendEnvConfig(level, EnvPropAll)
@@ -601,7 +570,7 @@ func (player *Player) sendEnvConfig(level *Level, mask uint32) {
 	}
 
 	var packet Packet
-	config := level.EnvConfig
+	config := &level.EnvConfig
 	if player.cpe[CpeEnvMapAspect] {
 		if mask&EnvPropSideBlock != 0 {
 			packet.mapEnvProperty(
@@ -677,11 +646,18 @@ func (player *Player) sendHackConfig(level *Level) {
 	}
 
 	var packet Packet
+	config := &level.HackConfig
+	packet.updateUserType(config.CanPlace[BlockBedrock])
 	if player.cpe[CpeClickDistance] {
-		packet.clickDistance(level.HackConfig.ReachDistance)
+		packet.clickDistance(config.ReachDistance)
 	}
 	if player.cpe[CpeHackControl] {
-		packet.hackControl(&level.HackConfig)
+		packet.hackControl(config)
+	}
+	if player.cpe[CpeBlockPermissions] {
+		for i := 0; i < BlockCount; i++ {
+			packet.setBlockPermission(byte(i), config.CanPlace[i], config.CanBreak[i])
+		}
 	}
 
 	player.sendPacket(packet)
@@ -929,7 +905,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 	switch packet.Mode {
 	case 0x00:
 		oldBlock := level.GetBlock(x, y, z)
-		if !player.CanBreak[oldBlock] {
+		if !level.HackConfig.CanBreak[oldBlock] {
 			player.SendMessage("You cannot break that block.")
 			player.revertBlock(x, y, z)
 			return
@@ -951,7 +927,7 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 			return
 		}
 
-		if !player.CanPlace[block] {
+		if !level.HackConfig.CanPlace[block] {
 			player.SendMessage("You cannot place that block.")
 			player.revertBlock(x, y, z)
 			return
