@@ -4,9 +4,14 @@
 package main
 
 import (
+	"math"
 	"sync"
 
 	"github.com/structinf/Go-MCC/gomcc"
+)
+
+const (
+	MaxUpdateQueueLength = math.MaxUint32 / 4
 )
 
 func (plugin *CorePlugin) initPhysics(level *gomcc.Level) {
@@ -26,8 +31,13 @@ type BlockUpdateQueue struct {
 
 func (queue *BlockUpdateQueue) Add(index int, delay int) {
 	queue.lock.Lock()
-	queue.updates = append(queue.updates, blockUpdate{index, delay})
-	queue.lock.Unlock()
+	defer queue.lock.Unlock()
+
+	if len(queue.updates) < MaxUpdateQueueLength {
+		queue.updates = append(queue.updates, blockUpdate{index, delay})
+	} else {
+		queue.updates = nil
+	}
 }
 
 func (queue *BlockUpdateQueue) Tick() (updates []int) {
