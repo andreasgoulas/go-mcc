@@ -4,6 +4,7 @@
 package main
 
 import (
+	"log"
 	"sort"
 	"strings"
 
@@ -41,6 +42,7 @@ func (plugin *CorePlugin) PrivateMessage(message string, src, dst gomcc.CommandS
 }
 
 func (plugin *CorePlugin) BroadcastMessage(src gomcc.CommandSender, message string) {
+	log.Printf("%s\n", message)
 	src.Server().ForEachPlayer(func(player *gomcc.Player) {
 		if !plugin.Players.Find(player.Name()).IsIgnored(src.Name()) {
 			player.SendMessage(message)
