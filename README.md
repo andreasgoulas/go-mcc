@@ -13,13 +13,13 @@ such as ban lists, a rank manager and data persistency.
 ## Install
 
 ```
-go get -u github.com/structinf/Go-MCC/gomcc-cli
+go get github.com/structinf/Go-MCC/gomcc-cli
 ```
 
 ### Core Plugin
 
 ```
-go get -u -buildmode=plugin github.com/structinf/Go-MCC/core
+go get -buildmode=plugin github.com/structinf/Go-MCC/core
 ```
 
 To use a plugin, you need to place it in the `plugins/` directory of the server.
