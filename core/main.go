@@ -61,6 +61,7 @@ type CorePlugin struct {
 	Ranks   RankManager
 	Bans    BanManager
 	Players PlayerManager
+	Levels  LevelManager
 }
 
 func Initialize() gomcc.Plugin {
@@ -75,6 +76,7 @@ func (plugin *CorePlugin) Enable(server *gomcc.Server) {
 	plugin.Bans.Load("bans.json")
 	plugin.Ranks.Load("ranks.json")
 	plugin.Players.Load("players.json")
+	plugin.Levels.Load("levels.json")
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "back",
@@ -203,6 +205,13 @@ func (plugin *CorePlugin) Enable(server *gomcc.Server) {
 	})
 
 	server.RegisterCommand(&gomcc.Command{
+		Name:        "physics",
+		Description: "Set the physics state of a level.",
+		Permission:  "core.physics",
+		Handler:     plugin.handlePhysics,
+	})
+
+	server.RegisterCommand(&gomcc.Command{
 		Name:        "r",
 		Description: "Reply to the last message.",
 		Permission:  "core.r",
@@ -305,15 +314,17 @@ func (plugin *CorePlugin) Enable(server *gomcc.Server) {
 	server.RegisterHandler(gomcc.EventTypePlayerQuit, plugin.handlePlayerQuit)
 	server.RegisterHandler(gomcc.EventTypePlayerChat, plugin.handlePlayerChat)
 	server.RegisterHandler(gomcc.EventTypeLevelLoad, plugin.handleLevelLoad)
+	server.RegisterHandler(gomcc.EventTypeLevelUnload, plugin.handleLevelUnload)
 
 	server.ForEachLevel(func(level *gomcc.Level) {
-		plugin.initPhysics(level)
+		plugin.handleLevelLoad(gomcc.EventTypeLevelLoad, &gomcc.EventLevelLoad{level})
 	})
 }
 
 func (plugin *CorePlugin) Disable(server *gomcc.Server) {
 	plugin.Bans.Save("bans.json")
 	plugin.Players.Save("players.json")
+	plugin.Levels.Save("levels.json")
 }
 
 func (plugin *CorePlugin) handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
@@ -378,5 +389,15 @@ func (plugin *CorePlugin) handlePlayerChat(eventType gomcc.EventType, event inte
 
 func (plugin *CorePlugin) handleLevelLoad(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventLevelLoad)
-	plugin.initPhysics(e.Level)
+
+	info := plugin.Levels.Add(e.Level)
+	plugin.disablePhysics(e.Level)
+	if info.Physics {
+		plugin.enablePhysics(e.Level)
+	}
+}
+
+func (plugin *CorePlugin) handleLevelUnload(eventType gomcc.EventType, event interface{}) {
+	e := event.(*gomcc.EventLevelUnload)
+	plugin.Levels.Remove(e.Level)
 }

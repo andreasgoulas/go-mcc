@@ -374,6 +374,28 @@ func (level *Level) RegisterSimulator(simulator Simulator) {
 	}
 }
 
+// UnregisterSimulator unregisters a physics simulator.
+func (level *Level) UnregisterSimulator(simulator Simulator) {
+	level.simulatorsLock.Lock()
+	defer level.simulatorsLock.Unlock()
+
+	index := -1
+	for i, s := range level.simulators {
+		if s == simulator {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		return
+	}
+
+	level.simulators[index] = level.simulators[len(level.simulators)-1]
+	level.simulators[len(level.simulators)-1] = nil
+	level.simulators = level.simulators[:len(level.simulators)-1]
+}
+
 // UpdateBlock updates the block at the specified coordinates.
 func (level *Level) UpdateBlock(x, y, z int) {
 	index := level.Index(x, y, z)
