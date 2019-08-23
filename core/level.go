@@ -19,7 +19,8 @@ type Level struct {
 }
 
 type LevelInfo struct {
-	Physics bool `json:"physics"`
+	MOTD    string `json:"motd,omitempty"`
+	Physics bool   `json:"physics"`
 
 	Level *Level `json:"-"`
 }

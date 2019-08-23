@@ -391,6 +391,8 @@ func (plugin *CorePlugin) handleLevelLoad(eventType gomcc.EventType, event inter
 	e := event.(*gomcc.EventLevelLoad)
 
 	info := plugin.Levels.Add(e.Level)
+	e.Level.MOTD = info.MOTD
+
 	plugin.disablePhysics(e.Level)
 	if info.Physics {
 		plugin.enablePhysics(e.Level)
