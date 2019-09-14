@@ -28,14 +28,15 @@ func (plugin *CorePlugin) PrivateMessage(message string, src, dst gomcc.CommandS
 	if player, ok := dst.(*gomcc.Player); ok {
 		dstNick = player.Nickname
 		dstInfo = plugin.Players.Find(dst.Name())
-		if srcInfo != nil {
-			dstInfo.Player.LastSender = src.Name()
-		}
 	}
 
 	src.SendMessage("to " + dstNick + ": &f" + message)
-	if dstInfo != nil && dstInfo.IsIgnored(src.Name()) {
-		return
+	if dstInfo != nil {
+		if dstInfo.IsIgnored(src.Name()) {
+			return
+		} else if srcInfo != nil {
+			dstInfo.Player.LastSender = src.Name()
+		}
 	}
 
 	dst.SendMessage("from " + srcNick + ": &f" + message)
