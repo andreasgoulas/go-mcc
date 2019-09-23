@@ -32,14 +32,14 @@ func (plugin *CorePlugin) handleBack(sender gomcc.CommandSender, command *gomcc.
 		return
 	}
 
-	info := plugin.Players.Find(sender.Name()).Player
-	if info.LastLevel == nil {
+	cplayer := plugin.FindPlayer(sender.Name())
+	if cplayer.LastLevel == nil {
 		sender.SendMessage("Location not found")
 		return
 	}
 
-	player.TeleportLevel(info.LastLevel)
-	player.Teleport(info.LastLocation)
+	player.TeleportLevel(cplayer.LastLevel)
+	player.Teleport(cplayer.LastLocation)
 }
 
 func (plugin *CorePlugin) handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message string) {
@@ -111,9 +111,9 @@ func (plugin *CorePlugin) handleTp(sender gomcc.CommandSender, command *gomcc.Co
 		return
 	}
 
-	info := plugin.Players.Find(player.Name()).Player
-	info.LastLevel = lastLevel
-	info.LastLocation = lastLocation
+	cplayer := plugin.FindPlayer(player.Name())
+	cplayer.LastLevel = lastLevel
+	cplayer.LastLocation = lastLocation
 }
 
 func (plugin *CorePlugin) handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message string) {

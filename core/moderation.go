@@ -4,6 +4,7 @@
 package main
 
 import (
+	"database/sql"
 	"net"
 	"strings"
 
@@ -27,13 +28,12 @@ func (plugin *CorePlugin) handleBan(sender gomcc.CommandSender, command *gomcc.C
 		return
 	}
 
-	if plugin.Bans.Name.Ban(args[0], reason, sender.Name()) {
-		sender.SendMessage("Player " + args[0] + " banned")
-		if player := sender.Server().FindPlayer(args[0]); player != nil {
-			player.Kick(reason)
-		}
-	} else {
-		sender.SendMessage("Player " + args[0] + " is already banned")
+	plugin.db.MustExec(`INSERT OR REPLACE INTO banned_names(name, reason, banned_by, timestamp)
+VALUES(?, ?, ?, CURRENT_TIMESTAMP)`, args[0], reason, sender.Name())
+
+	sender.SendMessage("Player " + args[0] + " banned")
+	if player := sender.Server().FindPlayer(args[0]); player != nil {
+		player.Kick(reason)
 	}
 }
 
@@ -54,16 +54,15 @@ func (plugin *CorePlugin) handleBanIp(sender gomcc.CommandSender, command *gomcc
 		return
 	}
 
-	if plugin.Bans.IP.Ban(args[0], reason, sender.Name()) {
-		sender.SendMessage("IP " + args[0] + " banned")
-		sender.Server().ForEachPlayer(func(player *gomcc.Player) {
-			if player.RemoteAddr() == args[0] {
-				player.Kick(reason)
-			}
-		})
-	} else {
-		sender.SendMessage("IP " + args[0] + " is already banned")
-	}
+	plugin.db.MustExec(`INSERT OR REPLACE INTO banned_ips(ip, reason, banned_by, timestamp)
+VALUES(?, ?, ?, CURRENT_TIMESTAMP)`, args[0], reason, sender.Name())
+
+	sender.SendMessage("IP " + args[0] + " banned")
+	sender.Server().ForEachPlayer(func(player *gomcc.Player) {
+		if player.RemoteAddr() == args[0] {
+			player.Kick(reason)
+		}
+	})
 }
 
 func (plugin *CorePlugin) handleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
@@ -91,26 +90,32 @@ func (plugin *CorePlugin) handleRank(sender gomcc.CommandSender, command *gomcc.
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
-		if info := plugin.Players.Find(args[0]); info != nil {
-			sender.SendMessage("The rank of " + args[0] + " is " + info.Rank)
+		var rank sql.NullString
+		if plugin.db.Get(&rank, "SELECT rank FROM players WHERE name = ?", args[0]) == nil {
+			if !rank.Valid {
+				rank.String = "<nil>"
+			}
+
+			sender.SendMessage("The rank of " + args[0] + " is " + rank.String)
 		} else {
 			sender.SendMessage("Player " + args[0] + " not found")
 		}
 
 	case 2:
-		if info := plugin.Players.Find(args[0]); info != nil {
-			if plugin.Ranks.Find(args[1]) == nil {
-				sender.SendMessage("Rank " + args[1] + " not found")
-				return
-			}
+		var exists bool
+		if plugin.db.Get(&exists, "SELECT 1 FROM ranks WHERE name = ?", args[1]) != nil {
+			sender.SendMessage("Rank " + args[1] + " not found")
+			return
+		}
 
-			info.Rank = args[1]
-			sender.SendMessage("Rank of " + args[0] + " set to " + args[1])
-			if info.Player != nil {
-				plugin.Ranks.SetPermissions(info)
-			}
-		} else {
+		r := plugin.db.MustExec("UPDATE players SET rank = ? WHERE name = ?", args[1], args[0])
+		if num, _ := r.RowsAffected(); num == 0 {
 			sender.SendMessage("Player " + args[0] + " not found")
+		} else {
+			sender.SendMessage("Rank of " + args[0] + " set to " + args[1])
+			if player := plugin.FindPlayer(args[0]); player != nil {
+				plugin.updatePermissions(player)
+			}
 		}
 
 	default:
@@ -125,10 +130,11 @@ func (plugin *CorePlugin) handleUnban(sender gomcc.CommandSender, command *gomcc
 		return
 	}
 
-	if plugin.Bans.Name.Unban(args[0]) {
-		sender.SendMessage("Player " + args[0] + " unbanned")
-	} else {
+	r := plugin.db.MustExec("DELETE FROM banned_names WHERE name = ?", args[0])
+	if num, _ := r.RowsAffected(); num == 0 {
 		sender.SendMessage("Player " + args[0] + " is not banned")
+	} else {
+		sender.SendMessage("Player " + args[0] + " unbanned")
 	}
 }
 
@@ -139,9 +145,10 @@ func (plugin *CorePlugin) handleUnbanIp(sender gomcc.CommandSender, command *gom
 		return
 	}
 
-	if plugin.Bans.IP.Unban(args[0]) {
-		sender.SendMessage("IP " + args[0] + " unbanned")
-	} else {
+	r := plugin.db.MustExec("DELETE FROM banned_ips WHERE ip = ?", args[0])
+	if num, _ := r.RowsAffected(); num == 0 {
 		sender.SendMessage("IP " + args[0] + " is not banned")
+	} else {
+		sender.SendMessage("IP " + args[0] + " unbanned")
 	}
 }

@@ -8,7 +8,8 @@ supports a large subset of the Classic Protocol Extension (CPE) project.
 
 The core functionality of Go-MCC can be extended through the use of plugins. The
 Core plugin provides important features typically found in Minecraft servers,
-such as ban lists, a rank manager and data persistency.
+such as ban lists and ranks. The configuration and data are stored in an SQLite
+database.
 
 ## Install
 

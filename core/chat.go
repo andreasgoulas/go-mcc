@@ -15,27 +15,28 @@ func (plugin *CorePlugin) PrivateMessage(message string, src, dst gomcc.CommandS
 	srcNick := src.Name()
 	dstNick := dst.Name()
 
-	var srcInfo, dstInfo *PlayerInfo
+	var srcPlayer *Player
 	if player, ok := src.(*gomcc.Player); ok {
 		srcNick = player.Nickname
-		srcInfo = plugin.Players.Find(src.Name())
-		if srcInfo.Mute {
+		srcPlayer = plugin.FindPlayer(src.Name())
+		if srcPlayer.Mute {
 			src.SendMessage("You are muted")
 			return
 		}
 	}
 
+	var dstPlayer *Player
 	if player, ok := dst.(*gomcc.Player); ok {
 		dstNick = player.Nickname
-		dstInfo = plugin.Players.Find(dst.Name())
+		dstPlayer = plugin.FindPlayer(dst.Name())
 	}
 
 	src.SendMessage("to " + dstNick + ": &f" + message)
-	if dstInfo != nil {
-		if dstInfo.IsIgnored(src.Name()) {
+	if dstPlayer != nil {
+		if dstPlayer.IsIgnored(src.Name()) {
 			return
-		} else if srcInfo != nil {
-			dstInfo.Player.LastSender = src.Name()
+		} else if srcPlayer != nil {
+			dstPlayer.LastSender = src.Name()
 		}
 	}
 
@@ -45,7 +46,7 @@ func (plugin *CorePlugin) PrivateMessage(message string, src, dst gomcc.CommandS
 func (plugin *CorePlugin) BroadcastMessage(src gomcc.CommandSender, message string) {
 	log.Printf("%s\n", message)
 	src.Server().ForEachPlayer(func(player *gomcc.Player) {
-		if !plugin.Players.Find(player.Name()).IsIgnored(src.Name()) {
+		if !plugin.FindPlayer(player.Name()).IsIgnored(src.Name()) {
 			player.SendMessage(message)
 		}
 	})
@@ -60,17 +61,14 @@ func (plugin *CorePlugin) handleIgnore(sender gomcc.CommandSender, command *gomc
 	args := strings.Fields(message)
 	switch len(args) {
 	case 0:
-		info := plugin.Players.Find(sender.Name())
-		if len(info.Ignore) == 0 {
+		player := plugin.FindPlayer(sender.Name())
+		if len(player.IgnoreList) == 0 {
 			sender.SendMessage("You are not ignoring anyone")
 			return
 		}
 
-		var players []string
-		for _, player := range info.Ignore {
-			players = append(players, player)
-		}
-
+		players := make([]string, len(player.IgnoreList))
+		copy(players, player.IgnoreList)
 		sort.Strings(players)
 		sender.SendMessage(strings.Join(players, ", "))
 
@@ -85,17 +83,24 @@ func (plugin *CorePlugin) handleIgnore(sender gomcc.CommandSender, command *gomc
 			return
 		}
 
-		info := plugin.Players.Find(sender.Name())
-		for i, player := range info.Ignore {
-			if player == args[0] {
-				info.Ignore = append(info.Ignore[:i], info.Ignore[i+1:]...)
+		found := false
+		player := plugin.FindPlayer(sender.Name())
+		for i, name := range player.IgnoreList {
+			if name == args[0] {
+				found = true
+				player.IgnoreList = append(player.IgnoreList[:i], player.IgnoreList[i+1:]...)
 				sender.SendMessage("You are no longer ignoring " + args[0])
-				return
+				break
 			}
 		}
 
-		info.Ignore = append(info.Ignore, args[0])
-		sender.SendMessage("You are ignoring " + args[0])
+		if !found {
+			player.IgnoreList = append(player.IgnoreList, args[0])
+			sender.SendMessage("You are ignoring " + args[0])
+		}
+
+		ignoreList := strings.Join(player.IgnoreList, ",")
+		plugin.db.MustExec("UPDATE players SET ignore_list = ? WHERE name = ?", ignoreList, sender.Name())
 
 	default:
 		sender.SendMessage("Usage: " + command.Name + " <player>")
@@ -110,7 +115,7 @@ func (plugin *CorePlugin) handleMe(sender gomcc.CommandSender, command *gomcc.Co
 
 	name := sender.Name()
 	if player, ok := sender.(*gomcc.Player); ok {
-		if plugin.Players.Find(name).Mute {
+		if plugin.FindPlayer(name).Mute {
 			sender.SendMessage("You are muted")
 			return
 		}
@@ -128,13 +133,15 @@ func (plugin *CorePlugin) handleMute(sender gomcc.CommandSender, command *gomcc.
 		return
 	}
 
-	if info := plugin.Players.Find(args[0]); info != nil {
-		info.Mute = !info.Mute
-		if info.Mute {
+	if player := plugin.FindPlayer(args[0]); player != nil {
+		player.Mute = !player.Mute
+		if player.Mute {
 			sender.SendMessage("Player " + args[0] + " muted")
 		} else {
 			sender.SendMessage("Player " + args[0] + " unmuted")
 		}
+
+		plugin.db.MustExec("UPDATE players SET mute = ? WHERE name = ?", player.Mute, args[0])
 	} else {
 		sender.SendMessage("Player " + args[0] + " not found")
 	}
@@ -151,7 +158,7 @@ func (plugin *CorePlugin) handleNick(sender gomcc.CommandSender, command *gomcc.
 		}
 
 		player.Nickname = player.Name()
-		plugin.Players.Find(player.Name()).Nickname = ""
+		plugin.db.MustExec("UPDATE players SET nickname = NULL WHERE name = ?", args[0])
 		sender.SendMessage("Nick of " + args[0] + " reset")
 
 	case 2:
@@ -167,7 +174,7 @@ func (plugin *CorePlugin) handleNick(sender gomcc.CommandSender, command *gomcc.
 		}
 
 		player.Nickname = args[1]
-		plugin.Players.Find(player.Name()).Nickname = args[1]
+		plugin.db.MustExec("UPDATE players SET nickname = ? WHERE name = ?", args[1], args[0])
 		sender.SendMessage("Nick of " + args[0] + " set to " + args[1])
 
 	default:
@@ -186,14 +193,14 @@ func (plugin *CorePlugin) handleR(sender gomcc.CommandSender, command *gomcc.Com
 		return
 	}
 
-	info := plugin.Players.Find(sender.Name())
-	player := sender.Server().FindPlayer(info.Player.LastSender)
-	if player == nil {
+	player := plugin.FindPlayer(sender.Name())
+	lastSender := sender.Server().FindPlayer(player.LastSender)
+	if lastSender == nil {
 		sender.SendMessage("Player not found")
 		return
 	}
 
-	plugin.PrivateMessage(message, sender, player)
+	plugin.PrivateMessage(message, sender, lastSender)
 }
 
 func (plugin *CorePlugin) handleSay(sender gomcc.CommandSender, command *gomcc.Command, message string) {

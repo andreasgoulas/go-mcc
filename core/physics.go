@@ -14,28 +14,26 @@ const (
 	MaxUpdateQueueLength = math.MaxUint32 / 4
 )
 
-func (plugin *CorePlugin) enablePhysics(level *gomcc.Level) {
+func (plugin *CorePlugin) enablePhysics(level *Level) {
 	sims := []gomcc.Simulator{
-		&WaterSimulator{Level: level},
-		&LavaSimulator{Level: level},
-		&SandSimulator{Level: level},
+		&WaterSimulator{Level: level.Level},
+		&LavaSimulator{Level: level.Level},
+		&SandSimulator{Level: level.Level},
 	}
 
 	for _, sim := range sims {
 		level.RegisterSimulator(sim)
 	}
 
-	info := plugin.Levels.Find(level.Name)
-	info.Level.Simulators = append(info.Level.Simulators, sims...)
+	level.Simulators = append(level.Simulators, sims...)
 }
 
-func (plugin *CorePlugin) disablePhysics(level *gomcc.Level) {
-	info := plugin.Levels.Find(level.Name)
-	for _, sim := range info.Level.Simulators {
+func (plugin *CorePlugin) disablePhysics(level *Level) {
+	for _, sim := range level.Simulators {
 		level.UnregisterSimulator(sim)
 	}
 
-	info.Level.Simulators = nil
+	level.Simulators = nil
 }
 
 type blockUpdate struct {

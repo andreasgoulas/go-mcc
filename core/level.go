@@ -7,72 +7,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/structinf/Go-MCC/gomcc"
 )
-
-type Level struct {
-	*gomcc.Level
-
-	Simulators []gomcc.Simulator
-}
-
-type LevelInfo struct {
-	MOTD    string `json:"motd,omitempty"`
-	Physics bool   `json:"physics"`
-
-	Level *Level `json:"-"`
-}
-
-type LevelManager struct {
-	Lock   sync.RWMutex
-	Levels map[string]*LevelInfo
-}
-
-func (manager *LevelManager) Load(path string) {
-	manager.Lock.Lock()
-	manager.Levels = make(map[string]*LevelInfo)
-	loadJson(path, &manager.Levels)
-	manager.Lock.Unlock()
-}
-
-func (manager *LevelManager) Save(path string) {
-	manager.Lock.RLock()
-	saveJson(path, &manager.Levels)
-	manager.Lock.RUnlock()
-}
-
-func (manager *LevelManager) Find(name string) *LevelInfo {
-	manager.Lock.RLock()
-	defer manager.Lock.RUnlock()
-	return manager.Levels[name]
-}
-
-func (manager *LevelManager) Add(level *gomcc.Level) *LevelInfo {
-	name := level.Name
-	manager.Lock.RLock()
-	defer manager.Lock.RUnlock()
-
-	info, ok := manager.Levels[name]
-	if !ok {
-		info = &LevelInfo{}
-		manager.Levels[name] = info
-	}
-
-	info.Level = &Level{Level: level}
-	return info
-}
-
-func (manager *LevelManager) Remove(level *gomcc.Level) {
-	name := level.Name
-	manager.Lock.Lock()
-	defer manager.Lock.Unlock()
-
-	if info, ok := manager.Levels[name]; ok {
-		info.Level = nil
-	}
-}
 
 func (plugin *CorePlugin) handleCopyLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
@@ -213,7 +150,7 @@ func (plugin *CorePlugin) handleNewLvl(sender gomcc.CommandSender, command *gomc
 }
 
 func (plugin *CorePlugin) handlePhysics(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	var level *gomcc.Level
+	var level *Level
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
@@ -221,11 +158,11 @@ func (plugin *CorePlugin) handlePhysics(sender gomcc.CommandSender, command *gom
 			sender.SendMessage("You are not a player")
 			return
 		} else {
-			level = player.Level()
+			level = plugin.FindLevel(player.Level().Name)
 		}
 
 	case 2:
-		level = sender.Server().FindLevel(args[0])
+		level = plugin.FindLevel(args[0])
 		if level == nil {
 			sender.SendMessage("Level " + args[0] + " not found")
 			return
@@ -242,8 +179,10 @@ func (plugin *CorePlugin) handlePhysics(sender gomcc.CommandSender, command *gom
 		sender.SendMessage(args[0] + " is not a valid boolean")
 		return
 	} else {
-		if info := plugin.Levels.Find(level.Name); info.Physics != value {
-			info.Physics = value
+		var oldValue bool
+		plugin.db.Get(&oldValue, "SELECT physics FROM levels WHERE name = ?", level.Name)
+		plugin.db.MustExec("UPDATE levels SET physics = ? WHERE name = ?", value, level.Name)
+		if oldValue != value {
 			if value {
 				plugin.enablePhysics(level)
 			} else {

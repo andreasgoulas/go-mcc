@@ -109,8 +109,9 @@ func (plugin *CorePlugin) handleSeen(sender gomcc.CommandSender, command *gomcc.
 		return
 	}
 
-	if info := plugin.Players.Find(args[0]); info != nil {
-		dt := time.Now().Sub(info.LastLogin)
+	var lastLogin time.Time
+	if plugin.db.Get(&lastLogin, "SELECT last_login FROM players WHERE name = ?", args[0]) == nil {
+		dt := time.Now().Sub(lastLogin)
 		sender.SendMessage("Player " + args[0] + " was last seen " + fmtDuration(dt) + " ago")
 	} else {
 		sender.SendMessage("Player " + args[0] + " not found")

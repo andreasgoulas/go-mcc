@@ -108,6 +108,10 @@ func (group *PermissionGroup) Clear() {
 
 // AddPermission adds permission to the group.
 func (group *PermissionGroup) AddPermission(permission string) {
+	if len(permission) == 0 {
+		return
+	}
+
 	split := strings.Split(permission, ".")
 	group.permissions = append(group.permissions, split)
 }
