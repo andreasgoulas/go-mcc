@@ -449,6 +449,12 @@ func (server *Server) ExecuteCommand(sender CommandSender, message string) {
 		message = ""
 	}
 
+	event := EventCommand{sender, command, message, false}
+	server.FireEvent(EventTypeCommand, &event)
+	if event.Cancel {
+		return
+	}
+
 	go command.Handler(sender, command, message)
 }
 

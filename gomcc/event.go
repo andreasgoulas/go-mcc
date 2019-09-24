@@ -29,6 +29,7 @@ const (
 	EventTypeLevelLoad
 	EventTypeLevelUnload
 	EventTypeLevelSave
+	EventTypeCommand
 )
 
 // EventHandler is the type of the function called to handle an event.
@@ -122,4 +123,13 @@ type EventLevelUnload struct {
 // EventLevelSave is dispatched when a level is saved.
 type EventLevelSave struct {
 	Level *Level
+}
+
+// EventCommand is dispatched before a command is executed.
+// If the event is cancelled, the command will not be executed.
+type EventCommand struct {
+	Sender  CommandSender
+	Command *Command
+	Message string
+	Cancel  bool
 }
