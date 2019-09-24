@@ -22,7 +22,7 @@ func fmtDuration(t time.Duration) string {
 	return fmt.Sprintf("%dd %dh %dm", d, h, m)
 }
 
-func (plugin *CorePlugin) handleCommands(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleCommands(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) != 0 {
 		sender.SendMessage("Usage: " + command.Name)
 		return
@@ -37,7 +37,7 @@ func (plugin *CorePlugin) handleCommands(sender gomcc.CommandSender, command *go
 	sender.SendMessage(strings.Join(cmds, ", "))
 }
 
-func (plugin *CorePlugin) handleHelp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleHelp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <command>")
@@ -53,7 +53,7 @@ func (plugin *CorePlugin) handleHelp(sender gomcc.CommandSender, command *gomcc.
 	sender.SendMessage(cmd.Description)
 }
 
-func (plugin *CorePlugin) handleLevels(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleLevels(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) != 0 {
 		sender.SendMessage("Usage: " + command.Name)
 		return
@@ -68,7 +68,7 @@ func (plugin *CorePlugin) handleLevels(sender gomcc.CommandSender, command *gomc
 	sender.SendMessage(strings.Join(levels, ", "))
 }
 
-func (plugin *CorePlugin) handlePlayers(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handlePlayers(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	var players []string
 	args := strings.Fields(message)
 	switch len(args) {
@@ -97,7 +97,7 @@ func (plugin *CorePlugin) handlePlayers(sender gomcc.CommandSender, command *gom
 	sender.SendMessage(strings.Join(players, ", "))
 }
 
-func (plugin *CorePlugin) handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <player>")

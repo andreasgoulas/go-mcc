@@ -11,7 +11,7 @@ import (
 	"github.com/structinf/Go-MCC/gomcc"
 )
 
-func (plugin *CorePlugin) handleCopyLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleCopyLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 2 {
 		sender.SendMessage("Usage: " + command.Name + " <src> <dest>")
@@ -35,7 +35,7 @@ func (plugin *CorePlugin) handleCopyLvl(sender gomcc.CommandSender, command *gom
 	sender.SendMessage("Level " + args[0] + " has been copied to " + args[1])
 }
 
-func (plugin *CorePlugin) handleGoto(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleGoto(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -62,7 +62,7 @@ func (plugin *CorePlugin) handleGoto(sender gomcc.CommandSender, command *gomcc.
 	player.TeleportLevel(level)
 }
 
-func (plugin *CorePlugin) handleLoad(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleLoad(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")
@@ -78,7 +78,7 @@ func (plugin *CorePlugin) handleLoad(sender gomcc.CommandSender, command *gomcc.
 	sender.SendMessage("Level " + args[0] + " loaded")
 }
 
-func (plugin *CorePlugin) handleMain(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleMain(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	switch len(args) {
 	case 0:
@@ -99,7 +99,7 @@ func (plugin *CorePlugin) handleMain(sender gomcc.CommandSender, command *gomcc.
 	}
 }
 
-func (plugin *CorePlugin) handleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) < 5 {
 		sender.SendMessage("Usage: " + command.Name + " <name> <width> <height> <length> <theme> <args>")
@@ -149,8 +149,8 @@ func (plugin *CorePlugin) handleNewLvl(sender gomcc.CommandSender, command *gomc
 	sender.SendMessage("Level " + level.Name + " created")
 }
 
-func (plugin *CorePlugin) handlePhysics(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	var level *Level
+func (plugin *Plugin) handlePhysics(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	var level *level
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
@@ -158,11 +158,11 @@ func (plugin *CorePlugin) handlePhysics(sender gomcc.CommandSender, command *gom
 			sender.SendMessage("You are not a player")
 			return
 		} else {
-			level = plugin.FindLevel(player.Level().Name)
+			level = plugin.findLevel(player.Level().Name)
 		}
 
 	case 2:
-		level = plugin.FindLevel(args[0])
+		level = plugin.findLevel(args[0])
 		if level == nil {
 			sender.SendMessage("Level " + args[0] + " not found")
 			return
@@ -194,7 +194,7 @@ func (plugin *CorePlugin) handlePhysics(sender gomcc.CommandSender, command *gom
 	}
 }
 
-func (plugin *CorePlugin) handleSave(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleSave(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")
@@ -219,7 +219,7 @@ func (plugin *CorePlugin) handleSave(sender gomcc.CommandSender, command *gomcc.
 	sender.SendMessage("Level " + level.Name + " saved")
 }
 
-func (plugin *CorePlugin) handleSetSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleSetSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -257,7 +257,7 @@ func (plugin *CorePlugin) handleSetSpawn(sender gomcc.CommandSender, command *go
 	}
 }
 
-func (plugin *CorePlugin) handleSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -272,7 +272,7 @@ func (plugin *CorePlugin) handleSpawn(sender gomcc.CommandSender, command *gomcc
 	player.Teleport(player.Level().Spawn)
 }
 
-func (plugin *CorePlugin) handleUnload(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleUnload(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")

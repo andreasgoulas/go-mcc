@@ -11,7 +11,7 @@ import (
 	"github.com/structinf/Go-MCC/gomcc"
 )
 
-func (plugin *CorePlugin) handleBan(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleBan(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <player> <reason>")
 		return
@@ -37,7 +37,7 @@ VALUES(?, ?, ?, CURRENT_TIMESTAMP)`, args[0], reason, sender.Name())
 	}
 }
 
-func (plugin *CorePlugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <ip> <reason>")
 		return
@@ -65,7 +65,7 @@ VALUES(?, ?, ?, CURRENT_TIMESTAMP)`, args[0], reason, sender.Name())
 	})
 }
 
-func (plugin *CorePlugin) handleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
 		sender.SendMessage("Usage: " + command.Name + " <player> <reason>")
 		return
@@ -86,7 +86,7 @@ func (plugin *CorePlugin) handleKick(sender gomcc.CommandSender, command *gomcc.
 	player.Kick(reason)
 }
 
-func (plugin *CorePlugin) handleRank(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleRank(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
@@ -113,7 +113,7 @@ func (plugin *CorePlugin) handleRank(sender gomcc.CommandSender, command *gomcc.
 			sender.SendMessage("Player " + args[0] + " not found")
 		} else {
 			sender.SendMessage("Rank of " + args[0] + " set to " + args[1])
-			if player := plugin.FindPlayer(args[0]); player != nil {
+			if player := plugin.findPlayer(args[0]); player != nil {
 				plugin.updatePermissions(player)
 			}
 		}
@@ -123,7 +123,7 @@ func (plugin *CorePlugin) handleRank(sender gomcc.CommandSender, command *gomcc.
 	}
 }
 
-func (plugin *CorePlugin) handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <player>")
@@ -138,7 +138,7 @@ func (plugin *CorePlugin) handleUnban(sender gomcc.CommandSender, command *gomcc
 	}
 }
 
-func (plugin *CorePlugin) handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <ip>")

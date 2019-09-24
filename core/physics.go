@@ -11,52 +11,52 @@ import (
 )
 
 const (
-	MaxUpdateQueueLength = math.MaxUint32 / 4
+	maxUpdateQueueLength = math.MaxUint32 / 4
 )
 
-func (plugin *CorePlugin) enablePhysics(level *Level) {
+func (plugin *Plugin) enablePhysics(level *level) {
 	sims := []gomcc.Simulator{
-		&WaterSimulator{Level: level.Level},
-		&LavaSimulator{Level: level.Level},
-		&SandSimulator{Level: level.Level},
+		&waterSimulator{level: level.Level},
+		&lavaSimulator{level: level.Level},
+		&sandSimulator{level: level.Level},
 	}
 
 	for _, sim := range sims {
 		level.RegisterSimulator(sim)
 	}
 
-	level.Simulators = append(level.Simulators, sims...)
+	level.simulators = append(level.simulators, sims...)
 }
 
-func (plugin *CorePlugin) disablePhysics(level *Level) {
-	for _, sim := range level.Simulators {
+func (plugin *Plugin) disablePhysics(level *level) {
+	for _, sim := range level.simulators {
 		level.UnregisterSimulator(sim)
 	}
 
-	level.Simulators = nil
+	level.simulators = nil
 }
 
 type blockUpdate struct {
 	index, ticks int
 }
 
-type BlockUpdateQueue struct {
+type blockUpdateQueue struct {
 	lock    sync.Mutex
 	updates []blockUpdate
 }
 
-func (queue *BlockUpdateQueue) Add(index int, delay int) {
+func (queue *blockUpdateQueue) Add(index int, delay int) {
 	queue.lock.Lock()
 	defer queue.lock.Unlock()
 
-	if len(queue.updates) < MaxUpdateQueueLength {
+	if len(queue.updates) < maxUpdateQueueLength {
 		queue.updates = append(queue.updates, blockUpdate{index, delay})
 	} else {
 		queue.updates = nil
 	}
 }
 
-func (queue *BlockUpdateQueue) Tick() (updates []int) {
+func (queue *blockUpdateQueue) Tick() (updates []int) {
 	i := 0
 	queue.lock.Lock()
 	for _, update := range queue.updates {
@@ -73,16 +73,16 @@ func (queue *BlockUpdateQueue) Tick() (updates []int) {
 	return
 }
 
-type WaterSimulator struct {
-	Level *gomcc.Level
-	queue BlockUpdateQueue
+type waterSimulator struct {
+	level *gomcc.Level
+	queue blockUpdateQueue
 }
 
-func (simulator *WaterSimulator) Update(block, old byte, index int) {
+func (simulator *waterSimulator) Update(block, old byte, index int) {
 	if block == gomcc.BlockActiveWater || (block == gomcc.BlockWater && block == old) {
 		simulator.queue.Add(index, 5)
 	} else {
-		level := simulator.Level
+		level := simulator.level
 		x, y, z := level.Position(index)
 		if block == gomcc.BlockAir && simulator.checkEdge(x, y, z) {
 			level.SetBlock(x, y, z, gomcc.BlockActiveWater)
@@ -96,8 +96,8 @@ func (simulator *WaterSimulator) Update(block, old byte, index int) {
 	}
 }
 
-func (simulator *WaterSimulator) Tick() {
-	level := simulator.Level
+func (simulator *waterSimulator) Tick() {
+	level := simulator.level
 	for _, index := range simulator.queue.Tick() {
 		block := level.Blocks[index]
 		if block != gomcc.BlockActiveWater && block != gomcc.BlockWater {
@@ -123,16 +123,16 @@ func (simulator *WaterSimulator) Tick() {
 	}
 }
 
-func (simulator *WaterSimulator) checkEdge(x, y, z int) bool {
-	level := simulator.Level
+func (simulator *waterSimulator) checkEdge(x, y, z int) bool {
+	level := simulator.level
 	env := level.EnvConfig
 	return (env.EdgeBlock == gomcc.BlockActiveWater || env.EdgeBlock == gomcc.BlockWater) &&
 		y >= (env.EdgeHeight+env.SideOffset) && y < env.EdgeHeight &&
 		(x == 0 || z == 0 || x == level.Width-1 || z == level.Length-1)
 }
 
-func (simulator *WaterSimulator) spread(x, y, z int) {
-	level := simulator.Level
+func (simulator *waterSimulator) spread(x, y, z int) {
+	level := simulator.level
 	switch level.GetBlock(x, y, z) {
 	case gomcc.BlockAir:
 		for yy := max(y-2, 0); yy <= min(y+2, level.Height-1); yy++ {
@@ -152,8 +152,8 @@ func (simulator *WaterSimulator) spread(x, y, z int) {
 	}
 }
 
-func (simulator *WaterSimulator) placeSponge(x, y, z int) {
-	level := simulator.Level
+func (simulator *waterSimulator) placeSponge(x, y, z int) {
+	level := simulator.level
 	for yy := max(y-2, 0); yy <= min(y+2, level.Height-1); yy++ {
 		for zz := max(z-2, 0); zz <= min(z+2, level.Length-1); zz++ {
 			for xx := max(x-2, 0); xx <= min(x+2, level.Width-1); xx++ {
@@ -166,8 +166,8 @@ func (simulator *WaterSimulator) placeSponge(x, y, z int) {
 	}
 }
 
-func (simulator *WaterSimulator) breakSponge(x, y, z int) {
-	level := simulator.Level
+func (simulator *waterSimulator) breakSponge(x, y, z int) {
+	level := simulator.level
 	for yy := max(y-3, 0); yy <= min(y+3, level.Height-1); yy++ {
 		for zz := max(z-3, 0); zz <= min(z+3, level.Length-1); zz++ {
 			for xx := max(x-3, 0); xx <= min(x+3, level.Width-1); xx++ {
@@ -182,19 +182,19 @@ func (simulator *WaterSimulator) breakSponge(x, y, z int) {
 	}
 }
 
-type LavaSimulator struct {
-	Level *gomcc.Level
-	queue BlockUpdateQueue
+type lavaSimulator struct {
+	level *gomcc.Level
+	queue blockUpdateQueue
 }
 
-func (simulator *LavaSimulator) Update(block, old byte, index int) {
+func (simulator *lavaSimulator) Update(block, old byte, index int) {
 	if block == gomcc.BlockActiveLava || (block == gomcc.BlockLava && block == old) {
 		simulator.queue.Add(index, 30)
 	}
 }
 
-func (simulator *LavaSimulator) Tick() {
-	level := simulator.Level
+func (simulator *lavaSimulator) Tick() {
+	level := simulator.level
 	for _, index := range simulator.queue.Tick() {
 		block := level.Blocks[index]
 		if block != gomcc.BlockActiveLava && block != gomcc.BlockLava {
@@ -220,8 +220,8 @@ func (simulator *LavaSimulator) Tick() {
 	}
 }
 
-func (simulator *LavaSimulator) spread(x, y, z int) {
-	level := simulator.Level
+func (simulator *lavaSimulator) spread(x, y, z int) {
+	level := simulator.level
 	switch level.GetBlock(x, y, z) {
 	case gomcc.BlockAir:
 		level.SetBlock(x, y, z, gomcc.BlockActiveLava)
@@ -231,16 +231,16 @@ func (simulator *LavaSimulator) spread(x, y, z int) {
 	}
 }
 
-type SandSimulator struct {
-	Level *gomcc.Level
+type sandSimulator struct {
+	level *gomcc.Level
 }
 
-func (simulator *SandSimulator) Update(block, old byte, index int) {
+func (simulator *sandSimulator) Update(block, old byte, index int) {
 	if block != gomcc.BlockSand && block != gomcc.BlockGravel {
 		return
 	}
 
-	level := simulator.Level
+	level := simulator.level
 	x, y0, z := level.Position(index)
 	y1 := y0
 	for y1 >= 0 && simulator.check(x, y1-1, z) {
@@ -253,10 +253,10 @@ func (simulator *SandSimulator) Update(block, old byte, index int) {
 	}
 }
 
-func (simulator *SandSimulator) Tick() {}
+func (simulator *sandSimulator) Tick() {}
 
-func (simulator *SandSimulator) check(x, y, z int) bool {
-	switch simulator.Level.GetBlock(x, y, z) {
+func (simulator *sandSimulator) check(x, y, z int) bool {
+	switch simulator.level.GetBlock(x, y, z) {
 	case gomcc.BlockAir, gomcc.BlockActiveWater, gomcc.BlockWater,
 		gomcc.BlockActiveLava, gomcc.BlockLava:
 		return true

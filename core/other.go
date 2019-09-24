@@ -20,9 +20,8 @@ func parseCoord(arg string, curr float64) (float64, error) {
 	}
 }
 
-func (plugin *CorePlugin) handleBack(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	player, ok := sender.(*gomcc.Player)
-	if !ok {
+func (plugin *Plugin) handleBack(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	if _, ok := sender.(*gomcc.Player); !ok {
 		sender.SendMessage("You are not a player")
 		return
 	}
@@ -32,17 +31,17 @@ func (plugin *CorePlugin) handleBack(sender gomcc.CommandSender, command *gomcc.
 		return
 	}
 
-	cplayer := plugin.FindPlayer(sender.Name())
-	if cplayer.LastLevel == nil {
+	player := plugin.findPlayer(sender.Name())
+	if player.lastLevel == nil {
 		sender.SendMessage("Location not found")
 		return
 	}
 
-	player.TeleportLevel(cplayer.LastLevel)
-	player.Teleport(cplayer.LastLocation)
+	player.TeleportLevel(player.lastLevel)
+	player.Teleport(player.lastLocation)
 }
 
-func (plugin *CorePlugin) handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 2 {
 		sender.SendMessage("Usage: " + command.Name + " <player> <skin>")
@@ -60,7 +59,7 @@ func (plugin *CorePlugin) handleSkin(sender gomcc.CommandSender, command *gomcc.
 	sender.SendMessage("Skin of " + args[0] + " set to " + args[1])
 }
 
-func (plugin *CorePlugin) handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -111,12 +110,12 @@ func (plugin *CorePlugin) handleTp(sender gomcc.CommandSender, command *gomcc.Co
 		return
 	}
 
-	cplayer := plugin.FindPlayer(player.Name())
-	cplayer.LastLevel = lastLevel
-	cplayer.LastLocation = lastLocation
+	cplayer := plugin.findPlayer(player.Name())
+	cplayer.lastLevel = lastLevel
+	cplayer.lastLocation = lastLocation
 }
 
-func (plugin *CorePlugin) handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")

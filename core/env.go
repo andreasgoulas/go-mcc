@@ -190,7 +190,7 @@ var envOptions = map[string]struct {
 	"diffusecolor":    {envDiffuseColor, gomcc.EnvPropDiffuseColor},
 }
 
-func (plugin *CorePlugin) handleEnv(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleEnv(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	player, ok := sender.(*gomcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")

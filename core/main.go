@@ -36,28 +36,28 @@ func max(x, y int) int {
 	return y
 }
 
-type Level struct {
+type level struct {
 	*gomcc.Level
 
-	Simulators []gomcc.Simulator
+	simulators []gomcc.Simulator
 }
 
-type Player struct {
+type player struct {
 	*gomcc.Player
 
-	PermGroup *gomcc.PermissionGroup
+	permGroup *gomcc.PermissionGroup
 
-	Mute       bool
-	IgnoreList []string
-	MsgFormat  string
+	mute       bool
+	ignoreList []string
+	msgFormat  string
 
-	LastSender   string
-	LastLevel    *gomcc.Level
-	LastLocation gomcc.Location
+	lastSender   string
+	lastLevel    *gomcc.Level
+	lastLocation gomcc.Location
 }
 
-func (player *Player) IsIgnored(name string) bool {
-	for _, p := range player.IgnoreList {
+func (player *player) isIgnored(name string) bool {
+	for _, p := range player.ignoreList {
 		if p == name {
 			return true
 		}
@@ -66,13 +66,13 @@ func (player *Player) IsIgnored(name string) bool {
 	return false
 }
 
-type CorePlugin struct {
+type Plugin struct {
 	db *sqlx.DB
 
-	levels     map[string]*Level
+	levels     map[string]*level
 	levelsLock sync.RWMutex
 
-	players     map[string]*Player
+	players     map[string]*player
 	playersLock sync.RWMutex
 }
 
@@ -83,42 +83,46 @@ func Initialize() gomcc.Plugin {
 		return nil
 	}
 
-	return &CorePlugin{
+	return &Plugin{
 		db:      db,
-		levels:  make(map[string]*Level),
-		players: make(map[string]*Player),
+		levels:  make(map[string]*level),
+		players: make(map[string]*player),
 	}
 }
 
-func (plugin *CorePlugin) Name() string {
+func (plugin *Plugin) Name() string {
 	return "Core"
 }
 
-func (plugin *CorePlugin) Enable(server *gomcc.Server) {
+func (plugin *Plugin) Enable(server *gomcc.Server) {
 	plugin.db.MustExec(`
 CREATE TABLE IF NOT EXISTS banned_names(
 	name TEXT PRIMARY KEY,
 	reason TEXT,
 	banned_by TEXT,
-	timestamp DATETIME);
+	timestamp DATETIME
+);
 
 CREATE TABLE IF NOT EXISTS banned_ips(
 	ip TEXT PRIMARY KEY,
 	reason TEXT,
 	banned_by TEXT,
-	timestamp DATETIME);
+	timestamp DATETIME
+);
 
 CREATE TABLE IF NOT EXISTS levels(
 	name TEXT PRIMARY KEY,
 	motd TEXT,
-	physics INTEGER NOT NULL);
+	physics INTEGER NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS ranks(
 	name TEXT PRIMARY KEY,
 	permissions TEXT,
 	prefix TEXT,
 	suffix TEXT,
-	is_default INTEGER NOT NULL);
+	is_default INTEGER NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS players(
 	name TEXT PRIMARY KEY,
@@ -129,7 +133,8 @@ CREATE TABLE IF NOT EXISTS players(
 	nickname TEXT,
 	ignore_list TEXT,
 	mute INTEGER NOT NULL,
-	FOREIGN KEY(rank) REFERENCES ranks(name));`)
+	FOREIGN KEY(rank) REFERENCES ranks(name)
+);`)
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "back",
@@ -374,13 +379,13 @@ CREATE TABLE IF NOT EXISTS players(
 	})
 }
 
-func (plugin *CorePlugin) Disable(server *gomcc.Server) {
+func (plugin *Plugin) Disable(server *gomcc.Server) {
 	plugin.db.Close()
 }
 
-func (plugin *CorePlugin) addPlayer(player *gomcc.Player) *Player {
-	name := player.Name()
-	cplayer := &Player{Player: player}
+func (plugin *Plugin) addPlayer(ptr *gomcc.Player) *player {
+	name := ptr.Name()
+	player := &player{Player: ptr}
 
 	plugin.db.MustExec(`INSERT OR IGNORE INTO players(name, rank, first_login, mute)
 VALUES(?, (SELECT name FROM ranks WHERE is_default = 1), CURRENT_TIMESTAMP, 0);`, name)
@@ -393,63 +398,51 @@ VALUES(?, (SELECT name FROM ranks WHERE is_default = 1), CURRENT_TIMESTAMP, 0);`
 	}{}
 	plugin.db.Get(&data, "SELECT nickname, ignore_list, mute FROM players WHERE name = ?", name)
 
-	cplayer.Mute = data.Mute
+	player.mute = data.Mute
 	if data.Nickname.Valid {
 		player.Nickname = data.Nickname.String
 	}
 	if data.IgnoreList.Valid && len(data.IgnoreList.String) != 0 {
-		cplayer.IgnoreList = strings.Split(data.IgnoreList.String, ",")
+		player.ignoreList = strings.Split(data.IgnoreList.String, ",")
 	}
 
-	plugin.updatePermissions(cplayer)
+	plugin.updatePermissions(player)
 
 	plugin.playersLock.Lock()
-	plugin.players[name] = cplayer
+	plugin.players[name] = player
 	plugin.playersLock.Unlock()
-	return cplayer
+	return player
 }
 
-func (plugin *CorePlugin) removePlayer(player *gomcc.Player) {
+func (plugin *Plugin) removePlayer(player *gomcc.Player) {
 	plugin.playersLock.Lock()
 	delete(plugin.players, player.Name())
 	plugin.playersLock.Unlock()
 }
 
-func (plugin *CorePlugin) FindPlayer(name string) *Player {
+func (plugin *Plugin) findPlayer(name string) *player {
 	plugin.playersLock.RLock()
 	defer plugin.playersLock.RUnlock()
 	return plugin.players[name]
 }
 
-func (plugin *CorePlugin) updatePermissions(player *Player) {
-	if player.PermGroup == nil {
-		player.PermGroup = &gomcc.PermissionGroup{}
-		player.AddPermissionGroup(player.PermGroup)
+func (plugin *Plugin) updatePermissions(player *player) {
+	if player.permGroup == nil {
+		player.permGroup = &gomcc.PermissionGroup{}
+		player.AddPermissionGroup(player.permGroup)
 	}
 
-	player.PermGroup.Clear()
-
-	var playerPerms sql.NullString
-	row := plugin.db.QueryRow("SELECT Permissions FROM Players WHERE Name = ?", player.Name())
-	if err := row.Scan(&playerPerms); err != nil {
-		log.Println(err)
-	}
+	player.permGroup.Clear()
 
 	playerData := struct {
 		Rank        sql.NullString `db:"rank"`
 		Permissions sql.NullString `db:"permissions"`
 	}{}
 	plugin.db.Get(&playerData, "SELECT rank, permissions FROM players WHERE name = ?", player.Name())
-
 	if playerData.Permissions.Valid {
 		for _, perm := range strings.Split(playerData.Permissions.String, ",") {
-			player.PermGroup.AddPermission(perm)
+			player.permGroup.AddPermission(perm)
 		}
-	}
-
-	if !playerData.Rank.Valid {
-		player.MsgFormat = "%s: &f%s"
-		return
 	}
 
 	rankData := struct {
@@ -457,20 +450,21 @@ func (plugin *CorePlugin) updatePermissions(player *Player) {
 		Suffix      sql.NullString `db:"suffix"`
 		Permissions sql.NullString `db:"permissions"`
 	}{}
-	plugin.db.Get(&rankData, "SELECT prefix, suffix, permissions FROM ranks WHERE name = ?", playerData.Rank.String)
-
-	if rankData.Permissions.Valid {
-		for _, perm := range strings.Split(rankData.Permissions.String, ",") {
-			player.PermGroup.AddPermission(perm)
+	if playerData.Rank.Valid {
+		plugin.db.Get(&rankData, "SELECT prefix, suffix, permissions FROM ranks WHERE name = ?", playerData.Rank.String)
+		if rankData.Permissions.Valid {
+			for _, perm := range strings.Split(rankData.Permissions.String, ",") {
+				player.permGroup.AddPermission(perm)
+			}
 		}
 	}
 
-	player.MsgFormat = fmt.Sprintf("%s%%s%s: &f%%s", rankData.Prefix.String, rankData.Suffix.String)
+	player.msgFormat = fmt.Sprintf("%s%%s%s: &f%%s", rankData.Prefix.String, rankData.Suffix.String)
 }
 
-func (plugin *CorePlugin) addLevel(level *gomcc.Level) *Level {
-	name := level.Name
-	clevel := &Level{Level: level}
+func (plugin *Plugin) addLevel(ptr *gomcc.Level) *level {
+	name := ptr.Name
+	level := &level{Level: ptr}
 
 	plugin.db.MustExec("INSERT OR IGNORE INTO levels(name, physics) VALUES(?, 0)", name)
 
@@ -484,30 +478,30 @@ func (plugin *CorePlugin) addLevel(level *gomcc.Level) *Level {
 		level.MOTD = data.MOTD.String
 	}
 
-	plugin.disablePhysics(clevel)
+	plugin.disablePhysics(level)
 	if data.Physics {
-		plugin.enablePhysics(clevel)
+		plugin.enablePhysics(level)
 	}
 
 	plugin.levelsLock.Lock()
-	plugin.levels[name] = clevel
+	plugin.levels[name] = level
 	plugin.levelsLock.Unlock()
-	return clevel
+	return level
 }
 
-func (plugin *CorePlugin) removeLevel(level *gomcc.Level) {
+func (plugin *Plugin) removeLevel(level *gomcc.Level) {
 	plugin.levelsLock.Lock()
 	delete(plugin.levels, level.Name)
 	plugin.levelsLock.Unlock()
 }
 
-func (plugin *CorePlugin) FindLevel(name string) *Level {
+func (plugin *Plugin) findLevel(name string) *level {
 	plugin.levelsLock.RLock()
 	defer plugin.levelsLock.RUnlock()
 	return plugin.levels[name]
 }
 
-func (plugin *CorePlugin) handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
+func (plugin *Plugin) handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerLogin)
 
 	var reason sql.NullString
@@ -521,40 +515,40 @@ SELECT reason FROM banned_names WHERE name = ?`, addr, name) == nil {
 	}
 }
 
-func (plugin *CorePlugin) handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
+func (plugin *Plugin) handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerJoin)
 	plugin.addPlayer(e.Player)
 }
 
-func (plugin *CorePlugin) handlePlayerQuit(eventType gomcc.EventType, event interface{}) {
+func (plugin *Plugin) handlePlayerQuit(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerQuit)
 	plugin.removePlayer(e.Player)
 }
 
-func (plugin *CorePlugin) handlePlayerChat(eventType gomcc.EventType, event interface{}) {
+func (plugin *Plugin) handlePlayerChat(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerChat)
 	name := e.Player.Name()
-	cplayer := plugin.FindPlayer(name)
-	if cplayer.Mute {
-		e.Player.SendMessage("You are muted")
+	player := plugin.findPlayer(name)
+	if player.mute {
+		player.SendMessage("You are muted")
 		e.Cancel = true
 		return
 	}
 
-	e.Format = cplayer.MsgFormat
+	e.Format = player.msgFormat
 	for i := len(e.Targets) - 1; i >= 0; i-- {
-		if plugin.FindPlayer(e.Targets[i].Name()).IsIgnored(name) {
+		if plugin.findPlayer(e.Targets[i].Name()).isIgnored(name) {
 			e.Targets = append(e.Targets[:i], e.Targets[i+1:]...)
 		}
 	}
 }
 
-func (plugin *CorePlugin) handleLevelLoad(eventType gomcc.EventType, event interface{}) {
+func (plugin *Plugin) handleLevelLoad(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventLevelLoad)
 	plugin.addLevel(e.Level)
 }
 
-func (plugin *CorePlugin) handleLevelUnload(eventType gomcc.EventType, event interface{}) {
+func (plugin *Plugin) handleLevelUnload(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventLevelUnload)
 	plugin.removeLevel(e.Level)
 }
