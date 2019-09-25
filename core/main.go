@@ -118,7 +118,6 @@ CREATE TABLE IF NOT EXISTS levels(
 
 CREATE TABLE IF NOT EXISTS ranks(
 	name TEXT PRIMARY KEY,
-	permissions TEXT,
 	prefix TEXT,
 	suffix TEXT,
 	is_default INTEGER NOT NULL
@@ -129,11 +128,22 @@ CREATE TABLE IF NOT EXISTS players(
 	rank TEXT,
 	first_login DATETIME,
 	last_login DATETIME,
-	permissions TEXT,
 	nickname TEXT,
 	ignore_list TEXT,
 	mute INTEGER NOT NULL,
 	FOREIGN KEY(rank) REFERENCES ranks(name)
+);
+
+CREATE TABLE IF NOT EXISTS rank_permissions(
+	rank TEXT NOT NULL,
+	permission TEXT NOT NULL,
+	FOREIGN KEY(rank) REFERENCES ranks(name)
+);
+
+CREATE TABLE IF NOT EXISTS player_permissions(
+	player TEXT NOT NULL,
+	permission TEXT NOT NULL,
+	FOREIGN KEY(player) REFERENCES players(name)
 );`)
 
 	server.RegisterCommand(&gomcc.Command{
@@ -427,6 +437,7 @@ func (plugin *Plugin) findPlayer(name string) *player {
 }
 
 func (plugin *Plugin) updatePermissions(player *player) {
+	name := player.Name()
 	if player.permGroup == nil {
 		player.permGroup = &gomcc.PermissionGroup{}
 		player.AddPermissionGroup(player.permGroup)
@@ -434,32 +445,22 @@ func (plugin *Plugin) updatePermissions(player *player) {
 
 	player.permGroup.Clear()
 
-	playerData := struct {
-		Rank        sql.NullString `db:"rank"`
-		Permissions sql.NullString `db:"permissions"`
-	}{}
-	plugin.db.Get(&playerData, "SELECT rank, permissions FROM players WHERE name = ?", player.Name())
-	if playerData.Permissions.Valid {
-		for _, perm := range strings.Split(playerData.Permissions.String, ",") {
-			player.permGroup.AddPermission(perm)
-		}
+	var permissions []string
+	plugin.db.Select(&permissions, `SELECT permission FROM player_permissions WHERE player = ?
+UNION SELECT rank_permissions.permission FROM rank_permissions
+INNER JOIN players ON rank_permissions.rank = players.rank WHERE players.name = ?`, name, name)
+
+	for _, perm := range permissions {
+		player.permGroup.AddPermission(perm)
 	}
 
-	rankData := struct {
-		Prefix      sql.NullString `db:"prefix"`
-		Suffix      sql.NullString `db:"suffix"`
-		Permissions sql.NullString `db:"permissions"`
+	data := struct {
+		Prefix sql.NullString `db:"prefix"`
+		Suffix sql.NullString `db:"suffix"`
 	}{}
-	if playerData.Rank.Valid {
-		plugin.db.Get(&rankData, "SELECT prefix, suffix, permissions FROM ranks WHERE name = ?", playerData.Rank.String)
-		if rankData.Permissions.Valid {
-			for _, perm := range strings.Split(rankData.Permissions.String, ",") {
-				player.permGroup.AddPermission(perm)
-			}
-		}
-	}
-
-	player.msgFormat = fmt.Sprintf("%s%%s%s: &f%%s", rankData.Prefix.String, rankData.Suffix.String)
+	plugin.db.Get(&data, `SELECT prefix, suffix FROM ranks
+INNER JOIN players ON ranks.name = players.rank WHERE players.name = ?`, name)
+	player.msgFormat = fmt.Sprintf("%s%%s%s: &f%%s", data.Prefix.String, data.Suffix.String)
 }
 
 func (plugin *Plugin) addLevel(ptr *gomcc.Level) *level {
