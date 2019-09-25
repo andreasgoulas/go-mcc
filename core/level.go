@@ -35,6 +35,42 @@ func (plugin *Plugin) handleCopyLvl(sender gomcc.CommandSender, command *gomcc.C
 	sender.SendMessage("Level " + args[0] + " has been copied to " + args[1])
 }
 
+func (plugin *Plugin) handleEnv(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	player, ok := sender.(*gomcc.Player)
+	if !ok {
+		sender.SendMessage("You are not a player")
+		return
+	}
+
+	level := player.Level()
+	args := strings.Fields(message)
+	switch len(args) {
+	case 1:
+		if args[0] == "reset" {
+			level.EnvConfig = level.DefaultEnvConfig()
+			level.SendEnvConfig(gomcc.EnvPropAll)
+			return
+		}
+
+	case 2:
+		switch mask := envOption(args[0], args[1], &level.EnvConfig); mask {
+		case 0:
+			sender.SendMessage("Unknown option")
+
+		case -1:
+			sender.SendMessage("Invalid value")
+
+		default:
+			level.SendEnvConfig(uint32(mask))
+		}
+
+		return
+	}
+
+	sender.SendMessage("Usage: " + command.Name + " <option> <value>")
+	return
+}
+
 func (plugin *Plugin) handleGoto(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	player, ok := sender.(*gomcc.Player)
 	if !ok {

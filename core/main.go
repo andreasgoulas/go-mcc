@@ -15,27 +15,6 @@ import (
 	"github.com/structinf/Go-MCC/gomcc"
 )
 
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
-func max(x, y int) int {
-	if x > y {
-		return x
-	}
-	return y
-}
-
 type level struct {
 	*gomcc.Level
 

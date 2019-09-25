@@ -4,21 +4,10 @@
 package main
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/structinf/Go-MCC/gomcc"
 )
-
-func parseCoord(arg string, curr float64) (float64, error) {
-	if strings.HasPrefix(arg, "~") {
-		value, err := strconv.Atoi(arg[1:])
-		return curr + float64(value), err
-	} else {
-		value, err := strconv.Atoi(arg)
-		return float64(value), err
-	}
-}
 
 func (plugin *Plugin) handleBack(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if _, ok := sender.(*gomcc.Player); !ok {

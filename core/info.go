@@ -4,23 +4,12 @@
 package main
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/structinf/Go-MCC/gomcc"
 )
-
-func fmtDuration(t time.Duration) string {
-	t = t.Round(time.Minute)
-	d := t / (24 * time.Hour)
-	t -= d * (24 * time.Hour)
-	h := t / time.Hour
-	t -= h * time.Hour
-	m := t / time.Minute
-	return fmt.Sprintf("%dd %dh %dm", d, h, m)
-}
 
 func (plugin *Plugin) handleCommands(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) != 0 {
