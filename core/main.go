@@ -15,6 +15,58 @@ import (
 	"github.com/structinf/Go-MCC/gomcc"
 )
 
+const dbSchema = `
+CREATE TABLE banned_names(
+	name TEXT PRIMARY KEY,
+	reason TEXT,
+	banned_by TEXT,
+	timestamp DATETIME
+);
+
+CREATE TABLE banned_ips(
+	ip TEXT PRIMARY KEY,
+	reason TEXT,
+	banned_by TEXT,
+	timestamp DATETIME
+);
+
+CREATE TABLE levels(
+	name TEXT PRIMARY KEY,
+	motd TEXT,
+	physics INTEGER NOT NULL
+);
+
+CREATE TABLE ranks(
+	name TEXT PRIMARY KEY,
+	prefix TEXT,
+	suffix TEXT,
+	is_default INTEGER NOT NULL
+);
+
+CREATE TABLE players(
+	name TEXT PRIMARY KEY,
+	rank TEXT,
+	first_login DATETIME,
+	last_login DATETIME,
+	nickname TEXT,
+	ignore_list TEXT,
+	mute INTEGER NOT NULL,
+	FOREIGN KEY(rank) REFERENCES ranks(name)
+);
+
+CREATE TABLE rank_permissions(
+	rank TEXT NOT NULL,
+	permission TEXT NOT NULL,
+	FOREIGN KEY(rank) REFERENCES ranks(name)
+);
+
+CREATE TABLE player_permissions(
+	player TEXT NOT NULL,
+	permission TEXT NOT NULL,
+	FOREIGN KEY(player) REFERENCES players(name)
+);
+`
+
 type level struct {
 	*gomcc.Level
 
@@ -56,10 +108,16 @@ type Plugin struct {
 }
 
 func Initialize() gomcc.Plugin {
-	db, err := sqlx.Open("sqlite3", "core.db")
+	db, err := sqlx.Connect("sqlite3", "core.db")
 	if err != nil {
 		log.Println(err)
 		return nil
+	}
+
+	var version int
+	db.Get(&version, "PRAGMA schema_version")
+	if version == 0 {
+		db.MustExec(dbSchema)
 	}
 
 	return &Plugin{
@@ -74,57 +132,6 @@ func (plugin *Plugin) Name() string {
 }
 
 func (plugin *Plugin) Enable(server *gomcc.Server) {
-	plugin.db.MustExec(`
-CREATE TABLE IF NOT EXISTS banned_names(
-	name TEXT PRIMARY KEY,
-	reason TEXT,
-	banned_by TEXT,
-	timestamp DATETIME
-);
-
-CREATE TABLE IF NOT EXISTS banned_ips(
-	ip TEXT PRIMARY KEY,
-	reason TEXT,
-	banned_by TEXT,
-	timestamp DATETIME
-);
-
-CREATE TABLE IF NOT EXISTS levels(
-	name TEXT PRIMARY KEY,
-	motd TEXT,
-	physics INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS ranks(
-	name TEXT PRIMARY KEY,
-	prefix TEXT,
-	suffix TEXT,
-	is_default INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS players(
-	name TEXT PRIMARY KEY,
-	rank TEXT,
-	first_login DATETIME,
-	last_login DATETIME,
-	nickname TEXT,
-	ignore_list TEXT,
-	mute INTEGER NOT NULL,
-	FOREIGN KEY(rank) REFERENCES ranks(name)
-);
-
-CREATE TABLE IF NOT EXISTS rank_permissions(
-	rank TEXT NOT NULL,
-	permission TEXT NOT NULL,
-	FOREIGN KEY(rank) REFERENCES ranks(name)
-);
-
-CREATE TABLE IF NOT EXISTS player_permissions(
-	player TEXT NOT NULL,
-	permission TEXT NOT NULL,
-	FOREIGN KEY(player) REFERENCES players(name)
-);`)
-
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "back",
 		Description: "Return to your location before your last teleportation.",

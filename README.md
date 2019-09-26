@@ -17,6 +17,8 @@ database.
 go get github.com/structinf/Go-MCC/gomcc-cli
 ```
 
+The server can be configured via the `server.properties` file.
+
 ### Core Plugin
 
 ```
