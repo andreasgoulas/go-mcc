@@ -86,7 +86,7 @@ type HackConfig struct {
 	Speeding        bool
 	SpawnControl    bool
 	ThirdPersonView bool
-	JumpHeight      int
+	JumpHeight      float64
 
 	CanPlace [BlockCount]bool
 	CanBreak [BlockCount]bool
@@ -193,12 +193,12 @@ func (level *Level) DefaultEnvConfig() EnvConfig {
 func (level *Level) DefaultHackConfig() HackConfig {
 	config := HackConfig{
 		ReachDistance:   5,
-		Flying:          false,
-		NoClip:          false,
-		Speeding:        false,
+		Flying:          true,
+		NoClip:          true,
+		Speeding:        true,
 		SpawnControl:    true,
 		ThirdPersonView: true,
-		JumpHeight:      -1,
+		JumpHeight:      -1.0,
 	}
 
 	for i := 0; i < BlockCount; i++ {

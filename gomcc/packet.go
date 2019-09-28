@@ -524,7 +524,7 @@ func (packet *Packet) hackControl(config *HackConfig) {
 		SpawnControl    byte
 		ThirdPersonView byte
 		JumpHeight      int16
-	}{packetTypeHackControl, 0, 0, 0, 0, 0, int16(config.JumpHeight)}
+	}{packetTypeHackControl, 0, 0, 0, 0, 0, -1}
 
 	if config.Flying {
 		data.Flying = 1
@@ -540,6 +540,9 @@ func (packet *Packet) hackControl(config *HackConfig) {
 	}
 	if config.ThirdPersonView {
 		data.ThirdPersonView = 1
+	}
+	if config.JumpHeight >= 0 {
+		data.JumpHeight = int16(config.JumpHeight * 32)
 	}
 
 	binary.Write(packet, binary.BigEndian, &data)

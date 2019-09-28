@@ -171,3 +171,34 @@ func envOption(option string, arg string, config *gomcc.EnvConfig) int32 {
 
 	return -1
 }
+
+func parseMOTD(motd string, config *gomcc.HackConfig) {
+	for _, arg := range strings.Fields(motd) {
+		if arg[0] == '+' || arg[0] == '-' {
+			value := arg[0] == '+'
+			switch strings.ToLower(arg[1:]) {
+			case "fly":
+				config.Flying = value
+			case "noclip":
+				config.NoClip = value
+			case "speed":
+				config.Speeding = value
+			case "respawn":
+				config.SpawnControl = value
+			case "thirdperson":
+				config.ThirdPersonView = value
+			case "hax":
+				config.Flying = value
+				config.NoClip = value
+				config.Speeding = value
+				config.SpawnControl = value
+				config.ThirdPersonView = value
+			}
+		} else if strings.HasPrefix(arg, "jumpheight=") {
+			i := strings.IndexByte(arg, '=')
+			if value, err := strconv.ParseFloat(arg[i+1:], 64); err == nil {
+				config.JumpHeight = value
+			}
+		}
+	}
+}

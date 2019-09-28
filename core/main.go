@@ -461,6 +461,8 @@ func (plugin *Plugin) addLevel(l *gomcc.Level) *level {
 		physics: db.Physics,
 	}
 
+	parseMOTD(db.MOTD, &level.HackConfig)
+
 	plugin.disablePhysics(level)
 	if db.Physics {
 		plugin.enablePhysics(level)
@@ -478,17 +480,17 @@ func (plugin *Plugin) removeLevel(level *gomcc.Level) {
 	plugin.levelsLock.Unlock()
 }
 
+func (plugin *Plugin) findLevel(name string) *level {
+	plugin.levelsLock.RLock()
+	defer plugin.levelsLock.RUnlock()
+	return plugin.levels[name]
+}
+
 func (plugin *Plugin) saveLevel(level *level) {
 	plugin.db.updateLevel(level.Name, &dbLevel{
 		MOTD:    level.motd,
 		Physics: level.physics,
 	})
-}
-
-func (plugin *Plugin) findLevel(name string) *level {
-	plugin.levelsLock.RLock()
-	defer plugin.levelsLock.RUnlock()
-	return plugin.levels[name]
 }
 
 func (plugin *Plugin) handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
