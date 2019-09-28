@@ -13,6 +13,10 @@ import (
 	"github.com/structinf/Go-MCC/gomcc"
 )
 
+const (
+	PermOperator = 1 << 0
+)
+
 type Console struct {
 	server    *gomcc.Server
 	waitGroup *sync.WaitGroup
@@ -29,7 +33,7 @@ func NewConsole(server *gomcc.Server, waitGroup *sync.WaitGroup) *Console {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "stop",
 		Description: "Stop the server.",
-		Permission:  "stop",
+		Permissions: PermOperator,
 		Handler:     console.handleStop,
 	})
 
@@ -69,7 +73,8 @@ func (console *Console) SendMessage(message string) {
 	log.Println(message)
 }
 
-func (console *Console) HasPermission(permission string) bool {
+// HasPermission implements CommandSender.
+func (console *Console) HasPermission(command *gomcc.Command) bool {
 	return true
 }
 

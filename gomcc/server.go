@@ -438,20 +438,19 @@ func (server *Server) ExecuteCommand(sender CommandSender, message string) {
 		return
 	}
 
-	if !sender.HasPermission(command.Permission) {
-		sender.SendMessage("You do not have permission to execute this command!")
-		return
-	}
-
 	if len(args) == 2 {
 		message = args[1]
 	} else {
 		message = ""
 	}
 
-	event := EventCommand{sender, command, message, false}
+	event := EventCommand{
+		sender, command, message,
+		sender.HasPermission(command),
+	}
 	server.FireEvent(EventTypeCommand, &event)
-	if event.Cancel {
+	if !event.Allow {
+		sender.SendMessage("You do not have permission to execute this command!")
 		return
 	}
 

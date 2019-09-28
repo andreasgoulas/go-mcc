@@ -99,9 +99,6 @@ func (plugin *Plugin) handleIgnore(sender gomcc.CommandSender, command *gomcc.Co
 			sender.SendMessage("You are ignoring " + args[0])
 		}
 
-		ignoreList := strings.Join(player.ignoreList, ",")
-		plugin.db.MustExec("UPDATE players SET ignore_list = ? WHERE name = ?", ignoreList, sender.Name())
-
 	default:
 		sender.SendMessage("Usage: " + command.Name + " <player>")
 	}
@@ -140,8 +137,6 @@ func (plugin *Plugin) handleMute(sender gomcc.CommandSender, command *gomcc.Comm
 		} else {
 			sender.SendMessage("Player " + args[0] + " unmuted")
 		}
-
-		plugin.db.MustExec("UPDATE players SET mute = ? WHERE name = ?", player.mute, args[0])
 	} else {
 		sender.SendMessage("Player " + args[0] + " not found")
 	}
@@ -158,7 +153,6 @@ func (plugin *Plugin) handleNick(sender gomcc.CommandSender, command *gomcc.Comm
 		}
 
 		player.Nickname = player.Name()
-		plugin.db.MustExec("UPDATE players SET nickname = NULL WHERE name = ?", args[0])
 		sender.SendMessage("Nick of " + args[0] + " reset")
 
 	case 2:
@@ -174,7 +168,6 @@ func (plugin *Plugin) handleNick(sender gomcc.CommandSender, command *gomcc.Comm
 		}
 
 		player.Nickname = args[1]
-		plugin.db.MustExec("UPDATE players SET nickname = ? WHERE name = ?", args[1], args[0])
 		sender.SendMessage("Nick of " + args[0] + " set to " + args[1])
 
 	default:

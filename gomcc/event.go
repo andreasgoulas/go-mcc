@@ -126,10 +126,9 @@ type EventLevelSave struct {
 }
 
 // EventCommand is dispatched before a command is executed.
-// If the event is cancelled, the command will not be executed.
 type EventCommand struct {
 	Sender  CommandSender
 	Command *Command
 	Message string
-	Cancel  bool
+	Allow   bool
 }

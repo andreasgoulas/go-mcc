@@ -5,7 +5,6 @@ package gomcc
 
 import (
 	"image/color"
-	"strings"
 )
 
 const (
@@ -66,7 +65,7 @@ type CommandSender interface {
 	Server() *Server
 	Name() string
 	SendMessage(message string)
-	HasPermission(permission string) bool
+	HasPermission(command *Command) bool
 }
 
 // CommandHandler is the type of the function called to execute a command. The
@@ -78,56 +77,14 @@ type CommandHandler func(sender CommandSender, command *Command, message string)
 type Command struct {
 	Name        string
 	Description string
-	Permission  string
+	Permissions uint32
 	Handler     CommandHandler
 }
 
-// PermissionGroup is a container that holds permission nodes.
-type PermissionGroup struct {
-	permissions [][]string
-}
-
-func checkPermission(permission []string, template []string) bool {
-	lenP := len(permission)
-	lenT := len(template)
-	for i := 0; i < min(lenP, lenT); i++ {
-		if template[i] == "*" {
-			return true
-		} else if permission[i] != template[i] {
-			return false
-		}
-	}
-
-	return lenP == lenT
-}
-
-// Clear resets the group to be empty.
-func (group *PermissionGroup) Clear() {
-	group.permissions = nil
-}
-
-// AddPermission adds permission to the group.
-func (group *PermissionGroup) AddPermission(permission string) {
-	if len(permission) == 0 {
-		return
-	}
-
-	split := strings.Split(permission, ".")
-	group.permissions = append(group.permissions, split)
-}
-
-// HasPermission reports whether the group contains permission.
-func (group *PermissionGroup) HasPermission(permission string) bool {
-	if len(permission) == 0 {
-		return true
-	}
-
-	split := strings.Split(permission, ".")
-	for _, template := range group.permissions {
-		if checkPermission(split, template) {
-			return true
-		}
-	}
-
-	return false
+// Rank represents a group of players that have the same permissions.
+type Rank struct {
+	Name        string
+	Tag         string
+	Permissions uint32
+	Rules       map[string]bool
 }

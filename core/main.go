@@ -5,70 +5,28 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
-	"log"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/structinf/Go-MCC/gomcc"
 )
 
-const dbSchema = `
-CREATE TABLE banned_names(
-	name TEXT PRIMARY KEY,
-	reason TEXT,
-	banned_by TEXT,
-	timestamp DATETIME
-);
-
-CREATE TABLE banned_ips(
-	ip TEXT PRIMARY KEY,
-	reason TEXT,
-	banned_by TEXT,
-	timestamp DATETIME
-);
-
-CREATE TABLE levels(
-	name TEXT PRIMARY KEY,
-	motd TEXT,
-	physics INTEGER NOT NULL
-);
-
-CREATE TABLE ranks(
-	name TEXT PRIMARY KEY,
-	prefix TEXT,
-	suffix TEXT,
-	is_default INTEGER NOT NULL
-);
-
-CREATE TABLE players(
-	name TEXT PRIMARY KEY,
-	rank TEXT,
-	first_login DATETIME,
-	last_login DATETIME,
-	nickname TEXT,
-	ignore_list TEXT,
-	mute INTEGER NOT NULL,
-	FOREIGN KEY(rank) REFERENCES ranks(name)
-);
-
-CREATE TABLE rank_permissions(
-	rank TEXT NOT NULL,
-	permission TEXT NOT NULL,
-	FOREIGN KEY(rank) REFERENCES ranks(name)
-);
-
-CREATE TABLE player_permissions(
-	player TEXT NOT NULL,
-	permission TEXT NOT NULL,
-	FOREIGN KEY(player) REFERENCES players(name)
-);
-`
+const (
+	PermOperator = 1 << 0
+	PermBan      = 1 << 1
+	PermKick     = 1 << 2
+	PermChat     = 1 << 3
+	PermTeleport = 1 << 4
+	PermSummon   = 1 << 5
+	PermLevel    = 1 << 6
+)
 
 type level struct {
 	*gomcc.Level
+
+	motd    string
+	physics bool
 
 	simulators []gomcc.Simulator
 }
@@ -76,11 +34,10 @@ type level struct {
 type player struct {
 	*gomcc.Player
 
-	permGroup *gomcc.PermissionGroup
-
 	mute       bool
 	ignoreList []string
-	msgFormat  string
+	firstLogin time.Time
+	lastLogin  time.Time
 
 	lastSender   string
 	lastLevel    *gomcc.Level
@@ -98,7 +55,11 @@ func (player *player) isIgnored(name string) bool {
 }
 
 type Plugin struct {
-	db *sqlx.DB
+	db *db
+
+	defaultRank string
+	ranks       map[string]*gomcc.Rank
+	ranksLock   sync.RWMutex
 
 	levels     map[string]*level
 	levelsLock sync.RWMutex
@@ -108,16 +69,9 @@ type Plugin struct {
 }
 
 func Initialize() gomcc.Plugin {
-	db, err := sqlx.Connect("sqlite3", "core.db")
-	if err != nil {
-		log.Println(err)
+	db := newDb("core.db")
+	if db == nil {
 		return nil
-	}
-
-	var version int
-	db.Get(&version, "PRAGMA schema_version")
-	if version == 0 {
-		db.MustExec(dbSchema)
 	}
 
 	return &Plugin{
@@ -132,277 +86,336 @@ func (plugin *Plugin) Name() string {
 }
 
 func (plugin *Plugin) Enable(server *gomcc.Server) {
+	plugin.loadRanks()
+
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "back",
 		Description: "Return to your location before your last teleportation.",
-		Permission:  "core.back",
+		Permissions: PermTeleport,
 		Handler:     plugin.handleBack,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "ban",
 		Description: "Ban a player from the server.",
-		Permission:  "core.ban",
+		Permissions: PermBan,
 		Handler:     plugin.handleBan,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "banip",
 		Description: "Ban an IP address from the server.",
-		Permission:  "core.banip",
+		Permissions: PermBan,
 		Handler:     plugin.handleBanIp,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "commands",
 		Description: "List all commands.",
-		Permission:  "core.commands",
 		Handler:     plugin.handleCommands,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "copylvl",
 		Description: "Copy a level.",
-		Permission:  "core.copylvl",
+		Permissions: PermLevel,
 		Handler:     plugin.handleCopyLvl,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "env",
 		Description: "Change the environment of the current level.",
-		Permission:  "core.env",
+		Permissions: PermLevel,
 		Handler:     plugin.handleEnv,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "goto",
 		Description: "Move to another level.",
-		Permission:  "core.goto",
 		Handler:     plugin.handleGoto,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "help",
 		Description: "Describe a command.",
-		Permission:  "core.help",
 		Handler:     plugin.handleHelp,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "ignore",
 		Description: "Ignore chat from a player",
-		Permission:  "core.ignore",
 		Handler:     plugin.handleIgnore,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "kick",
 		Description: "Kick a player from the server.",
-		Permission:  "core.kick",
+		Permissions: PermKick,
 		Handler:     plugin.handleKick,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "levels",
 		Description: "List all loaded levels.",
-		Permission:  "core.levels",
 		Handler:     plugin.handleLevels,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "load",
 		Description: "Load a level.",
-		Permission:  "core.load",
+		Permissions: PermLevel,
 		Handler:     plugin.handleLoad,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "main",
 		Description: "Set the main level.",
-		Permission:  "core.main",
+		Permissions: PermLevel,
 		Handler:     plugin.handleMain,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "me",
 		Description: "Broadcast an action.",
-		Permission:  "core.me",
 		Handler:     plugin.handleMe,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "mute",
 		Description: "Mute a player.",
-		Permission:  "core.mute",
+		Permissions: PermChat,
 		Handler:     plugin.handleMute,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "newlvl",
 		Description: "Create a new level.",
-		Permission:  "core.newlvl",
+		Permissions: PermLevel,
 		Handler:     plugin.handleNewLvl,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "nick",
 		Description: "Set the nickname of a player",
-		Permission:  "core.nick",
+		Permissions: PermChat,
 		Handler:     plugin.handleNick,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "players",
 		Description: "List all players.",
-		Permission:  "core.players",
 		Handler:     plugin.handlePlayers,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "physics",
 		Description: "Set the physics state of a level.",
-		Permission:  "core.physics",
+		Permissions: PermLevel,
 		Handler:     plugin.handlePhysics,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "r",
 		Description: "Reply to the last message.",
-		Permission:  "core.r",
 		Handler:     plugin.handleR,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "rank",
 		Description: "Set the rank of a player.",
-		Permission:  "core.rank",
+		Permissions: PermOperator,
 		Handler:     plugin.handleRank,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "save",
 		Description: "Save a level.",
-		Permission:  "core.save",
+		Permissions: PermLevel,
 		Handler:     plugin.handleSave,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "say",
 		Description: "Broadcast a message.",
-		Permission:  "core.say",
+		Permissions: PermChat,
 		Handler:     plugin.handleSay,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "seen",
 		Description: "Check when a player was last online.",
-		Permission:  "core.seen",
 		Handler:     plugin.handleSeen,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "setspawn",
 		Description: "Set the spawn location of the level to your location.",
-		Permission:  "core.setspawn",
+		Permissions: PermLevel,
 		Handler:     plugin.handleSetSpawn,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "skin",
 		Description: "Set the skin of a player.",
-		Permission:  "core.skin",
+		Permissions: PermOperator,
 		Handler:     plugin.handleSkin,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "spawn",
 		Description: "Teleport to the spawn location of the level.",
-		Permission:  "core.spawn",
 		Handler:     plugin.handleSpawn,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "summon",
 		Description: "Summon a player to your location.",
-		Permission:  "core.summon",
+		Permissions: PermSummon,
 		Handler:     plugin.handleSummon,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "unload",
 		Description: "Unload a level.",
-		Permission:  "core.unload",
+		Permissions: PermLevel,
 		Handler:     plugin.handleUnload,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "tell",
 		Description: "Send a private message to a player.",
-		Permission:  "core.tell",
 		Handler:     plugin.handleTell,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "tp",
 		Description: "Teleport to another player.",
-		Permission:  "core.tp",
+		Permissions: PermTeleport,
 		Handler:     plugin.handleTp,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "unban",
 		Description: "Remove the ban for a player.",
-		Permission:  "core.unban",
+		Permissions: PermBan,
 		Handler:     plugin.handleUnban,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "unbanip",
 		Description: "Remove the ban for an IP address.",
-		Permission:  "core.unbanip",
+		Permissions: PermBan,
 		Handler:     plugin.handleUnbanIp,
 	})
 
 	server.RegisterHandler(gomcc.EventTypePlayerLogin, plugin.handlePlayerLogin)
-	server.RegisterHandler(gomcc.EventTypePlayerJoin, plugin.handlePlayerJoin)
-	server.RegisterHandler(gomcc.EventTypePlayerQuit, plugin.handlePlayerQuit)
 	server.RegisterHandler(gomcc.EventTypePlayerChat, plugin.handlePlayerChat)
-	server.RegisterHandler(gomcc.EventTypeLevelLoad, plugin.handleLevelLoad)
-	server.RegisterHandler(gomcc.EventTypeLevelUnload, plugin.handleLevelUnload)
+
+	server.RegisterHandler(gomcc.EventTypePlayerJoin, func(eventType gomcc.EventType, event interface{}) {
+		e := event.(*gomcc.EventPlayerJoin)
+		plugin.addPlayer(e.Player)
+	})
+
+	server.RegisterHandler(gomcc.EventTypePlayerQuit, func(eventType gomcc.EventType, event interface{}) {
+		e := event.(*gomcc.EventPlayerQuit)
+		player := plugin.findPlayer(e.Player.Name())
+		plugin.savePlayer(player)
+		plugin.removePlayer(e.Player)
+	})
+
+	server.RegisterHandler(gomcc.EventTypeLevelLoad, func(eventType gomcc.EventType, event interface{}) {
+		e := event.(*gomcc.EventLevelLoad)
+		plugin.addLevel(e.Level)
+	})
+
+	server.RegisterHandler(gomcc.EventTypeLevelUnload, func(eventType gomcc.EventType, event interface{}) {
+		e := event.(*gomcc.EventLevelUnload)
+		level := plugin.findLevel(e.Level.Name)
+		plugin.saveLevel(level)
+		plugin.removeLevel(e.Level)
+	})
+
+	server.ForEachPlayer(func(player *gomcc.Player) {
+		plugin.addPlayer(player)
+	})
 
 	server.ForEachLevel(func(level *gomcc.Level) {
-		plugin.handleLevelLoad(gomcc.EventTypeLevelLoad, &gomcc.EventLevelLoad{level})
+		plugin.addLevel(level)
 	})
 }
 
 func (plugin *Plugin) Disable(server *gomcc.Server) {
+	plugin.playersLock.Lock()
+	for _, player := range plugin.players {
+		plugin.savePlayer(player)
+	}
+	plugin.players = nil
+	plugin.playersLock.Unlock()
+
+	plugin.levelsLock.Lock()
+	for _, level := range plugin.levels {
+		plugin.saveLevel(level)
+	}
+	plugin.levels = nil
+	plugin.levelsLock.Unlock()
+
 	plugin.db.Close()
 }
 
-func (plugin *Plugin) addPlayer(ptr *gomcc.Player) *player {
-	name := ptr.Name()
-	player := &player{Player: ptr}
+func (plugin *Plugin) loadRanks() {
+	plugin.ranksLock.Lock()
+	defer plugin.ranksLock.Unlock()
 
-	plugin.db.MustExec(`INSERT OR IGNORE INTO players(name, rank, first_login, mute)
-VALUES(?, (SELECT name FROM ranks WHERE is_default = 1), CURRENT_TIMESTAMP, 0);`, name)
-	plugin.db.MustExec("UPDATE players SET last_login = CURRENT_TIMESTAMP WHERE name = ?;", name)
-
-	data := struct {
-		Nickname   sql.NullString `db:"nickname"`
-		IgnoreList sql.NullString `db:"ignore_list"`
-		Mute       bool           `db:"mute"`
-	}{}
-	plugin.db.Get(&data, "SELECT nickname, ignore_list, mute FROM players WHERE name = ?", name)
-
-	player.mute = data.Mute
-	if data.Nickname.Valid {
-		player.Nickname = data.Nickname.String
-	}
-	if data.IgnoreList.Valid && len(data.IgnoreList.String) != 0 {
-		player.ignoreList = strings.Split(data.IgnoreList.String, ",")
+	plugin.ranks = make(map[string]*gomcc.Rank)
+	for _, r := range plugin.db.queryRanks() {
+		plugin.ranks[r.Name] = &gomcc.Rank{
+			Name:        r.Name,
+			Tag:         r.Tag.String,
+			Permissions: r.Permissions,
+		}
 	}
 
-	plugin.updatePermissions(player)
+	for _, rule := range plugin.db.queryRules() {
+		rank := plugin.ranks[rule.Rank]
+		if rank.Rules == nil {
+			rank.Rules = make(map[string]bool)
+		}
+
+		rank.Rules[rule.Command] = rule.Access
+	}
+
+	plugin.defaultRank = plugin.db.queryConfig("default_rank")
+}
+
+func (plugin *Plugin) findRank(name string) *gomcc.Rank {
+	plugin.ranksLock.RLock()
+	defer plugin.ranksLock.RUnlock()
+	return plugin.ranks[name]
+}
+
+func (plugin *Plugin) addPlayer(p *gomcc.Player) *player {
+	name := p.Name()
+
+	db, ok := plugin.db.queryPlayer(name)
+	if !ok {
+		db.Rank = sql.NullString{plugin.defaultRank, true}
+		db.FirstLogin = time.Now()
+		db.Nickname = name
+	}
+
+	player := &player{
+		Player:     p,
+		firstLogin: db.FirstLogin,
+		lastLogin:  time.Now(),
+	}
+
+	player.Nickname = db.Nickname
+	if len(db.IgnoreList) != 0 {
+		player.ignoreList = strings.Split(db.IgnoreList, ",")
+	}
+	if db.Rank.Valid {
+		player.Rank = plugin.findRank(db.Rank.String)
+	}
 
 	plugin.playersLock.Lock()
 	plugin.players[name] = player
@@ -422,51 +435,34 @@ func (plugin *Plugin) findPlayer(name string) *player {
 	return plugin.players[name]
 }
 
-func (plugin *Plugin) updatePermissions(player *player) {
-	name := player.Name()
-	if player.permGroup == nil {
-		player.permGroup = &gomcc.PermissionGroup{}
-		player.AddPermissionGroup(player.permGroup)
+func (plugin *Plugin) savePlayer(player *player) {
+	var rank sql.NullString
+	if player.Rank != nil {
+		rank = sql.NullString{player.Rank.Name, true}
 	}
 
-	player.permGroup.Clear()
-
-	var permissions []string
-	plugin.db.Select(&permissions, `SELECT permission FROM player_permissions WHERE player = ?
-UNION SELECT rank_permissions.permission FROM rank_permissions
-INNER JOIN players ON rank_permissions.rank = players.rank WHERE players.name = ?`, name, name)
-
-	for _, perm := range permissions {
-		player.permGroup.AddPermission(perm)
-	}
-
-	data := struct {
-		Prefix sql.NullString `db:"prefix"`
-		Suffix sql.NullString `db:"suffix"`
-	}{}
-	plugin.db.Get(&data, `SELECT prefix, suffix FROM ranks
-INNER JOIN players ON ranks.name = players.rank WHERE players.name = ?`, name)
-	player.msgFormat = fmt.Sprintf("%s%%s%s: &f%%s", data.Prefix.String, data.Suffix.String)
+	plugin.db.updatePlayer(player.Name(), &dbPlayer{
+		Rank:       rank,
+		FirstLogin: player.firstLogin,
+		LastLogin:  player.lastLogin,
+		Nickname:   player.Nickname,
+		IgnoreList: strings.Join(player.ignoreList, ","),
+		Mute:       player.mute,
+	})
 }
 
-func (plugin *Plugin) addLevel(ptr *gomcc.Level) *level {
-	name := ptr.Name
-	level := &level{Level: ptr}
+func (plugin *Plugin) addLevel(l *gomcc.Level) *level {
+	name := l.Name
 
-	plugin.db.MustExec("INSERT OR IGNORE INTO levels(name, physics) VALUES(?, 0)", name)
-
-	data := struct {
-		MOTD    sql.NullString `db:"motd"`
-		Physics bool           `db:"physics"`
-	}{}
-	plugin.db.Get(&data, "SELECT motd, physics FROM levels WHERE name = ?", name)
-
-	if data.MOTD.Valid {
-		level.MOTD = data.MOTD.String
+	db, _ := plugin.db.queryLevel(name)
+	level := &level{
+		Level:   l,
+		motd:    db.MOTD,
+		physics: db.Physics,
 	}
 
 	plugin.disablePhysics(level)
-	if data.Physics {
+	if db.Physics {
 		plugin.enablePhysics(level)
 	}
 
@@ -482,6 +478,13 @@ func (plugin *Plugin) removeLevel(level *gomcc.Level) {
 	plugin.levelsLock.Unlock()
 }
 
+func (plugin *Plugin) saveLevel(level *level) {
+	plugin.db.updateLevel(level.Name, &dbLevel{
+		MOTD:    level.motd,
+		Physics: level.physics,
+	})
+}
+
 func (plugin *Plugin) findLevel(name string) *level {
 	plugin.levelsLock.RLock()
 	defer plugin.levelsLock.RUnlock()
@@ -490,26 +493,9 @@ func (plugin *Plugin) findLevel(name string) *level {
 
 func (plugin *Plugin) handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
 	e := event.(*gomcc.EventPlayerLogin)
-
-	var reason sql.NullString
 	addr := e.Player.RemoteAddr()
 	name := e.Player.Name()
-	if plugin.db.Get(&reason, `SELECT reason FROM banned_ips WHERE ip = ? UNION
-SELECT reason FROM banned_names WHERE name = ?`, addr, name) == nil {
-		e.Cancel = true
-		e.CancelReason = reason.String
-		return
-	}
-}
-
-func (plugin *Plugin) handlePlayerJoin(eventType gomcc.EventType, event interface{}) {
-	e := event.(*gomcc.EventPlayerJoin)
-	plugin.addPlayer(e.Player)
-}
-
-func (plugin *Plugin) handlePlayerQuit(eventType gomcc.EventType, event interface{}) {
-	e := event.(*gomcc.EventPlayerQuit)
-	plugin.removePlayer(e.Player)
+	e.Cancel, e.CancelReason = plugin.db.checkBan(addr, name)
 }
 
 func (plugin *Plugin) handlePlayerChat(eventType gomcc.EventType, event interface{}) {
@@ -522,20 +508,9 @@ func (plugin *Plugin) handlePlayerChat(eventType gomcc.EventType, event interfac
 		return
 	}
 
-	e.Format = player.msgFormat
 	for i := len(e.Targets) - 1; i >= 0; i-- {
 		if plugin.findPlayer(e.Targets[i].Name()).isIgnored(name) {
 			e.Targets = append(e.Targets[:i], e.Targets[i+1:]...)
 		}
 	}
-}
-
-func (plugin *Plugin) handleLevelLoad(eventType gomcc.EventType, event interface{}) {
-	e := event.(*gomcc.EventLevelLoad)
-	plugin.addLevel(e.Level)
-}
-
-func (plugin *Plugin) handleLevelUnload(eventType gomcc.EventType, event interface{}) {
-	e := event.(*gomcc.EventLevelUnload)
-	plugin.removeLevel(e.Level)
 }

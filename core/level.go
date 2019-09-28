@@ -215,10 +215,8 @@ func (plugin *Plugin) handlePhysics(sender gomcc.CommandSender, command *gomcc.C
 		sender.SendMessage(args[0] + " is not a valid boolean")
 		return
 	} else {
-		var oldValue bool
-		plugin.db.Get(&oldValue, "SELECT physics FROM levels WHERE name = ?", level.Name)
-		plugin.db.MustExec("UPDATE levels SET physics = ? WHERE name = ?", value, level.Name)
-		if oldValue != value {
+		if value != level.physics {
+			level.physics = value
 			if value {
 				plugin.enablePhysics(level)
 			} else {

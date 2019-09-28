@@ -4,7 +4,6 @@
 package main
 
 import (
-	"database/sql"
 	"net"
 	"strings"
 
@@ -28,13 +27,12 @@ func (plugin *Plugin) handleBan(sender gomcc.CommandSender, command *gomcc.Comma
 		return
 	}
 
-	plugin.db.MustExec(`INSERT OR REPLACE INTO banned_names(name, reason, banned_by, timestamp)
-VALUES(?, ?, ?, CURRENT_TIMESTAMP)`, args[0], reason, sender.Name())
-
-	sender.SendMessage("Player " + args[0] + " banned")
+	plugin.db.ban(args[0], reason, sender.Name())
 	if player := sender.Server().FindPlayer(args[0]); player != nil {
 		player.Kick(reason)
 	}
+
+	sender.SendMessage("Player " + args[0] + " banned")
 }
 
 func (plugin *Plugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
@@ -54,15 +52,14 @@ func (plugin *Plugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Com
 		return
 	}
 
-	plugin.db.MustExec(`INSERT OR REPLACE INTO banned_ips(ip, reason, banned_by, timestamp)
-VALUES(?, ?, ?, CURRENT_TIMESTAMP)`, args[0], reason, sender.Name())
-
-	sender.SendMessage("IP " + args[0] + " banned")
+	plugin.db.banIp(args[0], reason, sender.Name())
 	sender.Server().ForEachPlayer(func(player *gomcc.Player) {
 		if player.RemoteAddr() == args[0] {
 			player.Kick(reason)
 		}
 	})
+
+	sender.SendMessage("IP " + args[0] + " banned")
 }
 
 func (plugin *Plugin) handleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
@@ -87,39 +84,32 @@ func (plugin *Plugin) handleKick(sender gomcc.CommandSender, command *gomcc.Comm
 }
 
 func (plugin *Plugin) handleRank(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+	var rank *gomcc.Rank
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
-		var rank sql.NullString
-		if plugin.db.Get(&rank, "SELECT rank FROM players WHERE name = ?", args[0]) == nil {
-			if !rank.Valid {
-				rank.String = "<nil>"
-			}
-
-			sender.SendMessage("The rank of " + args[0] + " is " + rank.String)
-		} else {
-			sender.SendMessage("Player " + args[0] + " not found")
-		}
+		rank = nil
 
 	case 2:
-		var exists bool
-		if plugin.db.Get(&exists, "SELECT 1 FROM ranks WHERE name = ?", args[1]) != nil {
+		if rank = plugin.findRank(args[1]); rank == nil {
 			sender.SendMessage("Rank " + args[1] + " not found")
 			return
 		}
 
-		r := plugin.db.MustExec("UPDATE players SET rank = ? WHERE name = ?", args[1], args[0])
-		if num, _ := r.RowsAffected(); num == 0 {
-			sender.SendMessage("Player " + args[0] + " not found")
-		} else {
-			sender.SendMessage("Rank of " + args[0] + " set to " + args[1])
-			if player := plugin.findPlayer(args[0]); player != nil {
-				plugin.updatePermissions(player)
-			}
-		}
-
 	default:
 		sender.SendMessage("Usage: " + command.Name + " <player> <rank>")
+		return
+	}
+
+	if player := plugin.findPlayer(args[0]); player == nil {
+		sender.SendMessage("Player " + args[0] + " not found")
+	} else {
+		player.Rank = rank
+		if rank == nil {
+			sender.SendMessage("Rank of " + args[0] + " reset")
+		} else {
+			sender.SendMessage("Rank of " + args[0] + " set to " + args[1])
+		}
 	}
 }
 
@@ -130,11 +120,10 @@ func (plugin *Plugin) handleUnban(sender gomcc.CommandSender, command *gomcc.Com
 		return
 	}
 
-	r := plugin.db.MustExec("DELETE FROM banned_names WHERE name = ?", args[0])
-	if num, _ := r.RowsAffected(); num == 0 {
-		sender.SendMessage("Player " + args[0] + " is not banned")
-	} else {
+	if plugin.db.unban(args[0]) {
 		sender.SendMessage("Player " + args[0] + " unbanned")
+	} else {
+		sender.SendMessage("Player " + args[0] + " is not banned")
 	}
 }
 
@@ -145,10 +134,9 @@ func (plugin *Plugin) handleUnbanIp(sender gomcc.CommandSender, command *gomcc.C
 		return
 	}
 
-	r := plugin.db.MustExec("DELETE FROM banned_ips WHERE ip = ?", args[0])
-	if num, _ := r.RowsAffected(); num == 0 {
-		sender.SendMessage("IP " + args[0] + " is not banned")
-	} else {
+	if plugin.db.unbanIp(args[0]) {
 		sender.SendMessage("IP " + args[0] + " unbanned")
+	} else {
+		sender.SendMessage("IP " + args[0] + " is not banned")
 	}
 }

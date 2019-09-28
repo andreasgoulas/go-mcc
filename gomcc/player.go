@@ -15,7 +15,6 @@ import (
 	"log"
 	"math"
 	"net"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -31,12 +30,10 @@ type Player struct {
 	*Entity
 
 	Nickname string
+	Rank     *Rank
 
 	conn  net.Conn
 	state uint32
-
-	permGroupsLock sync.RWMutex
-	permGroups     []*PermissionGroup
 
 	cpe           [CpeCount]bool
 	remExtensions int
@@ -58,47 +55,18 @@ func NewPlayer(conn net.Conn, server *Server) *Player {
 	}
 }
 
-// AddPermissionGroup adds group to the permission groups of the player.
-func (player *Player) AddPermissionGroup(group *PermissionGroup) {
-	player.permGroupsLock.Lock()
-	player.permGroups = append(player.permGroups, group)
-	player.permGroupsLock.Unlock()
-}
-
-// RemovePermissionGroup removes group from the permission groups of the player.
-func (player *Player) RemovePermissionGroup(group *PermissionGroup) {
-	player.permGroupsLock.RLock()
-	defer player.permGroupsLock.RUnlock()
-
-	index := -1
-	for i, g := range player.permGroups {
-		if g == group {
-			index = i
-			break
-		}
+// HasPermission implements CommandSender.
+func (player *Player) HasPermission(command *Command) bool {
+	mask := command.Permissions
+	if player.Rank == nil {
+		return mask == 0
 	}
 
-	if index == -1 {
-		return
+	if access, ok := player.Rank.Rules[command.Name]; ok {
+		return access
 	}
 
-	player.permGroups[index] = player.permGroups[len(player.permGroups)-1]
-	player.permGroups[len(player.permGroups)-1] = nil
-	player.permGroups = player.permGroups[:len(player.permGroups)-1]
-}
-
-// HasPermission reports whether the player has the specified permission node.
-func (player *Player) HasPermission(permission string) bool {
-	player.permGroupsLock.RLock()
-	defer player.permGroupsLock.RUnlock()
-
-	for _, group := range player.permGroups {
-		if group.HasPermission(permission) {
-			return true
-		}
-	}
-
-	return false
+	return (mask & player.Rank.Permissions) == mask
 }
 
 // HasExtension reports whther the player has the specified CPE extension.
@@ -1017,13 +985,18 @@ func (player *Player) handleMessage(reader io.Reader) {
 		copy(players, player.server.players)
 		player.server.playersLock.RUnlock()
 
-		event := EventPlayerChat{player, players, message, "%s: &f%s", false}
+		event := EventPlayerChat{player, players, message, "%s%s: &f%s", false}
 		player.server.FireEvent(EventTypePlayerChat, &event)
 		if event.Cancel {
 			return
 		}
 
-		message = fmt.Sprintf(event.Format, player.Nickname, event.Message)
+		var tag string
+		if player.Rank != nil {
+			tag = player.Rank.Tag
+		}
+
+		message = fmt.Sprintf(event.Format, tag, player.Nickname, event.Message)
 
 		log.Printf(message)
 		for _, player := range event.Targets {
