@@ -372,16 +372,31 @@ func (plugin *Plugin) loadRanks() {
 			Name:        r.Name,
 			Tag:         r.Tag.String,
 			Permissions: r.Permissions,
+			CanPlace:    gomcc.DefaultRank.CanPlace,
+			CanBreak:    gomcc.DefaultRank.CanBreak,
 		}
 	}
 
-	for _, rule := range plugin.db.queryRules() {
-		rank := plugin.ranks[rule.Rank]
-		if rank.Rules == nil {
-			rank.Rules = make(map[string]bool)
-		}
+	for _, rule := range plugin.db.queryCommandRules() {
+		if rank := plugin.ranks[rule.Rank]; rank != nil {
+			if rank.Rules == nil {
+				rank.Rules = make(map[string]bool)
+			}
 
-		rank.Rules[rule.Command] = rule.Access
+			rank.Rules[rule.Command] = rule.Access
+		}
+	}
+
+	for _, rule := range plugin.db.queryBlockRules() {
+		rank := plugin.ranks[rule.Rank]
+		if rank != nil && rule.BlockID >= 0 && rule.BlockID <= gomcc.BlockMax {
+			switch rule.Action {
+			case 0:
+				rank.CanBreak[rule.BlockID] = rule.Access
+			case 1:
+				rank.CanPlace[rule.BlockID] = rule.Access
+			}
+		}
 	}
 
 	plugin.defaultRank = plugin.db.queryConfig("default_rank")

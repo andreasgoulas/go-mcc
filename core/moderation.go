@@ -105,6 +105,7 @@ func (plugin *Plugin) handleRank(sender gomcc.CommandSender, command *gomcc.Comm
 		sender.SendMessage("Player " + args[0] + " not found")
 	} else {
 		player.Rank = rank
+		player.SendPermissions()
 		if rank == nil {
 			sender.SendMessage("Rank of " + args[0] + " reset")
 		} else {

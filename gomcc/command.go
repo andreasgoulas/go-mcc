@@ -87,4 +87,22 @@ type Rank struct {
 	Tag         string
 	Permissions uint32
 	Rules       map[string]bool
+	CanPlace    [BlockCount]bool
+	CanBreak    [BlockCount]bool
 }
+
+// DefaultRank stores the default player permissions.
+var DefaultRank = func() (rank Rank) {
+	for i := 0; i < BlockCount; i++ {
+		rank.CanPlace[i] = true
+		rank.CanBreak[i] = true
+	}
+
+	banned := []byte{BlockBedrock, BlockActiveWater, BlockWater, BlockActiveLava, BlockLava}
+	for _, block := range banned {
+		rank.CanPlace[block] = false
+	}
+	rank.CanBreak[BlockBedrock] = false
+
+	return
+}()

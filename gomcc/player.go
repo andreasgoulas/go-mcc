@@ -261,7 +261,12 @@ func (player *Player) convertBlock(block byte, level *Level) byte {
 }
 
 func (player *Player) sendMOTD(level *Level) {
-	op := level.HackConfig.CanPlace[BlockBedrock]
+	rank := player.Rank
+	if rank == nil {
+		rank = &DefaultRank
+	}
+
+	op := rank.CanPlace[BlockBedrock]
 
 	motd := level.MOTD
 	if len(motd) == 0 {
@@ -317,6 +322,8 @@ func (player *Player) sendLevel(level *Level) {
 	player.sendInventory(level)
 	player.sendEnvConfig(level, EnvPropAll)
 	player.sendHackConfig(level)
+
+	player.SendPermissions()
 
 	var packet Packet
 	packet.levelFinalize(level.Width, level.Height, level.Length)
@@ -615,16 +622,31 @@ func (player *Player) sendHackConfig(level *Level) {
 
 	var packet Packet
 	config := &level.HackConfig
-	packet.updateUserType(config.CanPlace[BlockBedrock])
 	if player.cpe[CpeClickDistance] {
 		packet.clickDistance(config.ReachDistance)
 	}
 	if player.cpe[CpeHackControl] {
 		packet.hackControl(config)
 	}
+
+	player.sendPacket(packet)
+}
+
+func (player *Player) SendPermissions() {
+	if player.state != stateGame {
+		return
+	}
+
+	rank := player.Rank
+	if rank == nil {
+		rank = &DefaultRank
+	}
+
+	var packet Packet
+	packet.updateUserType(rank.CanPlace[BlockBedrock])
 	if player.cpe[CpeBlockPermissions] {
 		for i := 0; i < BlockCount; i++ {
-			packet.setBlockPermission(byte(i), config.CanPlace[i], config.CanBreak[i])
+			packet.setBlockPermission(byte(i), rank.CanPlace[i], rank.CanBreak[i])
 		}
 	}
 
@@ -870,10 +892,15 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 		return
 	}
 
+	rank := player.Rank
+	if rank == nil {
+		rank = &DefaultRank
+	}
+
 	switch packet.Mode {
 	case 0x00:
 		oldBlock := level.GetBlock(x, y, z)
-		if !level.HackConfig.CanBreak[oldBlock] {
+		if !rank.CanBreak[oldBlock] {
 			player.SendMessage("You cannot break that block.")
 			player.revertBlock(x, y, z)
 			return
@@ -895,13 +922,14 @@ func (player *Player) handleSetBlock(reader io.Reader) {
 			return
 		}
 
-		if !level.HackConfig.CanPlace[block] {
+		oldBlock := level.GetBlock(x, y, z)
+		if !rank.CanPlace[block] || !rank.CanBreak[oldBlock] {
 			player.SendMessage("You cannot place that block.")
 			player.revertBlock(x, y, z)
 			return
 		}
 
-		event := &EventBlockPlace{player, level, block, x, y, z, false}
+		event := &EventBlockPlace{player, level, block, oldBlock, x, y, z, false}
 		player.server.FireEvent(EventTypeBlockPlace, &event)
 		if event.Cancel {
 			player.revertBlock(x, y, z)

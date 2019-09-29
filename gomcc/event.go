@@ -93,11 +93,12 @@ type EventEntityMove struct {
 // EventBlockPlace is dispatched when a player places a block.
 // If the event is cancelled, the block will not be placed.
 type EventBlockPlace struct {
-	Player  *Player
-	Level   *Level
-	Block   byte
-	X, Y, Z int
-	Cancel  bool
+	Player   *Player
+	Level    *Level
+	Block    byte
+	OldBlock byte
+	X, Y, Z  int
+	Cancel   bool
 }
 
 // EventBlockBreak is dispatched when a player breaks a block.

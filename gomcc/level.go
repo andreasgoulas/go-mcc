@@ -87,9 +87,6 @@ type HackConfig struct {
 	SpawnControl    bool
 	ThirdPersonView bool
 	JumpHeight      float64
-
-	CanPlace [BlockCount]bool
-	CanBreak [BlockCount]bool
 }
 
 // Level represents a level, which contains blocks and various metadata.
@@ -138,10 +135,18 @@ func NewLevel(name string, width, height, length int) *Level {
 			Y: float64(height) * 3 / 4,
 			Z: float64(length) / 2,
 		},
+		HackConfig: HackConfig{
+			ReachDistance:   5,
+			Flying:          true,
+			NoClip:          true,
+			Speeding:        true,
+			SpawnControl:    true,
+			ThirdPersonView: true,
+			JumpHeight:      -1.0,
+		},
 	}
 
 	level.EnvConfig = level.DefaultEnvConfig()
-	level.HackConfig = level.DefaultHackConfig()
 	return level
 }
 
@@ -187,32 +192,6 @@ func (level *Level) DefaultEnvConfig() EnvConfig {
 		AmbientColor:    DefaultColor,
 		DiffuseColor:    DefaultColor,
 	}
-}
-
-// DefaultHackConfig returns the default HackConfig for this level.
-func (level *Level) DefaultHackConfig() HackConfig {
-	config := HackConfig{
-		ReachDistance:   5,
-		Flying:          true,
-		NoClip:          true,
-		Speeding:        true,
-		SpawnControl:    true,
-		ThirdPersonView: true,
-		JumpHeight:      -1.0,
-	}
-
-	for i := 0; i < BlockCount; i++ {
-		config.CanPlace[i] = true
-		config.CanBreak[i] = true
-	}
-
-	banned := []byte{BlockBedrock, BlockActiveWater, BlockWater, BlockActiveLava, BlockLava}
-	for _, block := range banned {
-		config.CanPlace[block] = false
-		config.CanBreak[block] = false
-	}
-
-	return config
 }
 
 // Size returns the number of blocks.

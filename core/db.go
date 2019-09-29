@@ -49,11 +49,19 @@ CREATE TABLE ranks(
 	permissions INTEGER NOT NULL
 );
 
-CREATE TABLE rules(
+CREATE TABLE command_rules(
 	command TEXT NOT NULL,
 	rank TEXT NOT NULL,
 	access INTEGER NOT NULL,
 	PRIMARY KEY (command, rank)
+);
+
+CREATE TABLE block_rules(
+	block_id INTEGER NOT NULL,
+	action INTEGER NOT NULL,
+	rank TEXT NOT NULL,
+	access INTEGER NOT NULL,
+	PRIMARY KEY (block_id, action, rank)
 );
 
 CREATE TABLE config(
@@ -82,8 +90,15 @@ type dbRank struct {
 	Permissions uint32         `db:"permissions"`
 }
 
-type dbRule struct {
+type dbCommandRule struct {
 	Command string `db:"command"`
+	Rank    string `db:"rank"`
+	Access  bool   `db:"access"`
+}
+
+type dbBlockRule struct {
+	BlockID int    `db:"block_id"`
+	Action  int    `db:"action"`
 	Rank    string `db:"rank"`
 	Access  bool   `db:"access"`
 }
@@ -171,8 +186,13 @@ func (db *db) queryRanks() (ranks []dbRank) {
 	return
 }
 
-func (db *db) queryRules() (rules []dbRule) {
-	db.Select(&rules, "SELECT command, rank, access FROM rules")
+func (db *db) queryCommandRules() (rules []dbCommandRule) {
+	db.Select(&rules, "SELECT command, rank, access FROM command_rules")
+	return
+}
+
+func (db *db) queryBlockRules() (rules []dbBlockRule) {
+	db.Select(&rules, "SELECT block_id, action, rank, access FROM block_rules")
 	return
 }
 

@@ -71,7 +71,7 @@ teleport|16   |/tp
 summon  |32   |/summon
 level   |64   |/env, /load, /main, /newlvl, /physics, /save...
 
-### rules
+### command_rules
 
 This table stores the explicit command permissions for each rank.
 
@@ -80,6 +80,17 @@ Field  |Type   |Description
 command|string |Command name.
 rank   |string |Rank name.
 access |integer|Whether the command is allowed or denied.
+
+### block_rules
+
+This table stores the block permissions for each rank.
+
+Field   |Type   |Description
+--------|-------|-----------------------------------------
+block_id|integer|Block ID.
+action  |integer|Break = 0, Place = 1
+rank    |string |Rank name.
+access  |integer|Whether the action is allowed or denied.
 
 ### config
 
