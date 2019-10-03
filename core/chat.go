@@ -100,13 +100,13 @@ func (plugin *Plugin) handleIgnore(sender gomcc.CommandSender, command *gomcc.Co
 		}
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " [player]")
+		command.PrintUsage(sender)
 	}
 }
 
 func (plugin *Plugin) handleMe(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <action>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -126,7 +126,7 @@ func (plugin *Plugin) handleMe(sender gomcc.CommandSender, command *gomcc.Comman
 func (plugin *Plugin) handleMute(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
-		sender.SendMessage("Usage: " + command.Name + " <player>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -171,7 +171,7 @@ func (plugin *Plugin) handleNick(sender gomcc.CommandSender, command *gomcc.Comm
 		sender.SendMessage("Nick of " + args[0] + " set to " + args[1])
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " <player> [nick]")
+		command.PrintUsage(sender)
 	}
 }
 
@@ -182,7 +182,7 @@ func (plugin *Plugin) handleR(sender gomcc.CommandSender, command *gomcc.Command
 	}
 
 	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <message>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -198,7 +198,7 @@ func (plugin *Plugin) handleR(sender gomcc.CommandSender, command *gomcc.Command
 
 func (plugin *Plugin) handleSay(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <message>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -208,7 +208,7 @@ func (plugin *Plugin) handleSay(sender gomcc.CommandSender, command *gomcc.Comma
 func (plugin *Plugin) handleTell(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.SplitN(message, " ", 2)
 	if len(args) < 2 {
-		sender.SendMessage("Usage: " + command.Name + " <player> <message>")
+		command.PrintUsage(sender)
 		return
 	}
 

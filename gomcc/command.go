@@ -77,8 +77,14 @@ type CommandHandler func(sender CommandSender, command *Command, message string)
 type Command struct {
 	Name        string
 	Description string
+	Usage       string
 	Permissions uint32
 	Handler     CommandHandler
+}
+
+// PrintUsage sends the command usage message to sender.
+func (command *Command) PrintUsage(sender CommandSender) {
+	sender.SendMessage("Usage: " + command.Usage)
 }
 
 // Rank represents a group of players that have the same permissions.

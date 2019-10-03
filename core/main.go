@@ -91,6 +91,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "back",
 		Description: "Return to your location before your last teleportation.",
+		Usage:       "/back",
 		Permissions: PermTeleport,
 		Handler:     plugin.handleBack,
 	})
@@ -98,6 +99,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "ban",
 		Description: "Ban a player from the server.",
+		Usage:       "/ban <player> [reason]",
 		Permissions: PermBan,
 		Handler:     plugin.handleBan,
 	})
@@ -105,6 +107,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "banip",
 		Description: "Ban an IP address from the server.",
+		Usage:       "/banip <ip> [reason]",
 		Permissions: PermBan,
 		Handler:     plugin.handleBanIp,
 	})
@@ -112,12 +115,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "commands",
 		Description: "List all commands.",
+		Usage:       "/commands",
 		Handler:     plugin.handleCommands,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "copylvl",
 		Description: "Copy a level.",
+		Usage:       "/copylvl <src> <dst>",
 		Permissions: PermLevel,
 		Handler:     plugin.handleCopyLvl,
 	})
@@ -125,6 +130,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "env",
 		Description: "Change the environment of the current level.",
+		Usage:       "/env <option> <value>\n/env reset",
 		Permissions: PermLevel,
 		Handler:     plugin.handleEnv,
 	})
@@ -132,24 +138,28 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "goto",
 		Description: "Move to another level.",
+		Usage:       "/goto <level>",
 		Handler:     plugin.handleGoto,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "help",
 		Description: "Describe a command.",
+		Usage:       "/help <command>",
 		Handler:     plugin.handleHelp,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "ignore",
 		Description: "Ignore chat from a player",
+		Usage:       "/ignore [player]",
 		Handler:     plugin.handleIgnore,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "kick",
 		Description: "Kick a player from the server.",
+		Usage:       "/kick <player> [reason]",
 		Permissions: PermKick,
 		Handler:     plugin.handleKick,
 	})
@@ -157,12 +167,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "levels",
 		Description: "List all loaded levels.",
+		Usage:       "/levels",
 		Handler:     plugin.handleLevels,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "load",
 		Description: "Load a level.",
+		Usage:       "/load <level>",
 		Permissions: PermLevel,
 		Handler:     plugin.handleLoad,
 	})
@@ -170,6 +182,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "main",
 		Description: "Set the main level.",
+		Usage:       "/main [level]",
 		Permissions: PermLevel,
 		Handler:     plugin.handleMain,
 	})
@@ -177,12 +190,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "me",
 		Description: "Broadcast an action.",
+		Usage:       "/me <action>",
 		Handler:     plugin.handleMe,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "mute",
 		Description: "Mute a player.",
+		Usage:       "/mute <player>",
 		Permissions: PermChat,
 		Handler:     plugin.handleMute,
 	})
@@ -190,6 +205,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "newlvl",
 		Description: "Create a new level.",
+		Usage:       "/newlvl <name> <width> <height> <length> <theme> [<args>...]",
 		Permissions: PermLevel,
 		Handler:     plugin.handleNewLvl,
 	})
@@ -197,6 +213,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "nick",
 		Description: "Set the nickname of a player",
+		Usage:       "/nick <player> [nick]",
 		Permissions: PermChat,
 		Handler:     plugin.handleNick,
 	})
@@ -204,12 +221,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "players",
 		Description: "List all players.",
+		Usage:       "/players [level]",
 		Handler:     plugin.handlePlayers,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "physics",
 		Description: "Set the physics state of a level.",
+		Usage:       "/physics <level> <value>\n/physics <value>",
 		Permissions: PermLevel,
 		Handler:     plugin.handlePhysics,
 	})
@@ -217,12 +236,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "r",
 		Description: "Reply to the last message.",
+		Usage:       "/r <message>",
 		Handler:     plugin.handleR,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "rank",
 		Description: "Set the rank of a player.",
+		Usage:       "/rank <player> [rank]",
 		Permissions: PermOperator,
 		Handler:     plugin.handleRank,
 	})
@@ -230,6 +251,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "save",
 		Description: "Save a level.",
+		Usage:       "/save <level>\n/save all",
 		Permissions: PermLevel,
 		Handler:     plugin.handleSave,
 	})
@@ -237,6 +259,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "say",
 		Description: "Broadcast a message.",
+		Usage:       "/say <message>",
 		Permissions: PermChat,
 		Handler:     plugin.handleSay,
 	})
@@ -244,12 +267,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "seen",
 		Description: "Check when a player was last online.",
+		Usage:       "/seen <player>",
 		Handler:     plugin.handleSeen,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "setspawn",
 		Description: "Set the spawn location of the level to your location.",
+		Usage:       "/setspawn [player]",
 		Permissions: PermLevel,
 		Handler:     plugin.handleSetSpawn,
 	})
@@ -257,6 +282,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "skin",
 		Description: "Set the skin of a player.",
+		Usage:       "/skin <player> <skin>",
 		Permissions: PermOperator,
 		Handler:     plugin.handleSkin,
 	})
@@ -264,12 +290,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "spawn",
 		Description: "Teleport to the spawn location of the level.",
+		Usage:       "/spawn",
 		Handler:     plugin.handleSpawn,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "summon",
 		Description: "Summon a player to your location.",
+		Usage:       "/summon <player>\n/summon all",
 		Permissions: PermSummon,
 		Handler:     plugin.handleSummon,
 	})
@@ -277,6 +305,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "unload",
 		Description: "Unload a level.",
+		Usage:       "/unload <level>",
 		Permissions: PermLevel,
 		Handler:     plugin.handleUnload,
 	})
@@ -284,12 +313,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "tell",
 		Description: "Send a private message to a player.",
+		Usage:       "/tell <player> <message>",
 		Handler:     plugin.handleTell,
 	})
 
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "tp",
 		Description: "Teleport to another player.",
+		Usage:       "/tp <player>\n/tp <x> <y> <z>",
 		Permissions: PermTeleport,
 		Handler:     plugin.handleTp,
 	})
@@ -297,6 +328,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "unban",
 		Description: "Remove the ban for a player.",
+		Usage:       "/unban <player>",
 		Permissions: PermBan,
 		Handler:     plugin.handleUnban,
 	})
@@ -304,6 +336,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "unbanip",
 		Description: "Remove the ban for an IP address.",
+		Usage:       "/unbanip <ip>",
 		Permissions: PermBan,
 		Handler:     plugin.handleUnbanIp,
 	})

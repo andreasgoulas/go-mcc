@@ -14,7 +14,7 @@ import (
 func (plugin *Plugin) handleCopyLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 2 {
-		sender.SendMessage("Usage: " + command.Name + " <src> <dest>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -65,8 +65,7 @@ func (plugin *Plugin) handleEnv(sender gomcc.CommandSender, command *gomcc.Comma
 		return
 	}
 
-	sender.SendMessage("Usage: " + command.Name + " <option> <value>")
-	sender.SendMessage(command.Name + " reset")
+	command.PrintUsage(sender)
 	return
 }
 
@@ -79,7 +78,7 @@ func (plugin *Plugin) handleGoto(sender gomcc.CommandSender, command *gomcc.Comm
 
 	args := strings.Fields(message)
 	if len(args) != 1 {
-		sender.SendMessage("Usage: " + command.Name + " <level>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -100,7 +99,7 @@ func (plugin *Plugin) handleGoto(sender gomcc.CommandSender, command *gomcc.Comm
 func (plugin *Plugin) handleLoad(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
-		sender.SendMessage("Usage: " + command.Name + " <level>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -130,14 +129,14 @@ func (plugin *Plugin) handleMain(sender gomcc.CommandSender, command *gomcc.Comm
 		sender.SendMessage("Set main level to " + level.Name)
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " [level]")
+		command.PrintUsage(sender)
 	}
 }
 
 func (plugin *Plugin) handleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) < 5 {
-		sender.SendMessage("Usage: " + command.Name + " <name> <width> <height> <length> <theme> [<args>...]")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -206,8 +205,7 @@ func (plugin *Plugin) handlePhysics(sender gomcc.CommandSender, command *gomcc.C
 		args = args[1:]
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " <level> <value>")
-		sender.SendMessage(command.Name + " <value>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -231,8 +229,7 @@ func (plugin *Plugin) handlePhysics(sender gomcc.CommandSender, command *gomcc.C
 func (plugin *Plugin) handleSave(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
-		sender.SendMessage("Usage: " + command.Name + " <level>")
-		sender.SendMessage(command.Name + " all")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -288,7 +285,7 @@ func (plugin *Plugin) handleSetSpawn(sender gomcc.CommandSender, command *gomcc.
 		sender.SendMessage("Spawn location of " + player.Name() + " set to your current location")
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " [player]")
+		command.PrintUsage(sender)
 	}
 }
 
@@ -300,7 +297,7 @@ func (plugin *Plugin) handleSpawn(sender gomcc.CommandSender, command *gomcc.Com
 	}
 
 	if len(message) > 0 {
-		sender.SendMessage("Usage: " + command.Name)
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -310,7 +307,7 @@ func (plugin *Plugin) handleSpawn(sender gomcc.CommandSender, command *gomcc.Com
 func (plugin *Plugin) handleUnload(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
-		sender.SendMessage("Usage: " + command.Name + " <level>")
+		command.PrintUsage(sender)
 		return
 	}
 

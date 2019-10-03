@@ -16,7 +16,7 @@ func (plugin *Plugin) handleBack(sender gomcc.CommandSender, command *gomcc.Comm
 	}
 
 	if len(message) != 0 {
-		sender.SendMessage("Usage: " + command.Name)
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -33,7 +33,7 @@ func (plugin *Plugin) handleBack(sender gomcc.CommandSender, command *gomcc.Comm
 func (plugin *Plugin) handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 2 {
-		sender.SendMessage("Usage: " + command.Name + " <player> <skin>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -95,8 +95,7 @@ func (plugin *Plugin) handleTp(sender gomcc.CommandSender, command *gomcc.Comman
 		player.Teleport(location)
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " <player>")
-		sender.SendMessage(command.Name + " <x> <y> <z>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -114,8 +113,7 @@ func (plugin *Plugin) handleSummon(sender gomcc.CommandSender, command *gomcc.Co
 
 	args := strings.Fields(message)
 	if len(args) != 1 {
-		sender.SendMessage("Usage: " + command.Name + " <player>")
-		sender.SendMessage(command.Name + " all")
+		command.PrintUsage(sender)
 		return
 	}
 

@@ -13,7 +13,7 @@ import (
 
 func (plugin *Plugin) handleCommands(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) != 0 {
-		sender.SendMessage("Usage: " + command.Name)
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -29,7 +29,7 @@ func (plugin *Plugin) handleCommands(sender gomcc.CommandSender, command *gomcc.
 func (plugin *Plugin) handleHelp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
-		sender.SendMessage("Usage: " + command.Name + " <command>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -40,11 +40,12 @@ func (plugin *Plugin) handleHelp(sender gomcc.CommandSender, command *gomcc.Comm
 	}
 
 	sender.SendMessage(cmd.Description)
+	cmd.PrintUsage(sender)
 }
 
 func (plugin *Plugin) handleLevels(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) != 0 {
-		sender.SendMessage("Usage: " + command.Name)
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -78,7 +79,7 @@ func (plugin *Plugin) handlePlayers(sender gomcc.CommandSender, command *gomcc.C
 		})
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " [level]")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -89,7 +90,7 @@ func (plugin *Plugin) handlePlayers(sender gomcc.CommandSender, command *gomcc.C
 func (plugin *Plugin) handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
-		sender.SendMessage("Usage: " + command.Name + " <player>")
+		command.PrintUsage(sender)
 		return
 	}
 

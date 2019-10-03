@@ -33,6 +33,7 @@ func NewConsole(server *gomcc.Server, waitGroup *sync.WaitGroup) *Console {
 	server.RegisterCommand(&gomcc.Command{
 		Name:        "stop",
 		Description: "Stop the server.",
+		Usage:       "/stop",
 		Permissions: PermOperator,
 		Handler:     console.handleStop,
 	})

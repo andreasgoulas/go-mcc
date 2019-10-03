@@ -12,7 +12,7 @@ import (
 
 func (plugin *Plugin) handleBan(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <player> [reason]")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -37,7 +37,7 @@ func (plugin *Plugin) handleBan(sender gomcc.CommandSender, command *gomcc.Comma
 
 func (plugin *Plugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <ip> [reason]")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -64,7 +64,7 @@ func (plugin *Plugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Com
 
 func (plugin *Plugin) handleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <player> [reason]")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -97,7 +97,7 @@ func (plugin *Plugin) handleRank(sender gomcc.CommandSender, command *gomcc.Comm
 		}
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " <player> [rank]")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -117,7 +117,7 @@ func (plugin *Plugin) handleRank(sender gomcc.CommandSender, command *gomcc.Comm
 func (plugin *Plugin) handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
-		sender.SendMessage("Usage: " + command.Name + " <player>")
+		command.PrintUsage(sender)
 		return
 	}
 
@@ -131,7 +131,7 @@ func (plugin *Plugin) handleUnban(sender gomcc.CommandSender, command *gomcc.Com
 func (plugin *Plugin) handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
-		sender.SendMessage("Usage: " + command.Name + " <ip>")
+		command.PrintUsage(sender)
 		return
 	}
 
