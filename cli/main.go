@@ -10,11 +10,11 @@ import (
 	"plugin"
 	"sync"
 
-	"github.com/structinf/Go-MCC/gomcc"
-	"github.com/structinf/Go-MCC/storage"
+	"github.com/structinf/go-mcc/mcc"
+	"github.com/structinf/go-mcc/storage"
 )
 
-var defaultConfig = &gomcc.Config{
+var defaultConfig = &mcc.Config{
 	Port:       25565,
 	Name:       "Go-MCC",
 	MOTD:       "Welcome!",
@@ -25,7 +25,7 @@ var defaultConfig = &gomcc.Config{
 	MainLevel:  "main",
 }
 
-func readConfig(path string) *gomcc.Config {
+func readConfig(path string) *mcc.Config {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
 		data, err := json.MarshalIndent(defaultConfig, "", "\t")
@@ -40,7 +40,7 @@ func readConfig(path string) *gomcc.Config {
 
 		return defaultConfig
 	} else {
-		config := &gomcc.Config{}
+		config := &mcc.Config{}
 		err = json.Unmarshal(file, config)
 		if err != nil {
 			log.Printf("readConfig: %s\n", err)
@@ -51,7 +51,7 @@ func readConfig(path string) *gomcc.Config {
 	}
 }
 
-func loadPlugins(path string, server *gomcc.Server) {
+func loadPlugins(path string, server *mcc.Server) {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		return
@@ -74,7 +74,7 @@ func loadPlugins(path string, server *gomcc.Server) {
 			continue
 		}
 
-		initFn, ok := sym.(func() gomcc.Plugin)
+		initFn, ok := sym.(func() mcc.Plugin)
 		if !ok {
 			continue
 		}
@@ -87,7 +87,7 @@ func loadPlugins(path string, server *gomcc.Server) {
 func main() {
 	config := readConfig("server.json")
 	cwstorage := storage.NewCwStorage("levels/")
-	server := gomcc.NewServer(config, cwstorage)
+	server := mcc.NewServer(config, cwstorage)
 	if server == nil {
 		return
 	}
@@ -100,6 +100,6 @@ func main() {
 		return
 	}
 
-	console := NewConsole(server, &wg)
-	console.Run()
+	console := newConsole(server, &wg)
+	console.run()
 }

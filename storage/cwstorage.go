@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/structinf/Go-MCC/gomcc"
+	"github.com/structinf/go-mcc/mcc"
 )
 
 type cwSpawn struct {
@@ -38,7 +38,7 @@ func encodeColor(c color.RGBA) cwColor {
 
 func (c cwColor) decode() color.RGBA {
 	if c.R < 0 || c.G < 0 || c.B < 0 {
-		return gomcc.DefaultColor
+		return mcc.DefaultColor
 	} else {
 		return color.RGBA{byte(c.R), byte(c.G), byte(c.B), 0xff}
 	}
@@ -78,9 +78,9 @@ type cwBlockDefinition struct {
 }
 
 var cwFaceIndices = []int{
-	gomcc.FacePosY, gomcc.FaceNegY,
-	gomcc.FaceNegX, gomcc.FacePosX,
-	gomcc.FaceNegZ, gomcc.FacePosZ,
+	mcc.FacePosY, mcc.FaceNegY,
+	mcc.FaceNegX, mcc.FacePosX,
+	mcc.FaceNegZ, mcc.FacePosZ,
 }
 
 type CwBlockDefinitionMap map[string]cwBlockDefinition
@@ -117,7 +117,7 @@ type cwLevel struct {
 	Metadata      cwMetadata
 }
 
-// CwStorage is an implementation of the gomcc.levelStorage interface that can
+// CwStorage is an implementation of the mcc.levelStorage interface that can
 // handle ClassicWorld (.cw) levels.
 type CwStorage struct {
 	dirPath string
@@ -139,8 +139,8 @@ func (storage *CwStorage) getPath(name string) string {
 	return storage.dirPath + name + ".cw"
 }
 
-// Load implements gomcc.LevelStorage.
-func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
+// Load implements mcc.LevelStorage.
+func (storage *CwStorage) Load(name string) (level *mcc.Level, err error) {
 	path := storage.getPath(name)
 	file, err := os.Open(path)
 	if err != nil {
@@ -164,7 +164,7 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 		return nil, errors.New("cwstorage: invalid format")
 	}
 
-	level = gomcc.NewLevel(name, int(cw.X), int(cw.Y), int(cw.Z))
+	level = mcc.NewLevel(name, int(cw.X), int(cw.Y), int(cw.Z))
 	if level == nil {
 		return nil, errors.New("cwstorage: level creation failed")
 	}
@@ -227,11 +227,11 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 		}
 
 		if count > 0 {
-			level.BlockDefs = make([]*gomcc.BlockDefinition, count)
+			level.BlockDefs = make([]*mcc.BlockDefinition, count)
 		}
 
 		for _, v := range cpe.BlockDefinitions.CwBlockDefinitionMap {
-			def := &gomcc.BlockDefinition{
+			def := &mcc.BlockDefinition{
 				Name:        v.Name,
 				Speed:       float64(v.Speed),
 				CollideMode: v.CollideType,
@@ -258,9 +258,9 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 			}
 
 			if len(v.Coords) == 6 {
-				def.AABB = gomcc.AABB{
-					gomcc.Vector3{int(v.Coords[0]), int(v.Coords[1]), int(v.Coords[2])},
-					gomcc.Vector3{int(v.Coords[3]), int(v.Coords[4]), int(v.Coords[5])},
+				def.AABB = mcc.AABB{
+					mcc.Vector3{int(v.Coords[0]), int(v.Coords[1]), int(v.Coords[2])},
+					mcc.Vector3{int(v.Coords[3]), int(v.Coords[4]), int(v.Coords[5])},
 				}
 			}
 
@@ -273,8 +273,8 @@ func (storage *CwStorage) Load(name string) (level *gomcc.Level, err error) {
 	return
 }
 
-// Save implements gomcc.LevelStorage.
-func (storage *CwStorage) Save(level *gomcc.Level) (err error) {
+// Save implements mcc.LevelStorage.
+func (storage *CwStorage) Save(level *mcc.Level) (err error) {
 	file, err := os.Create(storage.getPath(level.Name))
 	if err != nil {
 		return

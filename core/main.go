@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/structinf/Go-MCC/gomcc"
+	"github.com/structinf/go-mcc/mcc"
 )
 
 const (
@@ -23,16 +23,16 @@ const (
 )
 
 type level struct {
-	*gomcc.Level
+	*mcc.Level
 
 	motd    string
 	physics bool
 
-	simulators []gomcc.Simulator
+	simulators []mcc.Simulator
 }
 
 type player struct {
-	*gomcc.Player
+	*mcc.Player
 
 	mute       bool
 	ignoreList []string
@@ -40,8 +40,8 @@ type player struct {
 	lastLogin  time.Time
 
 	lastSender   string
-	lastLevel    *gomcc.Level
-	lastLocation gomcc.Location
+	lastLevel    *mcc.Level
+	lastLocation mcc.Location
 }
 
 func (player *player) isIgnored(name string) bool {
@@ -58,7 +58,7 @@ type Plugin struct {
 	db *db
 
 	defaultRank string
-	ranks       map[string]*gomcc.Rank
+	ranks       map[string]*mcc.Rank
 	ranksLock   sync.RWMutex
 
 	levels     map[string]*level
@@ -68,7 +68,7 @@ type Plugin struct {
 	playersLock sync.RWMutex
 }
 
-func Initialize() gomcc.Plugin {
+func Initialize() mcc.Plugin {
 	db := newDb("core.db")
 	if db == nil {
 		return nil
@@ -85,10 +85,10 @@ func (plugin *Plugin) Name() string {
 	return "Core"
 }
 
-func (plugin *Plugin) Enable(server *gomcc.Server) {
+func (plugin *Plugin) Enable(server *mcc.Server) {
 	plugin.loadRanks()
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "back",
 		Description: "Return to your location before your last teleportation.",
 		Usage:       "/back",
@@ -96,7 +96,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleBack,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "ban",
 		Description: "Ban a player from the server.",
 		Usage:       "/ban <player> [reason]",
@@ -104,7 +104,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleBan,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "banip",
 		Description: "Ban an IP address from the server.",
 		Usage:       "/banip <ip> [reason]",
@@ -112,14 +112,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleBanIp,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "commands",
 		Description: "List all commands.",
 		Usage:       "/commands",
 		Handler:     plugin.handleCommands,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "copylvl",
 		Description: "Copy a level.",
 		Usage:       "/copylvl <src> <dst>",
@@ -127,7 +127,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleCopyLvl,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "env",
 		Description: "Change the environment of the current level.",
 		Usage:       "/env <option> <value>\n/env reset",
@@ -135,28 +135,28 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleEnv,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "goto",
 		Description: "Move to another level.",
 		Usage:       "/goto <level>",
 		Handler:     plugin.handleGoto,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "help",
 		Description: "Describe a command.",
 		Usage:       "/help <command>",
 		Handler:     plugin.handleHelp,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "ignore",
 		Description: "Ignore chat from a player",
 		Usage:       "/ignore [player]",
 		Handler:     plugin.handleIgnore,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "kick",
 		Description: "Kick a player from the server.",
 		Usage:       "/kick <player> [reason]",
@@ -164,14 +164,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleKick,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "levels",
 		Description: "List all loaded levels.",
 		Usage:       "/levels",
 		Handler:     plugin.handleLevels,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "load",
 		Description: "Load a level.",
 		Usage:       "/load <level>",
@@ -179,7 +179,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleLoad,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "main",
 		Description: "Set the main level.",
 		Usage:       "/main [level]",
@@ -187,14 +187,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleMain,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "me",
 		Description: "Broadcast an action.",
 		Usage:       "/me <action>",
 		Handler:     plugin.handleMe,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "mute",
 		Description: "Mute a player.",
 		Usage:       "/mute <player>",
@@ -202,7 +202,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleMute,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "newlvl",
 		Description: "Create a new level.",
 		Usage:       "/newlvl <name> <width> <height> <length> <theme> [<args>...]",
@@ -210,7 +210,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleNewLvl,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "nick",
 		Description: "Set the nickname of a player",
 		Usage:       "/nick <player> [nick]",
@@ -218,14 +218,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleNick,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "players",
 		Description: "List all players.",
 		Usage:       "/players [level]",
 		Handler:     plugin.handlePlayers,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "physics",
 		Description: "Set the physics state of a level.",
 		Usage:       "/physics <level> <value>\n/physics <value>",
@@ -233,14 +233,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handlePhysics,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "r",
 		Description: "Reply to the last message.",
 		Usage:       "/r <message>",
 		Handler:     plugin.handleR,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "rank",
 		Description: "Set the rank of a player.",
 		Usage:       "/rank <player> [rank]",
@@ -248,7 +248,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleRank,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "save",
 		Description: "Save a level.",
 		Usage:       "/save <level>\n/save all",
@@ -256,7 +256,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleSave,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "say",
 		Description: "Broadcast a message.",
 		Usage:       "/say <message>",
@@ -264,14 +264,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleSay,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "seen",
 		Description: "Check when a player was last online.",
 		Usage:       "/seen <player>",
 		Handler:     plugin.handleSeen,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "setspawn",
 		Description: "Set the spawn location of the level to your location.",
 		Usage:       "/setspawn [player]",
@@ -279,7 +279,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleSetSpawn,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "skin",
 		Description: "Set the skin of a player.",
 		Usage:       "/skin <player> <skin>",
@@ -287,14 +287,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleSkin,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "spawn",
 		Description: "Teleport to the spawn location of the level.",
 		Usage:       "/spawn",
 		Handler:     plugin.handleSpawn,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "summon",
 		Description: "Summon a player to your location.",
 		Usage:       "/summon <player>\n/summon all",
@@ -302,7 +302,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleSummon,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "unload",
 		Description: "Unload a level.",
 		Usage:       "/unload <level>",
@@ -310,14 +310,14 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleUnload,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "tell",
 		Description: "Send a private message to a player.",
 		Usage:       "/tell <player> <message>",
 		Handler:     plugin.handleTell,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "tp",
 		Description: "Teleport to another player.",
 		Usage:       "/tp <player>\n/tp <x> <y> <z>",
@@ -325,7 +325,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleTp,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "unban",
 		Description: "Remove the ban for a player.",
 		Usage:       "/unban <player>",
@@ -333,7 +333,7 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleUnban,
 	})
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "unbanip",
 		Description: "Remove the ban for an IP address.",
 		Usage:       "/unbanip <ip>",
@@ -341,43 +341,43 @@ func (plugin *Plugin) Enable(server *gomcc.Server) {
 		Handler:     plugin.handleUnbanIp,
 	})
 
-	server.RegisterHandler(gomcc.EventTypePlayerLogin, plugin.handlePlayerLogin)
-	server.RegisterHandler(gomcc.EventTypePlayerChat, plugin.handlePlayerChat)
+	server.RegisterHandler(mcc.EventTypePlayerLogin, plugin.handlePlayerLogin)
+	server.RegisterHandler(mcc.EventTypePlayerChat, plugin.handlePlayerChat)
 
-	server.RegisterHandler(gomcc.EventTypePlayerJoin, func(eventType gomcc.EventType, event interface{}) {
-		e := event.(*gomcc.EventPlayerJoin)
+	server.RegisterHandler(mcc.EventTypePlayerJoin, func(eventType mcc.EventType, event interface{}) {
+		e := event.(*mcc.EventPlayerJoin)
 		plugin.addPlayer(e.Player)
 	})
 
-	server.RegisterHandler(gomcc.EventTypePlayerQuit, func(eventType gomcc.EventType, event interface{}) {
-		e := event.(*gomcc.EventPlayerQuit)
+	server.RegisterHandler(mcc.EventTypePlayerQuit, func(eventType mcc.EventType, event interface{}) {
+		e := event.(*mcc.EventPlayerQuit)
 		player := plugin.findPlayer(e.Player.Name())
 		plugin.savePlayer(player)
 		plugin.removePlayer(e.Player)
 	})
 
-	server.RegisterHandler(gomcc.EventTypeLevelLoad, func(eventType gomcc.EventType, event interface{}) {
-		e := event.(*gomcc.EventLevelLoad)
+	server.RegisterHandler(mcc.EventTypeLevelLoad, func(eventType mcc.EventType, event interface{}) {
+		e := event.(*mcc.EventLevelLoad)
 		plugin.addLevel(e.Level)
 	})
 
-	server.RegisterHandler(gomcc.EventTypeLevelUnload, func(eventType gomcc.EventType, event interface{}) {
-		e := event.(*gomcc.EventLevelUnload)
+	server.RegisterHandler(mcc.EventTypeLevelUnload, func(eventType mcc.EventType, event interface{}) {
+		e := event.(*mcc.EventLevelUnload)
 		level := plugin.findLevel(e.Level.Name)
 		plugin.saveLevel(level)
 		plugin.removeLevel(e.Level)
 	})
 
-	server.ForEachPlayer(func(player *gomcc.Player) {
+	server.ForEachPlayer(func(player *mcc.Player) {
 		plugin.addPlayer(player)
 	})
 
-	server.ForEachLevel(func(level *gomcc.Level) {
+	server.ForEachLevel(func(level *mcc.Level) {
 		plugin.addLevel(level)
 	})
 }
 
-func (plugin *Plugin) Disable(server *gomcc.Server) {
+func (plugin *Plugin) Disable(server *mcc.Server) {
 	plugin.playersLock.Lock()
 	for _, player := range plugin.players {
 		plugin.savePlayer(player)
@@ -399,14 +399,14 @@ func (plugin *Plugin) loadRanks() {
 	plugin.ranksLock.Lock()
 	defer plugin.ranksLock.Unlock()
 
-	plugin.ranks = make(map[string]*gomcc.Rank)
+	plugin.ranks = make(map[string]*mcc.Rank)
 	for _, r := range plugin.db.queryRanks() {
-		plugin.ranks[r.Name] = &gomcc.Rank{
+		plugin.ranks[r.Name] = &mcc.Rank{
 			Name:        r.Name,
 			Tag:         r.Tag.String,
 			Permissions: r.Permissions,
-			CanPlace:    gomcc.DefaultRank.CanPlace,
-			CanBreak:    gomcc.DefaultRank.CanBreak,
+			CanPlace:    mcc.DefaultRank.CanPlace,
+			CanBreak:    mcc.DefaultRank.CanBreak,
 		}
 	}
 
@@ -422,7 +422,7 @@ func (plugin *Plugin) loadRanks() {
 
 	for _, rule := range plugin.db.queryBlockRules() {
 		rank := plugin.ranks[rule.Rank]
-		if rank != nil && rule.BlockID >= 0 && rule.BlockID <= gomcc.BlockMax {
+		if rank != nil && rule.BlockID >= 0 && rule.BlockID <= mcc.BlockMax {
 			switch rule.Action {
 			case 0:
 				rank.CanBreak[rule.BlockID] = rule.Access
@@ -435,13 +435,13 @@ func (plugin *Plugin) loadRanks() {
 	plugin.defaultRank = plugin.db.queryConfig("default_rank")
 }
 
-func (plugin *Plugin) findRank(name string) *gomcc.Rank {
+func (plugin *Plugin) findRank(name string) *mcc.Rank {
 	plugin.ranksLock.RLock()
 	defer plugin.ranksLock.RUnlock()
 	return plugin.ranks[name]
 }
 
-func (plugin *Plugin) addPlayer(p *gomcc.Player) *player {
+func (plugin *Plugin) addPlayer(p *mcc.Player) *player {
 	name := p.Name()
 
 	db, ok := plugin.db.queryPlayer(name)
@@ -471,7 +471,7 @@ func (plugin *Plugin) addPlayer(p *gomcc.Player) *player {
 	return player
 }
 
-func (plugin *Plugin) removePlayer(player *gomcc.Player) {
+func (plugin *Plugin) removePlayer(player *mcc.Player) {
 	plugin.playersLock.Lock()
 	delete(plugin.players, player.Name())
 	plugin.playersLock.Unlock()
@@ -499,7 +499,7 @@ func (plugin *Plugin) savePlayer(player *player) {
 	})
 }
 
-func (plugin *Plugin) addLevel(l *gomcc.Level) *level {
+func (plugin *Plugin) addLevel(l *mcc.Level) *level {
 	name := l.Name
 
 	db, _ := plugin.db.queryLevel(name)
@@ -522,7 +522,7 @@ func (plugin *Plugin) addLevel(l *gomcc.Level) *level {
 	return level
 }
 
-func (plugin *Plugin) removeLevel(level *gomcc.Level) {
+func (plugin *Plugin) removeLevel(level *mcc.Level) {
 	plugin.levelsLock.Lock()
 	delete(plugin.levels, level.Name)
 	plugin.levelsLock.Unlock()
@@ -541,15 +541,15 @@ func (plugin *Plugin) saveLevel(level *level) {
 	})
 }
 
-func (plugin *Plugin) handlePlayerLogin(eventType gomcc.EventType, event interface{}) {
-	e := event.(*gomcc.EventPlayerLogin)
+func (plugin *Plugin) handlePlayerLogin(eventType mcc.EventType, event interface{}) {
+	e := event.(*mcc.EventPlayerLogin)
 	addr := e.Player.RemoteAddr()
 	name := e.Player.Name()
 	e.Cancel, e.CancelReason = plugin.db.checkBan(addr, name)
 }
 
-func (plugin *Plugin) handlePlayerChat(eventType gomcc.EventType, event interface{}) {
-	e := event.(*gomcc.EventPlayerChat)
+func (plugin *Plugin) handlePlayerChat(eventType mcc.EventType, event interface{}) {
+	e := event.(*mcc.EventPlayerChat)
 	name := e.Player.Name()
 	player := plugin.findPlayer(name)
 	if player.mute {

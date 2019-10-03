@@ -6,11 +6,11 @@ package main
 import (
 	"strings"
 
-	"github.com/structinf/Go-MCC/gomcc"
+	"github.com/structinf/go-mcc/mcc"
 )
 
-func (plugin *Plugin) handleBack(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	if _, ok := sender.(*gomcc.Player); !ok {
+func (plugin *Plugin) handleBack(sender mcc.CommandSender, command *mcc.Command, message string) {
+	if _, ok := sender.(*mcc.Player); !ok {
 		sender.SendMessage("You are not a player")
 		return
 	}
@@ -30,7 +30,7 @@ func (plugin *Plugin) handleBack(sender gomcc.CommandSender, command *gomcc.Comm
 	player.Teleport(player.lastLocation)
 }
 
-func (plugin *Plugin) handleSkin(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleSkin(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 2 {
 		command.PrintUsage(sender)
@@ -48,8 +48,8 @@ func (plugin *Plugin) handleSkin(sender gomcc.CommandSender, command *gomcc.Comm
 	sender.SendMessage("Skin of " + args[0] + " set to " + args[1])
 }
 
-func (plugin *Plugin) handleTp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	player, ok := sender.(*gomcc.Player)
+func (plugin *Plugin) handleTp(sender mcc.CommandSender, command *mcc.Command, message string) {
+	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -104,8 +104,8 @@ func (plugin *Plugin) handleTp(sender gomcc.CommandSender, command *gomcc.Comman
 	cplayer.lastLocation = lastLocation
 }
 
-func (plugin *Plugin) handleSummon(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	player, ok := sender.(*gomcc.Player)
+func (plugin *Plugin) handleSummon(sender mcc.CommandSender, command *mcc.Command, message string) {
+	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -118,7 +118,7 @@ func (plugin *Plugin) handleSummon(sender gomcc.CommandSender, command *gomcc.Co
 	}
 
 	if args[0] == "all" {
-		player.Level().ForEachEntity(func(entity *gomcc.Entity) {
+		player.Level().ForEachEntity(func(entity *mcc.Entity) {
 			entity.Teleport(player.Location())
 		})
 	} else {

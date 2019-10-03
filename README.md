@@ -1,17 +1,17 @@
-# Go-MCC
+# go-mcc
 
 ## Introduction
 
-Go-MCC is an open source Minecraft classic server written in Go. It is fully
+go-mcc is an open source Minecraft classic server written in Go. It is fully
 compatible with the original client, World of Minecraft and ClassiCube. It
 supports a large subset of the Classic Protocol Extension (CPE) project.
 
-The core functionality of Go-MCC can be extended through the use of plugins. The
+The core functionality of go-mcc can be extended through the use of plugins. The
 Core plugin provides important features typically found in Minecraft servers,
 such as ban lists and data persistence. The configuration and data are stored in
 an SQLite database.
 
-Go-MCC implements a rank-based permission system. Users can execute only those
+go-mcc implements a rank-based permission system. Users can execute only those
 commands for which they have the required permissions, which are defined by one
 or more permission flags. The use of a command can also be explicitly allowed
 or denied for each rank.
@@ -19,13 +19,13 @@ or denied for each rank.
 ## Install
 
 ```
-go get github.com/structinf/Go-MCC/gomcc-cli
+go get github.com/structinf/go-mcc/cli
 ```
 
 ### Core Plugin
 
 ```
-go get -buildmode=plugin github.com/structinf/Go-MCC/core
+go get -buildmode=plugin github.com/structinf/go-mcc/core
 ```
 
 To use a plugin, you need to place it in the `plugins/` directory of the server.
@@ -109,4 +109,4 @@ default_rank|Name of default rank.
 
 ## License
 
-Go-MCC is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+go-mcc is licensed under the [MIT License](https://opensource.org/licenses/MIT).

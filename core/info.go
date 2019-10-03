@@ -8,17 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/structinf/Go-MCC/gomcc"
+	"github.com/structinf/go-mcc/mcc"
 )
 
-func (plugin *Plugin) handleCommands(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleCommands(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) != 0 {
 		command.PrintUsage(sender)
 		return
 	}
 
 	var cmds []string
-	sender.Server().ForEachCommand(func(cmd *gomcc.Command) {
+	sender.Server().ForEachCommand(func(cmd *mcc.Command) {
 		cmds = append(cmds, cmd.Name)
 	})
 
@@ -26,7 +26,7 @@ func (plugin *Plugin) handleCommands(sender gomcc.CommandSender, command *gomcc.
 	sender.SendMessage(strings.Join(cmds, ", "))
 }
 
-func (plugin *Plugin) handleHelp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleHelp(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)
@@ -43,14 +43,14 @@ func (plugin *Plugin) handleHelp(sender gomcc.CommandSender, command *gomcc.Comm
 	cmd.PrintUsage(sender)
 }
 
-func (plugin *Plugin) handleLevels(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleLevels(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) != 0 {
 		command.PrintUsage(sender)
 		return
 	}
 
 	var levels []string
-	sender.Server().ForEachLevel(func(level *gomcc.Level) {
+	sender.Server().ForEachLevel(func(level *mcc.Level) {
 		levels = append(levels, level.Name)
 	})
 
@@ -58,12 +58,12 @@ func (plugin *Plugin) handleLevels(sender gomcc.CommandSender, command *gomcc.Co
 	sender.SendMessage(strings.Join(levels, ", "))
 }
 
-func (plugin *Plugin) handlePlayers(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handlePlayers(sender mcc.CommandSender, command *mcc.Command, message string) {
 	var players []string
 	args := strings.Fields(message)
 	switch len(args) {
 	case 0:
-		sender.Server().ForEachPlayer(func(player *gomcc.Player) {
+		sender.Server().ForEachPlayer(func(player *mcc.Player) {
 			players = append(players, player.Name())
 		})
 
@@ -74,7 +74,7 @@ func (plugin *Plugin) handlePlayers(sender gomcc.CommandSender, command *gomcc.C
 			return
 		}
 
-		level.ForEachPlayer(func(player *gomcc.Player) {
+		level.ForEachPlayer(func(player *mcc.Player) {
 			players = append(players, player.Name())
 		})
 
@@ -87,7 +87,7 @@ func (plugin *Plugin) handlePlayers(sender gomcc.CommandSender, command *gomcc.C
 	sender.SendMessage(strings.Join(players, ", "))
 }
 
-func (plugin *Plugin) handleSeen(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleSeen(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)

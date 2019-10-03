@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/structinf/Go-MCC/gomcc"
+	"github.com/structinf/go-mcc/mcc"
 )
 
-func (plugin *Plugin) handleCopyLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleCopyLvl(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 2 {
 		command.PrintUsage(sender)
@@ -35,8 +35,8 @@ func (plugin *Plugin) handleCopyLvl(sender gomcc.CommandSender, command *gomcc.C
 	sender.SendMessage("Level " + args[0] + " has been copied to " + args[1])
 }
 
-func (plugin *Plugin) handleEnv(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	player, ok := sender.(*gomcc.Player)
+func (plugin *Plugin) handleEnv(sender mcc.CommandSender, command *mcc.Command, message string) {
+	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -48,7 +48,7 @@ func (plugin *Plugin) handleEnv(sender gomcc.CommandSender, command *gomcc.Comma
 	case 1:
 		if args[0] == "reset" {
 			level.EnvConfig = level.DefaultEnvConfig()
-			level.SendEnvConfig(gomcc.EnvPropAll)
+			level.SendEnvConfig(mcc.EnvPropAll)
 			return
 		}
 
@@ -69,8 +69,8 @@ func (plugin *Plugin) handleEnv(sender gomcc.CommandSender, command *gomcc.Comma
 	return
 }
 
-func (plugin *Plugin) handleGoto(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	player, ok := sender.(*gomcc.Player)
+func (plugin *Plugin) handleGoto(sender mcc.CommandSender, command *mcc.Command, message string) {
+	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -96,7 +96,7 @@ func (plugin *Plugin) handleGoto(sender gomcc.CommandSender, command *gomcc.Comm
 	player.TeleportLevel(level)
 }
 
-func (plugin *Plugin) handleLoad(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleLoad(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)
@@ -112,7 +112,7 @@ func (plugin *Plugin) handleLoad(sender gomcc.CommandSender, command *gomcc.Comm
 	sender.SendMessage("Level " + args[0] + " loaded")
 }
 
-func (plugin *Plugin) handleMain(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleMain(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	switch len(args) {
 	case 0:
@@ -133,7 +133,7 @@ func (plugin *Plugin) handleMain(sender gomcc.CommandSender, command *gomcc.Comm
 	}
 }
 
-func (plugin *Plugin) handleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleNewLvl(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) < 5 {
 		command.PrintUsage(sender)
@@ -158,7 +158,7 @@ func (plugin *Plugin) handleNewLvl(sender gomcc.CommandSender, command *gomcc.Co
 		return
 	}
 
-	genFunc, ok := gomcc.Generators[args[4]]
+	genFunc, ok := mcc.Generators[args[4]]
 	if !ok {
 		sender.SendMessage("Generator " + args[4] + " not found")
 		return
@@ -170,7 +170,7 @@ func (plugin *Plugin) handleNewLvl(sender gomcc.CommandSender, command *gomcc.Co
 		return
 	}
 
-	level = gomcc.NewLevel(args[0], int(width), int(height), int(length))
+	level = mcc.NewLevel(args[0], int(width), int(height), int(length))
 	if level == nil {
 		sender.SendMessage("Could not create level")
 		return
@@ -183,12 +183,12 @@ func (plugin *Plugin) handleNewLvl(sender gomcc.CommandSender, command *gomcc.Co
 	sender.SendMessage("Level " + level.Name + " created")
 }
 
-func (plugin *Plugin) handlePhysics(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handlePhysics(sender mcc.CommandSender, command *mcc.Command, message string) {
 	var level *level
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
-		if player, ok := sender.(*gomcc.Player); !ok {
+		if player, ok := sender.(*mcc.Player); !ok {
 			sender.SendMessage("You are not a player")
 			return
 		} else {
@@ -226,7 +226,7 @@ func (plugin *Plugin) handlePhysics(sender gomcc.CommandSender, command *gomcc.C
 	}
 }
 
-func (plugin *Plugin) handleSave(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleSave(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)
@@ -234,7 +234,7 @@ func (plugin *Plugin) handleSave(sender gomcc.CommandSender, command *gomcc.Comm
 	}
 
 	if args[0] == "all" {
-		sender.Server().ForEachLevel(func(level *gomcc.Level) {
+		sender.Server().ForEachLevel(func(level *mcc.Level) {
 			sender.Server().SaveLevel(level)
 		})
 		sender.SendMessage("All levels have been saved")
@@ -251,8 +251,8 @@ func (plugin *Plugin) handleSave(sender gomcc.CommandSender, command *gomcc.Comm
 	sender.SendMessage("Level " + level.Name + " saved")
 }
 
-func (plugin *Plugin) handleSetSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	player, ok := sender.(*gomcc.Player)
+func (plugin *Plugin) handleSetSpawn(sender mcc.CommandSender, command *mcc.Command, message string) {
+	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -289,8 +289,8 @@ func (plugin *Plugin) handleSetSpawn(sender gomcc.CommandSender, command *gomcc.
 	}
 }
 
-func (plugin *Plugin) handleSpawn(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	player, ok := sender.(*gomcc.Player)
+func (plugin *Plugin) handleSpawn(sender mcc.CommandSender, command *mcc.Command, message string) {
+	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -304,7 +304,7 @@ func (plugin *Plugin) handleSpawn(sender gomcc.CommandSender, command *gomcc.Com
 	player.Teleport(player.Level().Spawn)
 }
 
-func (plugin *Plugin) handleUnload(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleUnload(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)

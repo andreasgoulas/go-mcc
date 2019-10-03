@@ -10,27 +10,27 @@ import (
 	"os/signal"
 	"sync"
 
-	"github.com/structinf/Go-MCC/gomcc"
+	"github.com/structinf/go-mcc/mcc"
 )
 
 const (
 	PermOperator = 1 << 0
 )
 
-type Console struct {
-	server    *gomcc.Server
+type console struct {
+	server    *mcc.Server
 	waitGroup *sync.WaitGroup
 	signal    chan os.Signal
 }
 
-func NewConsole(server *gomcc.Server, waitGroup *sync.WaitGroup) *Console {
-	console := &Console{
+func newConsole(server *mcc.Server, waitGroup *sync.WaitGroup) *console {
+	console := &console{
 		server,
 		waitGroup,
 		make(chan os.Signal),
 	}
 
-	server.RegisterCommand(&gomcc.Command{
+	server.RegisterCommand(&mcc.Command{
 		Name:        "stop",
 		Description: "Stop the server.",
 		Usage:       "/stop",
@@ -42,43 +42,46 @@ func NewConsole(server *gomcc.Server, waitGroup *sync.WaitGroup) *Console {
 	go func() {
 		signal := <-console.signal
 		if signal == os.Interrupt {
-			console.Stop()
+			console.stop()
 		}
 	}()
 
 	return console
 }
 
-func (console *Console) Run() {
+func (console *console) run() {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		console.server.ExecuteCommand(console, scanner.Text())
 	}
 }
 
-func (console *Console) Stop() {
+func (console *console) stop() {
 	console.server.Stop()
 	console.waitGroup.Wait()
 	os.Exit(0)
 }
 
-func (console *Console) Server() *gomcc.Server {
+// Server implements mcc.CommandSender.
+func (console *console) Server() *mcc.Server {
 	return console.server
 }
 
-func (console *Console) Name() string {
+// Name implements mcc.CommandSender.
+func (console *console) Name() string {
 	return "Console"
 }
 
-func (console *Console) SendMessage(message string) {
+// SendMessage implements mcc.CommandSender.
+func (console *console) SendMessage(message string) {
 	log.Println(message)
 }
 
-// CanExecute implements CommandSender.
-func (console *Console) CanExecute(command *gomcc.Command) bool {
+// CanExecute implements mcc.CommandSender.
+func (console *console) CanExecute(command *mcc.Command) bool {
 	return true
 }
 
-func (console *Console) handleStop(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	console.Stop()
+func (console *console) handleStop(sender mcc.CommandSender, command *mcc.Command, message string) {
+	console.stop()
 }

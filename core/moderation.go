@@ -7,10 +7,10 @@ import (
 	"net"
 	"strings"
 
-	"github.com/structinf/Go-MCC/gomcc"
+	"github.com/structinf/go-mcc/mcc"
 )
 
-func (plugin *Plugin) handleBan(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleBan(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) == 0 {
 		command.PrintUsage(sender)
 		return
@@ -22,7 +22,7 @@ func (plugin *Plugin) handleBan(sender gomcc.CommandSender, command *gomcc.Comma
 		reason = args[1]
 	}
 
-	if !gomcc.IsValidName(args[0]) {
+	if !mcc.IsValidName(args[0]) {
 		sender.SendMessage(args[0] + " is not a valid name")
 		return
 	}
@@ -35,7 +35,7 @@ func (plugin *Plugin) handleBan(sender gomcc.CommandSender, command *gomcc.Comma
 	sender.SendMessage("Player " + args[0] + " banned")
 }
 
-func (plugin *Plugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleBanIp(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) == 0 {
 		command.PrintUsage(sender)
 		return
@@ -53,7 +53,7 @@ func (plugin *Plugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Com
 	}
 
 	plugin.db.banIp(args[0], reason, sender.Name())
-	sender.Server().ForEachPlayer(func(player *gomcc.Player) {
+	sender.Server().ForEachPlayer(func(player *mcc.Player) {
 		if player.RemoteAddr() == args[0] {
 			player.Kick(reason)
 		}
@@ -62,7 +62,7 @@ func (plugin *Plugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Com
 	sender.SendMessage("IP " + args[0] + " banned")
 }
 
-func (plugin *Plugin) handleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleKick(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) == 0 {
 		command.PrintUsage(sender)
 		return
@@ -83,8 +83,8 @@ func (plugin *Plugin) handleKick(sender gomcc.CommandSender, command *gomcc.Comm
 	player.Kick(reason)
 }
 
-func (plugin *Plugin) handleRank(sender gomcc.CommandSender, command *gomcc.Command, message string) {
-	var rank *gomcc.Rank
+func (plugin *Plugin) handleRank(sender mcc.CommandSender, command *mcc.Command, message string) {
+	var rank *mcc.Rank
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
@@ -114,7 +114,7 @@ func (plugin *Plugin) handleRank(sender gomcc.CommandSender, command *gomcc.Comm
 	}
 }
 
-func (plugin *Plugin) handleUnban(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleUnban(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)
@@ -128,7 +128,7 @@ func (plugin *Plugin) handleUnban(sender gomcc.CommandSender, command *gomcc.Com
 	}
 }
 
-func (plugin *Plugin) handleUnbanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
+func (plugin *Plugin) handleUnbanIp(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)

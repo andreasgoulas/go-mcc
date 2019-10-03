@@ -1,7 +1,7 @@
 // Copyright (c) 2017-2019 Andrew Goulas
 // Licensed under the MIT license.
 
-package gomcc
+package mcc
 
 import (
 	"strconv"
