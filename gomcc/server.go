@@ -446,7 +446,7 @@ func (server *Server) ExecuteCommand(sender CommandSender, message string) {
 
 	event := EventCommand{
 		sender, command, message,
-		sender.HasPermission(command),
+		sender.CanExecute(command),
 	}
 	server.FireEvent(EventTypeCommand, &event)
 	if !event.Allow {

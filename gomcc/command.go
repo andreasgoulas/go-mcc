@@ -65,7 +65,7 @@ type CommandSender interface {
 	Server() *Server
 	Name() string
 	SendMessage(message string)
-	HasPermission(command *Command) bool
+	CanExecute(command *Command) bool
 }
 
 // CommandHandler is the type of the function called to execute a command. The

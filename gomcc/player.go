@@ -55,8 +55,8 @@ func NewPlayer(conn net.Conn, server *Server) *Player {
 	}
 }
 
-// HasPermission implements CommandSender.
-func (player *Player) HasPermission(command *Command) bool {
+// CanExecute implements CommandSender.
+func (player *Player) CanExecute(command *Command) bool {
 	mask := command.Permissions
 	if player.Rank == nil {
 		return mask == 0

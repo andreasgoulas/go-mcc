@@ -73,8 +73,8 @@ func (console *Console) SendMessage(message string) {
 	log.Println(message)
 }
 
-// HasPermission implements CommandSender.
-func (console *Console) HasPermission(command *gomcc.Command) bool {
+// CanExecute implements CommandSender.
+func (console *Console) CanExecute(command *gomcc.Command) bool {
 	return true
 }
 
