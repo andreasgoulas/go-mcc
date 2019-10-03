@@ -95,7 +95,8 @@ func (plugin *Plugin) handleTp(sender gomcc.CommandSender, command *gomcc.Comman
 		player.Teleport(location)
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " <player> or <x> <y> <z>")
+		sender.SendMessage("Usage: " + command.Name + " <player>")
+		sender.SendMessage(command.Name + " <x> <y> <z>")
 		return
 	}
 
@@ -113,7 +114,8 @@ func (plugin *Plugin) handleSummon(sender gomcc.CommandSender, command *gomcc.Co
 
 	args := strings.Fields(message)
 	if len(args) != 1 {
-		sender.SendMessage("Usage: " + command.Name + " <player> or all")
+		sender.SendMessage("Usage: " + command.Name + " <player>")
+		sender.SendMessage(command.Name + " all")
 		return
 	}
 

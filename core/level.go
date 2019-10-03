@@ -56,10 +56,8 @@ func (plugin *Plugin) handleEnv(sender gomcc.CommandSender, command *gomcc.Comma
 		switch mask := envOption(args[0], args[1], &level.EnvConfig); mask {
 		case 0:
 			sender.SendMessage("Unknown option")
-
 		case -1:
 			sender.SendMessage("Invalid value")
-
 		default:
 			level.SendEnvConfig(uint32(mask))
 		}
@@ -68,6 +66,7 @@ func (plugin *Plugin) handleEnv(sender gomcc.CommandSender, command *gomcc.Comma
 	}
 
 	sender.SendMessage("Usage: " + command.Name + " <option> <value>")
+	sender.SendMessage(command.Name + " reset")
 	return
 }
 
@@ -131,14 +130,14 @@ func (plugin *Plugin) handleMain(sender gomcc.CommandSender, command *gomcc.Comm
 		sender.SendMessage("Set main level to " + level.Name)
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " <level>")
+		sender.SendMessage("Usage: " + command.Name + " [level]")
 	}
 }
 
 func (plugin *Plugin) handleNewLvl(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) < 5 {
-		sender.SendMessage("Usage: " + command.Name + " <name> <width> <height> <length> <theme> <args>")
+		sender.SendMessage("Usage: " + command.Name + " <name> <width> <height> <length> <theme> [<args>...]")
 		return
 	}
 
@@ -208,6 +207,7 @@ func (plugin *Plugin) handlePhysics(sender gomcc.CommandSender, command *gomcc.C
 
 	default:
 		sender.SendMessage("Usage: " + command.Name + " <level> <value>")
+		sender.SendMessage(command.Name + " <value>")
 		return
 	}
 
@@ -232,6 +232,7 @@ func (plugin *Plugin) handleSave(sender gomcc.CommandSender, command *gomcc.Comm
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		sender.SendMessage("Usage: " + command.Name + " <level>")
+		sender.SendMessage(command.Name + " all")
 		return
 	}
 
@@ -287,7 +288,7 @@ func (plugin *Plugin) handleSetSpawn(sender gomcc.CommandSender, command *gomcc.
 		sender.SendMessage("Spawn location of " + player.Name() + " set to your current location")
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " <player>")
+		sender.SendMessage("Usage: " + command.Name + " [player]")
 	}
 }
 

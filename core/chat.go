@@ -100,7 +100,7 @@ func (plugin *Plugin) handleIgnore(sender gomcc.CommandSender, command *gomcc.Co
 		}
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " <player>")
+		sender.SendMessage("Usage: " + command.Name + " [player]")
 	}
 }
 
@@ -171,7 +171,7 @@ func (plugin *Plugin) handleNick(sender gomcc.CommandSender, command *gomcc.Comm
 		sender.SendMessage("Nick of " + args[0] + " set to " + args[1])
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " <player> <nick>")
+		sender.SendMessage("Usage: " + command.Name + " <player> [nick]")
 	}
 }
 

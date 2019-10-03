@@ -12,7 +12,7 @@ import (
 
 func (plugin *Plugin) handleBan(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <player> <reason>")
+		sender.SendMessage("Usage: " + command.Name + " <player> [reason]")
 		return
 	}
 
@@ -37,7 +37,7 @@ func (plugin *Plugin) handleBan(sender gomcc.CommandSender, command *gomcc.Comma
 
 func (plugin *Plugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <ip> <reason>")
+		sender.SendMessage("Usage: " + command.Name + " <ip> [reason]")
 		return
 	}
 
@@ -64,7 +64,7 @@ func (plugin *Plugin) handleBanIp(sender gomcc.CommandSender, command *gomcc.Com
 
 func (plugin *Plugin) handleKick(sender gomcc.CommandSender, command *gomcc.Command, message string) {
 	if len(message) == 0 {
-		sender.SendMessage("Usage: " + command.Name + " <player> <reason>")
+		sender.SendMessage("Usage: " + command.Name + " <player> [reason]")
 		return
 	}
 
@@ -97,7 +97,7 @@ func (plugin *Plugin) handleRank(sender gomcc.CommandSender, command *gomcc.Comm
 		}
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " <player> <rank>")
+		sender.SendMessage("Usage: " + command.Name + " <player> [rank]")
 		return
 	}
 

@@ -78,7 +78,7 @@ func (plugin *Plugin) handlePlayers(sender gomcc.CommandSender, command *gomcc.C
 		})
 
 	default:
-		sender.SendMessage("Usage: " + command.Name + " <level>")
+		sender.SendMessage("Usage: " + command.Name + " [level]")
 		return
 	}
 
