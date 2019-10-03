@@ -97,6 +97,16 @@ type Rank struct {
 	CanBreak    [BlockCount]bool
 }
 
+// CanExecute returns whether the members of rank can execute command.
+func (rank *Rank) CanExecute(command *Command) bool {
+	if access, ok := rank.Rules[command.Name]; ok {
+		return access
+	}
+
+	mask := command.Permissions
+	return (mask & rank.Permissions) == mask
+}
+
 // DefaultRank stores the default player permissions.
 var DefaultRank = func() (rank Rank) {
 	for i := 0; i < BlockCount; i++ {

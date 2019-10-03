@@ -57,16 +57,12 @@ func NewPlayer(conn net.Conn, server *Server) *Player {
 
 // CanExecute implements CommandSender.
 func (player *Player) CanExecute(command *Command) bool {
-	mask := command.Permissions
-	if player.Rank == nil {
-		return mask == 0
+	rank := player.Rank
+	if rank == nil {
+		rank = &DefaultRank
 	}
 
-	if access, ok := player.Rank.Rules[command.Name]; ok {
-		return access
-	}
-
-	return (mask & player.Rank.Permissions) == mask
+	return rank.CanExecute(command)
 }
 
 // HasExtension reports whther the player has the specified CPE extension.
