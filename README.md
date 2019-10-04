@@ -54,9 +54,9 @@ permissions.
 This table stores the rank entries.
 
 Field      |Type   |Description
------------|-------|------------------------------------------------------
+-----------|-------|-------------------------------------------------------
 name       |string |Rank name.
-tag        |string |Tag the prefixes the name of all members of this rank.
+tag        |string |Tag that prefixes the name of all members of this rank.
 permissions|integer|Bitwise-OR of one or more permission flags.
 
 Core defines the following permission flags.

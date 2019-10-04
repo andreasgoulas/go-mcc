@@ -52,7 +52,7 @@ func (plugin *Plugin) handleBanIp(sender mcc.CommandSender, command *mcc.Command
 		return
 	}
 
-	plugin.db.banIp(args[0], reason, sender.Name())
+	plugin.db.banIP(args[0], reason, sender.Name())
 	sender.Server().ForEachPlayer(func(player *mcc.Player) {
 		if player.RemoteAddr() == args[0] {
 			player.Kick(reason)
@@ -135,7 +135,7 @@ func (plugin *Plugin) handleUnbanIp(sender mcc.CommandSender, command *mcc.Comma
 		return
 	}
 
-	if plugin.db.unbanIp(args[0]) {
+	if plugin.db.unbanIP(args[0]) {
 		sender.SendMessage("IP " + args[0] + " unbanned")
 	} else {
 		sender.SendMessage("IP " + args[0] + " is not banned")

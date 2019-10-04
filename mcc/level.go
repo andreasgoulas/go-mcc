@@ -342,8 +342,8 @@ func (level *Level) SendMOTD() {
 	})
 }
 
-// RegisterSimulator registers a physics simulator.
-func (level *Level) RegisterSimulator(simulator Simulator) {
+// AddSimulator registers a physics simulator.
+func (level *Level) AddSimulator(simulator Simulator) {
 	level.simulatorsLock.Lock()
 	level.simulators = append(level.simulators, simulator)
 	level.simulatorsLock.Unlock()
@@ -353,8 +353,8 @@ func (level *Level) RegisterSimulator(simulator Simulator) {
 	}
 }
 
-// UnregisterSimulator unregisters a physics simulator.
-func (level *Level) UnregisterSimulator(simulator Simulator) {
+// RemoveSimulator unregisters a physics simulator.
+func (level *Level) RemoveSimulator(simulator Simulator) {
 	level.simulatorsLock.Lock()
 	defer level.simulatorsLock.Unlock()
 

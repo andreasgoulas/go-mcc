@@ -62,6 +62,9 @@ type Server struct {
 	handlers     map[EventType][]EventHandler
 	handlersLock sync.RWMutex
 
+	generators     map[string]GeneratorFunc
+	generatorsLock sync.RWMutex
+
 	storage    LevelStorage
 	levels     []*Level
 	levelsLock sync.RWMutex
@@ -86,15 +89,17 @@ type Server struct {
 // NewServer returns a new Server.
 func NewServer(config *Config, storage LevelStorage) *Server {
 	server := &Server{
-		Config:   config,
-		commands: make(map[string]*Command),
-		handlers: make(map[EventType][]EventHandler),
-		storage:  storage,
-		stopChan: make(chan bool),
+		Config:     config,
+		commands:   make(map[string]*Command),
+		handlers:   make(map[EventType][]EventHandler),
+		generators: make(map[string]GeneratorFunc),
+		storage:    storage,
+		stopChan:   make(chan bool),
 	}
 
 	server.generateSalt()
 
+	server.generators["flat"] = NewFlatGenerator
 	mainLevel, err := server.LoadLevel(config.MainLevel)
 	if err != nil {
 		log.Printf("Main level not found.\n")
@@ -103,7 +108,7 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 			return nil
 		}
 
-		Generators["flat"]().Generate(mainLevel)
+		NewFlatGenerator().Generate(mainLevel)
 		server.AddLevel(mainLevel)
 	}
 
@@ -457,8 +462,8 @@ func (server *Server) ExecuteCommand(sender CommandSender, message string) {
 	go command.Handler(sender, command, message)
 }
 
-// RegisterHandler registers a handler for the specified event type.
-func (server *Server) RegisterHandler(eventType EventType, handler EventHandler) {
+// AddHandler registers a handler for the specified event type.
+func (server *Server) AddHandler(eventType EventType, handler EventHandler) {
 	server.handlersLock.Lock()
 	server.handlers[eventType] = append(server.handlers[eventType], handler)
 	server.handlersLock.Unlock()
@@ -471,6 +476,24 @@ func (server *Server) FireEvent(eventType EventType, event interface{}) {
 		handler(eventType, event)
 	}
 	server.handlersLock.RUnlock()
+}
+
+// AddGenerator registers a level generator.
+func (server *Server) AddGenerator(name string, fn GeneratorFunc) {
+	server.generatorsLock.Lock()
+	server.generators[name] = fn
+	server.generatorsLock.Unlock()
+}
+
+// NewGenerator returns a new generator with the specified options.
+func (server *Server) NewGenerator(name string, args ...string) Generator {
+	server.generatorsLock.RLock()
+	defer server.generatorsLock.RUnlock()
+	if fn := server.generators[name]; fn != nil {
+		return fn(args...)
+	}
+
+	return nil
 }
 
 // RegisterPlugin registers and enables plugin.

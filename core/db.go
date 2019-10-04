@@ -129,7 +129,7 @@ REPLACE INTO banned_names(name, reason, banned_by, timestamp)
 VALUES(?, ?, ?, CURRENT_TIMESTAMP)`, name, reason, banned_by)
 }
 
-func (db *db) banIp(ip, reason, banned_by string) {
+func (db *db) banIP(ip, reason, banned_by string) {
 	db.MustExec(`
 REPLACE INTO banned_ips(ip, reason, banned_by, timestamp)
 VALUES(?, ?, ?, CURRENT_TIMESTAMP)`, ip, reason, banned_by)
@@ -141,7 +141,7 @@ func (db *db) unban(name string) bool {
 	return rows > 0
 }
 
-func (db *db) unbanIp(ip string) bool {
+func (db *db) unbanIP(ip string) bool {
 	r := db.MustExec("DELETE FROM banned_ips WHERE ip = ?", ip)
 	rows, _ := r.RowsAffected()
 	return rows > 0

@@ -97,7 +97,7 @@ type Rank struct {
 	CanBreak    [BlockCount]bool
 }
 
-// CanExecute returns whether the members of rank can execute command.
+// CanExecute returns whether the members of the rank can execute command.
 func (rank *Rank) CanExecute(command *Command) bool {
 	if access, ok := rank.Rules[command.Name]; ok {
 		return access

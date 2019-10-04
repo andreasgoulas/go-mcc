@@ -341,27 +341,27 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleUnbanIp,
 	})
 
-	server.RegisterHandler(mcc.EventTypePlayerLogin, plugin.handlePlayerLogin)
-	server.RegisterHandler(mcc.EventTypePlayerChat, plugin.handlePlayerChat)
+	server.AddHandler(mcc.EventTypePlayerLogin, plugin.handlePlayerLogin)
+	server.AddHandler(mcc.EventTypePlayerChat, plugin.handlePlayerChat)
 
-	server.RegisterHandler(mcc.EventTypePlayerJoin, func(eventType mcc.EventType, event interface{}) {
+	server.AddHandler(mcc.EventTypePlayerJoin, func(eventType mcc.EventType, event interface{}) {
 		e := event.(*mcc.EventPlayerJoin)
 		plugin.addPlayer(e.Player)
 	})
 
-	server.RegisterHandler(mcc.EventTypePlayerQuit, func(eventType mcc.EventType, event interface{}) {
+	server.AddHandler(mcc.EventTypePlayerQuit, func(eventType mcc.EventType, event interface{}) {
 		e := event.(*mcc.EventPlayerQuit)
 		player := plugin.findPlayer(e.Player.Name())
 		plugin.savePlayer(player)
 		plugin.removePlayer(e.Player)
 	})
 
-	server.RegisterHandler(mcc.EventTypeLevelLoad, func(eventType mcc.EventType, event interface{}) {
+	server.AddHandler(mcc.EventTypeLevelLoad, func(eventType mcc.EventType, event interface{}) {
 		e := event.(*mcc.EventLevelLoad)
 		plugin.addLevel(e.Level)
 	})
 
-	server.RegisterHandler(mcc.EventTypeLevelUnload, func(eventType mcc.EventType, event interface{}) {
+	server.AddHandler(mcc.EventTypeLevelUnload, func(eventType mcc.EventType, event interface{}) {
 		e := event.(*mcc.EventLevelUnload)
 		level := plugin.findLevel(e.Level.Name)
 		plugin.saveLevel(level)

@@ -12,6 +12,9 @@ type Generator interface {
 	Generate(level *Level)
 }
 
+// GeneratorFunc is the type of function called to create a new generator.
+type GeneratorFunc func(args ...string) Generator
+
 // FlatGenerator is an implementation of the Generator interface that can
 // generate flat grass levels.
 type FlatGenerator struct {
@@ -20,7 +23,7 @@ type FlatGenerator struct {
 	SoilBlock    byte
 }
 
-func newFlatGenerator(args ...string) Generator {
+func NewFlatGenerator(args ...string) Generator {
 	grassHeight := -1
 	if len(args) > 0 {
 		grassHeight, _ = strconv.Atoi(args[0])
@@ -44,8 +47,4 @@ func (generator *FlatGenerator) Generate(level *Level) {
 	if grassHeight > 0 {
 		level.FillLayers(0, grassHeight-1, generator.SoilBlock)
 	}
-}
-
-var Generators = map[string]func(args ...string) Generator{
-	"flat": newFlatGenerator,
 }

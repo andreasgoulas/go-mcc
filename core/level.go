@@ -158,13 +158,14 @@ func (plugin *Plugin) handleNewLvl(sender mcc.CommandSender, command *mcc.Comman
 		return
 	}
 
-	genFunc, ok := mcc.Generators[args[4]]
-	if !ok {
+	server := sender.Server()
+	generator := server.NewGenerator(args[4])
+	if generator == nil {
 		sender.SendMessage("Generator " + args[4] + " not found")
 		return
 	}
 
-	level := sender.Server().FindLevel(args[0])
+	level := server.FindLevel(args[0])
 	if level != nil {
 		sender.SendMessage("Level " + args[0] + " already exists")
 		return
@@ -176,10 +177,8 @@ func (plugin *Plugin) handleNewLvl(sender mcc.CommandSender, command *mcc.Comman
 		return
 	}
 
-	generator := genFunc(args[5:]...)
 	generator.Generate(level)
-
-	sender.Server().AddLevel(level)
+	server.AddLevel(level)
 	sender.SendMessage("Level " + level.Name + " created")
 }
 

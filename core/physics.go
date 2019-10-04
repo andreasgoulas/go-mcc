@@ -22,7 +22,7 @@ func (plugin *Plugin) enablePhysics(level *level) {
 	}
 
 	for _, sim := range sims {
-		level.RegisterSimulator(sim)
+		level.AddSimulator(sim)
 	}
 
 	level.simulators = append(level.simulators, sims...)
@@ -30,7 +30,7 @@ func (plugin *Plugin) enablePhysics(level *level) {
 
 func (plugin *Plugin) disablePhysics(level *level) {
 	for _, sim := range level.simulators {
-		level.UnregisterSimulator(sim)
+		level.RemoveSimulator(sim)
 	}
 
 	level.simulators = nil

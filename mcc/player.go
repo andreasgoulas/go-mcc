@@ -65,7 +65,7 @@ func (player *Player) CanExecute(command *Command) bool {
 	return rank.CanExecute(command)
 }
 
-// HasExtension reports whther the player has the specified CPE extension.
+// HasExtension reports whether the player has the specified CPE extension.
 func (player *Player) HasExtension(extension int) bool {
 	return player.cpe[extension]
 }
