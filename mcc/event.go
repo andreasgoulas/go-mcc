@@ -3,8 +3,6 @@
 
 package mcc
 
-type EventType int
-
 const (
 	ButtonLeft   = 0
 	ButtonRight  = 1
@@ -33,7 +31,7 @@ const (
 )
 
 // EventHandler is the type of the function called to handle an event.
-type EventHandler func(eventType EventType, event interface{})
+type EventHandler func(eventType int, event interface{})
 
 // EventPlayerLogin is dispatched when a player attempts to log in.
 // If the event is cancelled, the player will be kicked.

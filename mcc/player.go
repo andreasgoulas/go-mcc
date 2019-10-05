@@ -49,9 +49,10 @@ type Player struct {
 // NewPlayer returns a new Player.
 func NewPlayer(conn net.Conn, server *Server) *Player {
 	return &Player{
-		Entity: NewEntity("", server),
-		conn:   conn,
-		state:  stateClosed,
+		Entity:    NewEntity("", server),
+		conn:      conn,
+		state:     stateClosed,
+		heldBlock: BlockAir,
 	}
 }
 
@@ -123,6 +124,9 @@ func (player *Player) CanReach(x, y, z int) bool {
 	return dx*dx+dy*dy+dz*dz <= dist*dist
 }
 
+// HeldBlock returns the block that the player is holding.
+// If the player does not support the HeldBlock extension, the function returns
+// BlockAir.
 func (player *Player) HeldBlock() byte {
 	return player.heldBlock
 }
@@ -628,6 +632,7 @@ func (player *Player) sendHackConfig(level *Level) {
 	player.sendPacket(packet)
 }
 
+// SendPermissions sends the block permissions to the player.
 func (player *Player) SendPermissions() {
 	if player.state != stateGame {
 		return
@@ -997,7 +1002,7 @@ func (player *Player) handleMessage(reader io.Reader) {
 	player.message = ""
 
 	if !IsValidMessage(message) {
-		player.SendMessage("Invalid message!")
+		player.Kick("Invalid message!")
 		return
 	}
 

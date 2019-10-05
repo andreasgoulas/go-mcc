@@ -344,24 +344,24 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 	server.AddHandler(mcc.EventTypePlayerLogin, plugin.handlePlayerLogin)
 	server.AddHandler(mcc.EventTypePlayerChat, plugin.handlePlayerChat)
 
-	server.AddHandler(mcc.EventTypePlayerJoin, func(eventType mcc.EventType, event interface{}) {
+	server.AddHandler(mcc.EventTypePlayerJoin, func(eventType int, event interface{}) {
 		e := event.(*mcc.EventPlayerJoin)
 		plugin.addPlayer(e.Player)
 	})
 
-	server.AddHandler(mcc.EventTypePlayerQuit, func(eventType mcc.EventType, event interface{}) {
+	server.AddHandler(mcc.EventTypePlayerQuit, func(eventType int, event interface{}) {
 		e := event.(*mcc.EventPlayerQuit)
 		player := plugin.findPlayer(e.Player.Name())
 		plugin.savePlayer(player)
 		plugin.removePlayer(e.Player)
 	})
 
-	server.AddHandler(mcc.EventTypeLevelLoad, func(eventType mcc.EventType, event interface{}) {
+	server.AddHandler(mcc.EventTypeLevelLoad, func(eventType int, event interface{}) {
 		e := event.(*mcc.EventLevelLoad)
 		plugin.addLevel(e.Level)
 	})
 
-	server.AddHandler(mcc.EventTypeLevelUnload, func(eventType mcc.EventType, event interface{}) {
+	server.AddHandler(mcc.EventTypeLevelUnload, func(eventType int, event interface{}) {
 		e := event.(*mcc.EventLevelUnload)
 		level := plugin.findLevel(e.Level.Name)
 		plugin.saveLevel(level)
@@ -541,14 +541,14 @@ func (plugin *Plugin) saveLevel(level *level) {
 	})
 }
 
-func (plugin *Plugin) handlePlayerLogin(eventType mcc.EventType, event interface{}) {
+func (plugin *Plugin) handlePlayerLogin(eventType int, event interface{}) {
 	e := event.(*mcc.EventPlayerLogin)
 	addr := e.Player.RemoteAddr()
 	name := e.Player.Name()
 	e.Cancel, e.CancelReason = plugin.db.checkBan(addr, name)
 }
 
-func (plugin *Plugin) handlePlayerChat(eventType mcc.EventType, event interface{}) {
+func (plugin *Plugin) handlePlayerChat(eventType int, event interface{}) {
 	e := event.(*mcc.EventPlayerChat)
 	name := e.Player.Name()
 	player := plugin.findPlayer(name)

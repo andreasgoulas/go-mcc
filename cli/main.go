@@ -80,7 +80,7 @@ func loadPlugins(path string, server *mcc.Server) {
 		}
 
 		plug := initFn()
-		server.RegisterPlugin(plug)
+		server.AddPlugin(plug)
 	}
 }
 

@@ -59,7 +59,7 @@ type Server struct {
 	commands     map[string]*Command
 	commandsLock sync.RWMutex
 
-	handlers     map[EventType][]EventHandler
+	handlers     map[int][]EventHandler
 	handlersLock sync.RWMutex
 
 	generators     map[string]GeneratorFunc
@@ -91,7 +91,7 @@ func NewServer(config *Config, storage LevelStorage) *Server {
 	server := &Server{
 		Config:     config,
 		commands:   make(map[string]*Command),
-		handlers:   make(map[EventType][]EventHandler),
+		handlers:   make(map[int][]EventHandler),
 		generators: make(map[string]GeneratorFunc),
 		storage:    storage,
 		stopChan:   make(chan bool),
@@ -463,14 +463,14 @@ func (server *Server) ExecuteCommand(sender CommandSender, message string) {
 }
 
 // AddHandler registers a handler for the specified event type.
-func (server *Server) AddHandler(eventType EventType, handler EventHandler) {
+func (server *Server) AddHandler(eventType int, handler EventHandler) {
 	server.handlersLock.Lock()
 	server.handlers[eventType] = append(server.handlers[eventType], handler)
 	server.handlersLock.Unlock()
 }
 
 // FireEvent dispatches event to the server.
-func (server *Server) FireEvent(eventType EventType, event interface{}) {
+func (server *Server) FireEvent(eventType int, event interface{}) {
 	server.handlersLock.RLock()
 	for _, handler := range server.handlers[eventType] {
 		handler(eventType, event)
@@ -496,8 +496,8 @@ func (server *Server) NewGenerator(name string, args ...string) Generator {
 	return nil
 }
 
-// RegisterPlugin registers and enables plugin.
-func (server *Server) RegisterPlugin(plugin Plugin) {
+// AddPlugin registers and enables plugin.
+func (server *Server) AddPlugin(plugin Plugin) {
 	server.pluginsLock.Lock()
 	server.plugins = append(server.plugins, plugin)
 	server.pluginsLock.Unlock()

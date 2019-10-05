@@ -289,28 +289,24 @@ func (level *Level) FillLayers(yStart, yEnd int, block byte) {
 
 // ForEachEntity calls fn for each entity in the level.
 func (level *Level) ForEachEntity(fn func(*Entity)) {
-	if level.server == nil {
-		return
+	if level.server != nil {
+		level.server.ForEachEntity(func(entity *Entity) {
+			if entity.level == level {
+				fn(entity)
+			}
+		})
 	}
-
-	level.server.ForEachEntity(func(entity *Entity) {
-		if entity.level == level {
-			fn(entity)
-		}
-	})
 }
 
 // ForEachPlayer calls fn for each player in the level.
 func (level *Level) ForEachPlayer(fn func(*Player)) {
-	if level.server == nil {
-		return
+	if level.server != nil {
+		level.server.ForEachPlayer(func(player *Player) {
+			if player.level == level {
+				fn(player)
+			}
+		})
 	}
-
-	level.server.ForEachPlayer(func(player *Player) {
-		if player.level == level {
-			fn(player)
-		}
-	})
 }
 
 // SendEnvConfig sends the EnvConfig of the level to all relevant players.
