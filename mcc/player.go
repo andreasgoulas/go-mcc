@@ -106,7 +106,7 @@ func (player *Player) Disconnect() {
 
 // Kick kicks and disconnects the player.
 func (player *Player) Kick(reason string) {
-	var packet Packet
+	var packet packet
 	packet.kick(reason)
 	player.sendPacket(packet)
 
@@ -136,7 +136,7 @@ func (player *Player) HeldBlock() byte {
 func (player *Player) SetHeldBlock(block byte, lock bool) {
 	level := player.level
 	if player.state == stateGame && player.cpe[CpeHeldBlock] && level != nil {
-		var packet Packet
+		var packet packet
 		packet.holdThis(player.convertBlock(block, level), lock)
 		player.sendPacket(packet)
 	}
@@ -145,7 +145,7 @@ func (player *Player) SetHeldBlock(block byte, lock bool) {
 // SetSelection marks a cuboid selection.
 func (player *Player) SetSelection(id byte, label string, box AABB, color color.RGBA) {
 	if player.state == stateGame && player.cpe[CpeSelectionCuboid] {
-		var packet Packet
+		var packet packet
 		packet.makeSelection(id, label, box, color)
 		player.sendPacket(packet)
 	}
@@ -154,7 +154,7 @@ func (player *Player) SetSelection(id byte, label string, box AABB, color color.
 // ResetSelection resets the selection with the specified ID.
 func (player *Player) ResetSelection(id byte) {
 	if player.state == stateGame && player.cpe[CpeSelectionCuboid] {
-		var packet Packet
+		var packet packet
 		packet.removeSelection(id)
 		player.sendPacket(packet)
 	}
@@ -214,7 +214,7 @@ func (player *Player) SendMessageExt(msgType int, message string) {
 		}
 	}
 
-	var packet Packet
+	var packet packet
 	message = player.convertMessage(message)
 	for _, line := range WordWrap(message, 64) {
 		packet.message(msgType, line)
@@ -229,7 +229,7 @@ func (player *Player) SetSpawn() {
 	player.sendSpawn(player.Entity)
 }
 
-func (player *Player) sendPacket(packet Packet) {
+func (player *Player) sendPacket(packet packet) {
 	if player.state == stateClosed {
 		return
 	}
@@ -273,7 +273,7 @@ func (player *Player) sendMOTD(level *Level) {
 		motd = player.server.Config.MOTD
 	}
 
-	var packet Packet
+	var packet packet
 	packet.motd(player, motd, op)
 	player.sendPacket(packet)
 }
@@ -293,7 +293,7 @@ func (player *Player) sendLevel(level *Level) {
 	stream := levelStream{player: player}
 	stream.reset()
 	if player.cpe[CpeFastMap] {
-		var packet Packet
+		var packet packet
 		packet.levelInitializeExt(level.Size())
 		player.sendPacket(packet)
 
@@ -304,7 +304,7 @@ func (player *Player) sendLevel(level *Level) {
 		}
 		writer.Close()
 	} else {
-		var packet Packet
+		var packet packet
 		packet.levelInitialize()
 		player.sendPacket(packet)
 
@@ -325,7 +325,7 @@ func (player *Player) sendLevel(level *Level) {
 
 	player.SendPermissions()
 
-	var packet Packet
+	var packet packet
 	packet.levelFinalize(level.Width, level.Height, level.Length)
 	player.sendPacket(packet)
 }
@@ -335,7 +335,7 @@ func (player *Player) sendSpawn(entity *Entity) {
 		return
 	}
 
-	var packet Packet
+	var packet packet
 	self := entity.id == player.id
 	extPos := player.cpe[CpeExtEntityPositions]
 	if player.cpe[CpeExtPlayerList] {
@@ -355,7 +355,7 @@ func (player *Player) sendSpawn(entity *Entity) {
 
 func (player *Player) sendDespawn(entity *Entity) {
 	if player.state == stateGame {
-		var packet Packet
+		var packet packet
 		packet.removeEntity(entity, entity.id == player.id)
 		player.sendPacket(packet)
 	}
@@ -380,7 +380,7 @@ func (player *Player) despawnLevel(level *Level) {
 
 func (player *Player) sendTeleport(entity *Entity) {
 	if player.state == stateGame {
-		var packet Packet
+		var packet packet
 		extPos := player.cpe[CpeExtEntityPositions]
 		packet.teleport(entity, entity.id == player.id, extPos)
 		player.sendPacket(packet)
@@ -390,14 +390,14 @@ func (player *Player) sendTeleport(entity *Entity) {
 func (player *Player) sendBlockChange(x, y, z int, block byte) {
 	level := player.level
 	if player.state == stateGame && level != nil {
-		var packet Packet
+		var packet packet
 		packet.setBlock(x, y, z, player.convertBlock(block, level))
 		player.sendPacket(packet)
 	}
 }
 
 func (player *Player) sendCPE() {
-	var packet Packet
+	var packet packet
 	packet.extInfo()
 	for _, extension := range Extensions {
 		packet.extEntry(&extension)
@@ -408,7 +408,7 @@ func (player *Player) sendCPE() {
 
 func (player *Player) sendHotkeys() {
 	if player.state == stateGame && player.cpe[CpeTextHotKey] {
-		var packet Packet
+		var packet packet
 		for _, desc := range player.server.Hotkeys {
 			packet.setTextHotKey(&desc)
 		}
@@ -419,7 +419,7 @@ func (player *Player) sendHotkeys() {
 
 func (player *Player) sendTextColors() {
 	if player.state == stateGame && player.cpe[CpeTextColors] {
-		var packet Packet
+		var packet packet
 		for _, desc := range player.server.Colors {
 			packet.setTextColor(&desc)
 		}
@@ -430,7 +430,7 @@ func (player *Player) sendTextColors() {
 
 func (player *Player) sendAddPlayerList(entity *Entity) {
 	if player.state == stateGame && player.cpe[CpeExtPlayerList] {
-		var packet Packet
+		var packet packet
 		packet.extAddPlayerName(entity, entity.id == player.id)
 		player.sendPacket(packet)
 	}
@@ -438,7 +438,7 @@ func (player *Player) sendAddPlayerList(entity *Entity) {
 
 func (player *Player) sendRemovePlayerList(entity *Entity) {
 	if player.state == stateGame && player.cpe[CpeExtPlayerList] {
-		var packet Packet
+		var packet packet
 		packet.extRemovePlayerName(entity, entity.id == player.id)
 		player.sendPacket(packet)
 	}
@@ -446,7 +446,7 @@ func (player *Player) sendRemovePlayerList(entity *Entity) {
 
 func (player *Player) sendChangeModel(entity *Entity) {
 	if player.state == stateGame && player.cpe[CpeChangeModel] {
-		var packet Packet
+		var packet packet
 		packet.changeModel(entity, entity.id == player.id)
 		player.sendPacket(packet)
 	}
@@ -457,7 +457,7 @@ func (player *Player) sendEntityProps(entity *Entity, mask uint32) {
 		return
 	}
 
-	var packet Packet
+	var packet packet
 	props := entity.Props
 	self := entity.id == player.id
 	if mask&EntityPropRotX != 0 {
@@ -487,7 +487,7 @@ func (player *Player) sendBlockDefinitions(level *Level) {
 		return
 	}
 
-	var packet Packet
+	var packet packet
 	extTex := player.cpe[CpeExtendedTextures]
 	for id, def := range level.BlockDefs {
 		if def != nil {
@@ -507,7 +507,7 @@ func (player *Player) resetBlockDefinitions(level *Level) {
 		return
 	}
 
-	var packet Packet
+	var packet packet
 	for id, def := range level.BlockDefs {
 		if def != nil {
 			packet.removeBlockDefinition(byte(id))
@@ -519,7 +519,7 @@ func (player *Player) resetBlockDefinitions(level *Level) {
 
 func (player *Player) sendInventory(level *Level) {
 	if player.state == stateGame && player.cpe[CpeInventoryOrder] {
-		var packet Packet
+		var packet packet
 		for id, order := range level.Inventory {
 			packet.setInventoryOrder(order, byte(id))
 		}
@@ -530,7 +530,7 @@ func (player *Player) sendInventory(level *Level) {
 
 func (player *Player) resetInventory(level *Level) {
 	if player.state == stateGame && player.cpe[CpeInventoryOrder] {
-		var packet Packet
+		var packet packet
 		for id := range level.Inventory {
 			packet.setInventoryOrder(byte(id), byte(id))
 		}
@@ -544,7 +544,7 @@ func (player *Player) sendEnvConfig(level *Level, mask uint32) {
 		return
 	}
 
-	var packet Packet
+	var packet packet
 	config := &level.EnvConfig
 	if player.cpe[CpeEnvMapAspect] {
 		if mask&EnvPropSideBlock != 0 {
@@ -620,7 +620,7 @@ func (player *Player) sendHackConfig(level *Level) {
 		return
 	}
 
-	var packet Packet
+	var packet packet
 	config := &level.HackConfig
 	if player.cpe[CpeClickDistance] {
 		packet.clickDistance(config.ReachDistance)
@@ -643,7 +643,7 @@ func (player *Player) SendPermissions() {
 		rank = &DefaultRank
 	}
 
-	var packet Packet
+	var packet packet
 	packet.updateUserType(rank.CanPlace[BlockBedrock])
 	if player.cpe[CpeBlockPermissions] {
 		for i := 0; i < BlockCount; i++ {
@@ -700,7 +700,7 @@ func (player *Player) handle() {
 		}
 
 		if size == 0 {
-			player.Kick("Invalid Packet")
+			player.Kick("Invalid packet")
 			break
 		}
 
@@ -801,7 +801,7 @@ func (player *Player) login() {
 	player.pingTicker = time.NewTicker(2 * time.Second)
 	go func() {
 		for range player.pingTicker.C {
-			var packet Packet
+			var packet packet
 			if player.cpe[CpeTwoWayPing] {
 				packet.twoWayPing(1, player.pingBuffer.Next())
 			} else {
@@ -1049,16 +1049,16 @@ func (player *Player) handleExtInfo(reader io.Reader) {
 }
 
 func (player *Player) handleExtEntry(reader io.Reader) {
-	packet := struct {
+	packet0 := struct {
 		PacketID byte
 		ExtName  [64]byte
 		Version  int32
 	}{}
-	binary.Read(reader, binary.BigEndian, &packet)
+	binary.Read(reader, binary.BigEndian, &packet0)
 
 	for i, extension := range Extensions {
-		if extension.Name == trimString(packet.ExtName) {
-			if extension.Version == int(packet.Version) {
+		if extension.Name == trimString(packet0.ExtName) {
+			if extension.Version == int(packet0.Version) {
 				player.cpe[i] = true
 				break
 			}
@@ -1068,9 +1068,9 @@ func (player *Player) handleExtEntry(reader io.Reader) {
 	player.remExtensions--
 	if player.remExtensions == 0 {
 		if player.cpe[CpeCustomBlocks] {
-			var packet Packet
-			packet.customBlockSupportLevel(1)
-			player.sendPacket(packet)
+			var packet1 packet
+			packet1.customBlockSupportLevel(1)
+			player.sendPacket(packet1)
 		} else {
 			player.login()
 		}
@@ -1116,20 +1116,20 @@ func (player *Player) handlePlayerClicked(reader io.Reader) {
 }
 
 func (player *Player) handleTwoWayPing(reader io.Reader) {
-	packet := struct {
+	packet0 := struct {
 		PacketID  byte
 		Direction byte
 		Data      int16
 	}{}
-	binary.Read(reader, binary.BigEndian, &packet)
+	binary.Read(reader, binary.BigEndian, &packet0)
 
-	switch packet.Direction {
+	switch packet0.Direction {
 	case 0:
-		var response Packet
-		response.twoWayPing(0, packet.Data)
-		player.sendPacket(response)
+		var packet1 packet
+		packet1.twoWayPing(0, packet0.Data)
+		player.sendPacket(packet1)
 
 	case 1:
-		player.pingBuffer.Update(packet.Data)
+		player.pingBuffer.Update(packet0.Data)
 	}
 }

@@ -197,7 +197,7 @@ func (entity *Entity) update() {
 		teleport = true
 	}
 
-	var packet, packetExt Packet
+	var packet, packetExt packet
 	if teleport {
 		packet.teleport(entity, false, false)
 		packetExt.teleport(entity, false, true)

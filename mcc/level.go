@@ -427,7 +427,7 @@ func (buffer *BlockBuffer) Flush() {
 			blocks[i] = player.convertBlock(buffer.blocks[i], buffer.level)
 		}
 
-		var packet Packet
+		var packet packet
 		if player.cpe[CpeBulkBlockUpdate] {
 			packet.bulkBlockUpdate(buffer.indices[:], blocks[:buffer.count])
 		} else {
