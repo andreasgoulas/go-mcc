@@ -88,7 +88,7 @@ func (plugin *Plugin) Name() string {
 func (plugin *Plugin) Enable(server *mcc.Server) {
 	plugin.loadRanks()
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "back",
 		Description: "Return to your location before your last teleportation.",
 		Usage:       "/back",
@@ -96,7 +96,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleBack,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "ban",
 		Description: "Ban a player from the server.",
 		Usage:       "/ban <player> [reason]",
@@ -104,7 +104,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleBan,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "banip",
 		Description: "Ban an IP address from the server.",
 		Usage:       "/banip <ip> [reason]",
@@ -112,14 +112,14 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleBanIp,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "commands",
 		Description: "List all commands.",
 		Usage:       "/commands",
 		Handler:     plugin.handleCommands,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "copylvl",
 		Description: "Copy a level.",
 		Usage:       "/copylvl <src> <dst>",
@@ -127,7 +127,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleCopyLvl,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "env",
 		Description: "Change the environment of the current level.",
 		Usage:       "/env <option> <value>\n/env reset",
@@ -135,28 +135,28 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleEnv,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "goto",
 		Description: "Move to another level.",
 		Usage:       "/goto <level>",
 		Handler:     plugin.handleGoto,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "help",
 		Description: "Describe a command.",
 		Usage:       "/help <command>",
 		Handler:     plugin.handleHelp,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "ignore",
 		Description: "Ignore chat from a player",
 		Usage:       "/ignore [player]",
 		Handler:     plugin.handleIgnore,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "kick",
 		Description: "Kick a player from the server.",
 		Usage:       "/kick <player> [reason]",
@@ -164,14 +164,14 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleKick,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "levels",
 		Description: "List all loaded levels.",
 		Usage:       "/levels",
 		Handler:     plugin.handleLevels,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "load",
 		Description: "Load a level.",
 		Usage:       "/load <level>",
@@ -179,7 +179,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleLoad,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "main",
 		Description: "Set the main level.",
 		Usage:       "/main [level]",
@@ -187,14 +187,14 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleMain,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "me",
 		Description: "Broadcast an action.",
 		Usage:       "/me <action>",
 		Handler:     plugin.handleMe,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "mute",
 		Description: "Mute a player.",
 		Usage:       "/mute <player>",
@@ -202,7 +202,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleMute,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "newlvl",
 		Description: "Create a new level.",
 		Usage:       "/newlvl <name> <width> <height> <length> <theme> [<args>...]",
@@ -210,7 +210,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleNewLvl,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "nick",
 		Description: "Set the nickname of a player",
 		Usage:       "/nick <player> [nick]",
@@ -218,14 +218,14 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleNick,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "players",
 		Description: "List all players.",
 		Usage:       "/players [level]",
 		Handler:     plugin.handlePlayers,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "physics",
 		Description: "Set the physics state of a level.",
 		Usage:       "/physics <level> <value>\n/physics <value>",
@@ -233,14 +233,14 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handlePhysics,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "r",
 		Description: "Reply to the last message.",
 		Usage:       "/r <message>",
 		Handler:     plugin.handleR,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "rank",
 		Description: "Set the rank of a player.",
 		Usage:       "/rank <player> [rank]",
@@ -248,7 +248,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleRank,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "save",
 		Description: "Save a level.",
 		Usage:       "/save <level>\n/save all",
@@ -256,7 +256,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleSave,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "say",
 		Description: "Broadcast a message.",
 		Usage:       "/say <message>",
@@ -264,14 +264,14 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleSay,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "seen",
 		Description: "Check when a player was last online.",
 		Usage:       "/seen <player>",
 		Handler:     plugin.handleSeen,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "setspawn",
 		Description: "Set the spawn location of the level to your location.",
 		Usage:       "/setspawn [player]",
@@ -279,7 +279,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleSetSpawn,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "skin",
 		Description: "Set the skin of a player.",
 		Usage:       "/skin <player> <skin>",
@@ -287,14 +287,14 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleSkin,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "spawn",
 		Description: "Teleport to the spawn location of the level.",
 		Usage:       "/spawn",
 		Handler:     plugin.handleSpawn,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "summon",
 		Description: "Summon a player to your location.",
 		Usage:       "/summon <player>\n/summon all",
@@ -302,7 +302,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleSummon,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "unload",
 		Description: "Unload a level.",
 		Usage:       "/unload <level>",
@@ -310,14 +310,14 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleUnload,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "tell",
 		Description: "Send a private message to a player.",
 		Usage:       "/tell <player> <message>",
 		Handler:     plugin.handleTell,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "tp",
 		Description: "Teleport to another player.",
 		Usage:       "/tp <player>\n/tp <x> <y> <z>",
@@ -325,7 +325,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleTp,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "unban",
 		Description: "Remove the ban for a player.",
 		Usage:       "/unban <player>",
@@ -333,7 +333,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 		Handler:     plugin.handleUnban,
 	})
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "unbanip",
 		Description: "Remove the ban for an IP address.",
 		Usage:       "/unbanip <ip>",

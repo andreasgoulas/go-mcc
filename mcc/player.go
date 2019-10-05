@@ -803,7 +803,7 @@ func (player *Player) login() {
 		for range player.pingTicker.C {
 			var packet packet
 			if player.cpe[CpeTwoWayPing] {
-				packet.twoWayPing(1, player.pingBuffer.Next())
+				packet.twoWayPing(1, player.pingBuffer.next())
 			} else {
 				packet.ping()
 			}
@@ -1130,6 +1130,6 @@ func (player *Player) handleTwoWayPing(reader io.Reader) {
 		player.sendPacket(packet1)
 
 	case 1:
-		player.pingBuffer.Update(packet0.Data)
+		player.pingBuffer.update(packet0.Data)
 	}
 }

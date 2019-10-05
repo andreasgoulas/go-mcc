@@ -30,7 +30,7 @@ func newConsole(server *mcc.Server, waitGroup *sync.WaitGroup) *console {
 		make(chan os.Signal),
 	}
 
-	server.RegisterCommand(&mcc.Command{
+	server.AddCommand(&mcc.Command{
 		Name:        "stop",
 		Description: "Stop the server.",
 		Usage:       "/stop",

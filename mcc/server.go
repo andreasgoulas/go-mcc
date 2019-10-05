@@ -397,8 +397,8 @@ func (server *Server) ForEachPlayer(fn func(*Player)) {
 	server.playersLock.RUnlock()
 }
 
-// RegisterCommand registers the specified command.
-func (server *Server) RegisterCommand(command *Command) {
+// AddCommand registers the specified command.
+func (server *Server) AddCommand(command *Command) {
 	server.commandsLock.Lock()
 	server.commands[command.Name] = command
 	server.commandsLock.Unlock()

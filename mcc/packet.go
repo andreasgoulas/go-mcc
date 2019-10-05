@@ -788,7 +788,7 @@ type pingBuffer struct {
 	index   int
 }
 
-func (buf *pingBuffer) Next() int16 {
+func (buf *pingBuffer) next() int16 {
 	data := buf.entries[buf.index].data + 1
 	buf.index = (buf.index + 1) % len(buf.entries)
 	buf.entries[buf.index] = pingEntry{
@@ -799,7 +799,7 @@ func (buf *pingBuffer) Next() int16 {
 	return data
 }
 
-func (buf *pingBuffer) Update(data int16) {
+func (buf *pingBuffer) update(data int16) {
 	for i, entry := range buf.entries {
 		if entry.data == data {
 			buf.entries[i].received = time.Now()
@@ -808,7 +808,7 @@ func (buf *pingBuffer) Update(data int16) {
 	}
 }
 
-func (buf *pingBuffer) Average() (d time.Duration) {
+func (buf *pingBuffer) average() (d time.Duration) {
 	count := int64(0)
 	var sum time.Duration
 	for _, entry := range buf.entries {
