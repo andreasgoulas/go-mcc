@@ -66,7 +66,6 @@ func (plugin *Plugin) handleEnv(sender mcc.CommandSender, command *mcc.Command, 
 	}
 
 	command.PrintUsage(sender)
-	return
 }
 
 func (plugin *Plugin) handleGoto(sender mcc.CommandSender, command *mcc.Command, message string) {

@@ -100,7 +100,7 @@ func (plugin *Plugin) handleSeen(sender mcc.CommandSender, command *mcc.Command,
 	}
 
 	if db, ok := plugin.db.queryPlayer(args[0]); ok {
-		dt := time.Now().Sub(db.LastLogin)
+		dt := time.Since(db.LastLogin)
 		sender.SendMessage("Player " + args[0] + " was last seen " + fmtDuration(dt) + " ago")
 	} else {
 		sender.SendMessage("Player " + args[0] + " not found")

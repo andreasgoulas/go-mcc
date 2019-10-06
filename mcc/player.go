@@ -1027,7 +1027,7 @@ func (player *Player) handleMessage(reader io.Reader) {
 
 		message = fmt.Sprintf(event.Format, tag, player.Nickname, event.Message)
 
-		log.Printf(message)
+		log.Println(message)
 		for _, player := range event.Targets {
 			player.SendMessage(message)
 		}

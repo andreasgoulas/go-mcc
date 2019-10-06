@@ -151,21 +151,32 @@ func NewLevel(name string, width, height, length int) *Level {
 }
 
 // Clone returns a duplicate of the level.
-func (level Level) Clone(name string) *Level {
+func (level *Level) Clone(name string) *Level {
 	if len(name) == 0 {
 		return nil
 	}
 
-	newLevel := level
-	newLevel.server = nil
-	newLevel.Name = name
-	newLevel.Dirty = true
-	newLevel.UUID = RandomUUID()
-	newLevel.TimeCreated = time.Now()
+	newLevel := &Level{
+		Width:       level.Width,
+		Height:      level.Height,
+		Length:      level.Length,
+		Blocks:      make([]byte, len(level.Blocks)),
+		Dirty:       true,
+		Name:        name,
+		UUID:        RandomUUID(),
+		TimeCreated: time.Now(),
+		MOTD:        level.MOTD,
+		Spawn:       level.Spawn,
+		EnvConfig:   level.EnvConfig,
+		HackConfig:  level.HackConfig,
+		BlockDefs:   level.BlockDefs,
+		Inventory:   level.Inventory,
+		Metadata:    level.Metadata,
+		MetadataCPE: level.MetadataCPE,
+	}
 
-	newLevel.Blocks = make([]byte, len(level.Blocks))
 	copy(newLevel.Blocks, level.Blocks)
-	return &newLevel
+	return newLevel
 }
 
 func (level *Level) Server() *Server {

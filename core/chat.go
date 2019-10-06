@@ -44,7 +44,7 @@ func (plugin *Plugin) PrivateMessage(message string, src, dst mcc.CommandSender)
 }
 
 func (plugin *Plugin) BroadcastMessage(src mcc.CommandSender, message string) {
-	log.Printf("%s\n", message)
+	log.Println(message)
 	src.Server().ForEachPlayer(func(player *mcc.Player) {
 		if !plugin.findPlayer(player.Name()).isIgnored(src.Name()) {
 			player.SendMessage(message)

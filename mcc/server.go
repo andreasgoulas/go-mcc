@@ -137,7 +137,7 @@ func (server *Server) Stop() {
 
 // BroadcastMessage broadcasts a message to all players.
 func (server *Server) BroadcastMessage(message string) {
-	log.Printf("%s\n", message)
+	log.Println(message)
 	server.ForEachPlayer(func(player *Player) {
 		player.SendMessage(message)
 	})
