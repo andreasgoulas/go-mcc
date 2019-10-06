@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	ServerSoftware = "Go-MCC"
+	ServerSoftware = "go-mcc"
 
 	UpdateInterval    = 50 * time.Millisecond
 	HeartbeatInterval = 45 * time.Second

@@ -85,7 +85,9 @@ func (simulator *waterSimulator) Update(block, old byte, index int) {
 		level := simulator.level
 		x, y, z := level.Position(index)
 		if block == mcc.BlockAir && simulator.checkEdge(x, y, z) {
-			level.SetBlock(x, y, z, mcc.BlockActiveWater)
+			if !simulator.checkSponge(x, y, z) {
+				level.SetBlock(x, y, z, mcc.BlockActiveWater)
+			}
 		} else if block != old {
 			if block == mcc.BlockSponge {
 				simulator.placeSponge(x, y, z)
@@ -131,21 +133,28 @@ func (simulator *waterSimulator) checkEdge(x, y, z int) bool {
 		(x == 0 || z == 0 || x == level.Width-1 || z == level.Length-1)
 }
 
+func (simulator *waterSimulator) checkSponge(x, y, z int) bool {
+	level := simulator.level
+	for yy := max(y-2, 0); yy <= min(y+2, level.Height-1); yy++ {
+		for zz := max(z-2, 0); zz <= min(z+2, level.Length-1); zz++ {
+			for xx := max(x-2, 0); xx <= min(x+2, level.Width-1); xx++ {
+				if level.GetBlock(xx, yy, zz) == mcc.BlockSponge {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
 func (simulator *waterSimulator) spread(x, y, z int) {
 	level := simulator.level
 	switch level.GetBlock(x, y, z) {
 	case mcc.BlockAir:
-		for yy := max(y-2, 0); yy <= min(y+2, level.Height-1); yy++ {
-			for zz := max(z-2, 0); zz <= min(z+2, level.Length-1); zz++ {
-				for xx := max(x-2, 0); xx <= min(x+2, level.Width-1); xx++ {
-					if level.GetBlock(xx, yy, zz) == mcc.BlockSponge {
-						return
-					}
-				}
-			}
+		if !simulator.checkSponge(x, y, z) {
+			level.SetBlock(x, y, z, mcc.BlockActiveWater)
 		}
-
-		level.SetBlock(x, y, z, mcc.BlockActiveWater)
 
 	case mcc.BlockActiveLava, mcc.BlockLava:
 		level.SetBlock(x, y, z, mcc.BlockStone)
@@ -171,12 +180,9 @@ func (simulator *waterSimulator) breakSponge(x, y, z int) {
 	for yy := max(y-3, 0); yy <= min(y+3, level.Height-1); yy++ {
 		for zz := max(z-3, 0); zz <= min(z+3, level.Length-1); zz++ {
 			for xx := max(x-3, 0); xx <= min(x+3, level.Width-1); xx++ {
-				if abs(xx-x) == 3 || abs(yy-y) == 3 || abs(zz-z) == 3 {
-					switch level.GetBlock(xx, yy, zz) {
-					case mcc.BlockActiveWater, mcc.BlockWater:
-						level.UpdateBlock(xx, yy, zz)
-					}
-				}
+				index := level.Index(xx, yy, zz)
+				block := level.Blocks[index]
+				simulator.Update(block, block, index)
 			}
 		}
 	}
