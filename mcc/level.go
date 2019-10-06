@@ -169,13 +169,20 @@ func (level *Level) Clone(name string) *Level {
 		Spawn:       level.Spawn,
 		EnvConfig:   level.EnvConfig,
 		HackConfig:  level.HackConfig,
-		BlockDefs:   level.BlockDefs,
-		Inventory:   level.Inventory,
 		Metadata:    level.Metadata,
 		MetadataCPE: level.MetadataCPE,
 	}
 
 	copy(newLevel.Blocks, level.Blocks)
+	if level.BlockDefs != nil {
+		newLevel.BlockDefs = make([]*BlockDefinition, len(level.BlockDefs))
+		copy(newLevel.BlockDefs, level.BlockDefs)
+	}
+	if level.Inventory != nil {
+		newLevel.Inventory = make([]byte, len(level.Inventory))
+		copy(newLevel.Inventory, level.Inventory)
+	}
+
 	return newLevel
 }
 
