@@ -32,7 +32,7 @@ type AABB struct {
 	Min, Max Vector3
 }
 
-// RGB represents a 32-bit RGB color.
+// RGB represents a 24-bit RGB color.
 type RGB struct {
 	R, G, B uint8
 }
