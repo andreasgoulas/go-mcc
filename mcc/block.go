@@ -3,10 +3,6 @@
 
 package mcc
 
-import (
-	"image/color"
-)
-
 const (
 	BlockAir         = 0
 	BlockStone       = 1
@@ -198,5 +194,5 @@ type BlockDefinition struct {
 	AABB  AABB
 
 	FogDensity byte
-	Fog        color.RGBA
+	Fog        RGB
 }

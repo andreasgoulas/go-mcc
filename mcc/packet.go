@@ -6,7 +6,6 @@ package mcc
 import (
 	"bytes"
 	"encoding/binary"
-	"image/color"
 	"log"
 	"math"
 	"strings"
@@ -445,7 +444,7 @@ func (packet *packet) extRemovePlayerName(entity *Entity, self bool) {
 	}{packetTypeExtRemovePlayerName, id})
 }
 
-func (packet *packet) makeSelection(id byte, label string, box AABB, color color.RGBA) {
+func (packet *packet) makeSelection(id byte, label string, box AABB, color RGBA) {
 	packet.marshal(struct {
 		PacketID               byte
 		SelectionID            byte
@@ -470,13 +469,13 @@ func (packet *packet) removeSelection(id byte) {
 	}{packetTypeRemoveSelection, id})
 }
 
-func (packet *packet) envSetColor(id byte, color color.RGBA) {
+func (packet *packet) envSetColor(id byte, color NullRGB) {
 	data := struct {
 		packetId byte
 		Variable byte
 		R, G, B  int16
 	}{packetTypeEnvSetColor, id, -1, -1, -1}
-	if color.A != 0 {
+	if color.Valid {
 		data.R = int16(color.R)
 		data.G = int16(color.G)
 		data.B = int16(color.B)

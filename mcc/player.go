@@ -10,7 +10,6 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"fmt"
-	"image/color"
 	"io"
 	"log"
 	"math"
@@ -143,7 +142,7 @@ func (player *Player) SetHeldBlock(block byte, lock bool) {
 }
 
 // SetSelection marks a cuboid selection.
-func (player *Player) SetSelection(id byte, label string, box AABB, color color.RGBA) {
+func (player *Player) SetSelection(id byte, label string, box AABB, color RGBA) {
 	if player.state == stateGame && player.cpe[CpeSelectionCuboid] {
 		var packet packet
 		packet.makeSelection(id, label, box, color)

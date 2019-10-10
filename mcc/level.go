@@ -4,7 +4,6 @@
 package mcc
 
 import (
-	"image/color"
 	"sync"
 	"time"
 )
@@ -45,14 +44,12 @@ type EnvConfig struct {
 	ExpFog          bool
 	SideOffset      int
 
-	SkyColor     color.RGBA
-	CloudColor   color.RGBA
-	FogColor     color.RGBA
-	AmbientColor color.RGBA
-	DiffuseColor color.RGBA
+	SkyColor     NullRGB
+	CloudColor   NullRGB
+	FogColor     NullRGB
+	AmbientColor NullRGB
+	DiffuseColor NullRGB
 }
-
-var DefaultColor = color.RGBA{0, 0, 0, 0}
 
 const (
 	EnvPropWeather     = 1 << 0
@@ -204,11 +201,6 @@ func (level *Level) DefaultEnvConfig() EnvConfig {
 		WeatherFade:     1.0,
 		ExpFog:          false,
 		SideOffset:      -2,
-		SkyColor:        DefaultColor,
-		CloudColor:      DefaultColor,
-		FogColor:        DefaultColor,
-		AmbientColor:    DefaultColor,
-		DiffuseColor:    DefaultColor,
 	}
 }
 

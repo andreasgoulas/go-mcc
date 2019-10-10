@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"image/color"
 	"strconv"
 	"strings"
 	"time"
@@ -47,8 +46,8 @@ func parseCoord(arg string, curr float64) (float64, error) {
 	}
 }
 
-func parseColor(arg string) (c color.RGBA, err error) {
-	c.A = 0xff
+func parseColor(arg string) (c mcc.NullRGB, err error) {
+	c.Valid = true
 	_, err = fmt.Sscanf(arg, "#%02x%02x%02x", &c.R, &c.G, &c.B)
 	return
 }

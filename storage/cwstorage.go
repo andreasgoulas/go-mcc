@@ -7,7 +7,6 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
-	"image/color"
 	"os"
 	"time"
 
@@ -28,19 +27,19 @@ type cwColor struct {
 	R, G, B int16
 }
 
-func encodeColor(c color.RGBA) cwColor {
-	if c.A != 0 {
+func encodeColor(c mcc.NullRGB) cwColor {
+	if c.Valid {
 		return cwColor{int16(c.R), int16(c.G), int16(c.B)}
 	} else {
 		return cwColor{-1, -1, -1}
 	}
 }
 
-func (c cwColor) decode() color.RGBA {
+func (c cwColor) decode() mcc.NullRGB {
 	if c.R < 0 || c.G < 0 || c.B < 0 {
-		return mcc.DefaultColor
+		return mcc.NullRGB{}
 	} else {
-		return color.RGBA{byte(c.R), byte(c.G), byte(c.B), 0xff}
+		return mcc.NullRGB{true, byte(c.R), byte(c.G), byte(c.B)}
 	}
 }
 
@@ -254,7 +253,7 @@ func (storage *CwStorage) Load(name string) (level *mcc.Level, err error) {
 
 			if len(v.Fog) == 4 {
 				def.FogDensity = v.Fog[0]
-				def.Fog = color.RGBA{v.Fog[1], v.Fog[2], v.Fog[3], 0xff}
+				def.Fog = mcc.RGB{v.Fog[1], v.Fog[2], v.Fog[3]}
 			}
 
 			if len(v.Coords) == 6 {

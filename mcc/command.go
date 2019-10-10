@@ -3,10 +3,6 @@
 
 package mcc
 
-import (
-	"image/color"
-)
-
 const (
 	ColorBlack       = "&0"
 	ColorDarkBlue    = "&1"
@@ -30,7 +26,7 @@ const (
 
 // ColorDesc describes a chat color.
 type ColorDesc struct {
-	color.RGBA
+	RGBA
 	Code, Fallback byte
 }
 

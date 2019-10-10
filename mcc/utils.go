@@ -32,6 +32,22 @@ type AABB struct {
 	Min, Max Vector3
 }
 
+// RGB represents a 32-bit RGB color.
+type RGB struct {
+	R, G, B uint8
+}
+
+// RGBA represents a 32-bit RGBA color.
+type RGBA struct {
+	R, G, B, A uint8
+}
+
+// NullRGB represents a 24-bit RGB color that may be null.
+type NullRGB struct {
+	Valid   bool
+	R, G, B uint8
+}
+
 // IsValidName reports whether name is a valid entity name.
 func IsValidName(name string) bool {
 	if len(name) < 3 || len(name) > 16 {
