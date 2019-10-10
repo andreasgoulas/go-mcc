@@ -11,7 +11,7 @@ import (
 	"github.com/structinf/go-mcc/mcc"
 )
 
-func (plugin *Plugin) handleCommands(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleCommands(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) != 0 {
 		command.PrintUsage(sender)
 		return
@@ -26,7 +26,7 @@ func (plugin *Plugin) handleCommands(sender mcc.CommandSender, command *mcc.Comm
 	sender.SendMessage(strings.Join(cmds, ", "))
 }
 
-func (plugin *Plugin) handleHelp(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleHelp(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)
@@ -43,7 +43,7 @@ func (plugin *Plugin) handleHelp(sender mcc.CommandSender, command *mcc.Command,
 	cmd.PrintUsage(sender)
 }
 
-func (plugin *Plugin) handleLevels(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleLevels(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) != 0 {
 		command.PrintUsage(sender)
 		return
@@ -58,7 +58,7 @@ func (plugin *Plugin) handleLevels(sender mcc.CommandSender, command *mcc.Comman
 	sender.SendMessage(strings.Join(levels, ", "))
 }
 
-func (plugin *Plugin) handlePlayers(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handlePlayers(sender mcc.CommandSender, command *mcc.Command, message string) {
 	var players []string
 	args := strings.Fields(message)
 	switch len(args) {
@@ -87,7 +87,7 @@ func (plugin *Plugin) handlePlayers(sender mcc.CommandSender, command *mcc.Comma
 	sender.SendMessage(strings.Join(players, ", "))
 }
 
-func (plugin *Plugin) handleSeen(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleSeen(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)

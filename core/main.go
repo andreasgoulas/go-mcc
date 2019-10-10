@@ -54,7 +54,7 @@ func (player *player) isIgnored(name string) bool {
 	return false
 }
 
-type Plugin struct {
+type plugin struct {
 	db *db
 
 	defaultRank string
@@ -74,18 +74,18 @@ func Initialize() mcc.Plugin {
 		return nil
 	}
 
-	return &Plugin{
+	return &plugin{
 		db:      db,
 		levels:  make(map[string]*level),
 		players: make(map[string]*player),
 	}
 }
 
-func (plugin *Plugin) Name() string {
+func (plugin *plugin) Name() string {
 	return "Core"
 }
 
-func (plugin *Plugin) Enable(server *mcc.Server) {
+func (plugin *plugin) Enable(server *mcc.Server) {
 	plugin.loadRanks()
 
 	server.AddCommand(&mcc.Command{
@@ -377,7 +377,7 @@ func (plugin *Plugin) Enable(server *mcc.Server) {
 	})
 }
 
-func (plugin *Plugin) Disable(server *mcc.Server) {
+func (plugin *plugin) Disable(server *mcc.Server) {
 	plugin.playersLock.Lock()
 	for _, player := range plugin.players {
 		plugin.savePlayer(player)
@@ -395,7 +395,7 @@ func (plugin *Plugin) Disable(server *mcc.Server) {
 	plugin.db.Close()
 }
 
-func (plugin *Plugin) loadRanks() {
+func (plugin *plugin) loadRanks() {
 	plugin.ranksLock.Lock()
 	defer plugin.ranksLock.Unlock()
 
@@ -435,13 +435,13 @@ func (plugin *Plugin) loadRanks() {
 	plugin.defaultRank = plugin.db.queryConfig("default_rank")
 }
 
-func (plugin *Plugin) findRank(name string) *mcc.Rank {
+func (plugin *plugin) findRank(name string) *mcc.Rank {
 	plugin.ranksLock.RLock()
 	defer plugin.ranksLock.RUnlock()
 	return plugin.ranks[name]
 }
 
-func (plugin *Plugin) addPlayer(p *mcc.Player) *player {
+func (plugin *plugin) addPlayer(p *mcc.Player) *player {
 	name := p.Name()
 
 	db, ok := plugin.db.queryPlayer(name)
@@ -471,19 +471,19 @@ func (plugin *Plugin) addPlayer(p *mcc.Player) *player {
 	return player
 }
 
-func (plugin *Plugin) removePlayer(player *mcc.Player) {
+func (plugin *plugin) removePlayer(player *mcc.Player) {
 	plugin.playersLock.Lock()
 	delete(plugin.players, player.Name())
 	plugin.playersLock.Unlock()
 }
 
-func (plugin *Plugin) findPlayer(name string) *player {
+func (plugin *plugin) findPlayer(name string) *player {
 	plugin.playersLock.RLock()
 	defer plugin.playersLock.RUnlock()
 	return plugin.players[name]
 }
 
-func (plugin *Plugin) savePlayer(player *player) {
+func (plugin *plugin) savePlayer(player *player) {
 	var rank sql.NullString
 	if player.Rank != nil {
 		rank = sql.NullString{player.Rank.Name, true}
@@ -499,7 +499,7 @@ func (plugin *Plugin) savePlayer(player *player) {
 	})
 }
 
-func (plugin *Plugin) addLevel(l *mcc.Level) *level {
+func (plugin *plugin) addLevel(l *mcc.Level) *level {
 	name := l.Name
 
 	db, _ := plugin.db.queryLevel(name)
@@ -522,33 +522,33 @@ func (plugin *Plugin) addLevel(l *mcc.Level) *level {
 	return level
 }
 
-func (plugin *Plugin) removeLevel(level *mcc.Level) {
+func (plugin *plugin) removeLevel(level *mcc.Level) {
 	plugin.levelsLock.Lock()
 	delete(plugin.levels, level.Name)
 	plugin.levelsLock.Unlock()
 }
 
-func (plugin *Plugin) findLevel(name string) *level {
+func (plugin *plugin) findLevel(name string) *level {
 	plugin.levelsLock.RLock()
 	defer plugin.levelsLock.RUnlock()
 	return plugin.levels[name]
 }
 
-func (plugin *Plugin) saveLevel(level *level) {
+func (plugin *plugin) saveLevel(level *level) {
 	plugin.db.updateLevel(level.Name, &dbLevel{
 		MOTD:    level.motd,
 		Physics: level.physics,
 	})
 }
 
-func (plugin *Plugin) handlePlayerLogin(eventType int, event interface{}) {
+func (plugin *plugin) handlePlayerLogin(eventType int, event interface{}) {
 	e := event.(*mcc.EventPlayerLogin)
 	addr := e.Player.RemoteAddr()
 	name := e.Player.Name()
 	e.Cancel, e.CancelReason = plugin.db.checkBan(addr, name)
 }
 
-func (plugin *Plugin) handlePlayerChat(eventType int, event interface{}) {
+func (plugin *plugin) handlePlayerChat(eventType int, event interface{}) {
 	e := event.(*mcc.EventPlayerChat)
 	name := e.Player.Name()
 	player := plugin.findPlayer(name)

@@ -11,7 +11,7 @@ import (
 	"github.com/structinf/go-mcc/mcc"
 )
 
-func (plugin *Plugin) PrivateMessage(message string, src, dst mcc.CommandSender) {
+func (plugin *plugin) PrivateMessage(message string, src, dst mcc.CommandSender) {
 	srcNick := src.Name()
 	dstNick := dst.Name()
 
@@ -43,7 +43,7 @@ func (plugin *Plugin) PrivateMessage(message string, src, dst mcc.CommandSender)
 	dst.SendMessage("from " + srcNick + ": &f" + message)
 }
 
-func (plugin *Plugin) BroadcastMessage(src mcc.CommandSender, message string) {
+func (plugin *plugin) BroadcastMessage(src mcc.CommandSender, message string) {
 	log.Println(message)
 	src.Server().ForEachPlayer(func(player *mcc.Player) {
 		if !plugin.findPlayer(player.Name()).isIgnored(src.Name()) {
@@ -52,7 +52,7 @@ func (plugin *Plugin) BroadcastMessage(src mcc.CommandSender, message string) {
 	})
 }
 
-func (plugin *Plugin) handleIgnore(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleIgnore(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if _, ok := sender.(*mcc.Player); !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -104,7 +104,7 @@ func (plugin *Plugin) handleIgnore(sender mcc.CommandSender, command *mcc.Comman
 	}
 }
 
-func (plugin *Plugin) handleMe(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleMe(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) == 0 {
 		command.PrintUsage(sender)
 		return
@@ -123,7 +123,7 @@ func (plugin *Plugin) handleMe(sender mcc.CommandSender, command *mcc.Command, m
 	plugin.BroadcastMessage(sender, "* "+name+" "+message)
 }
 
-func (plugin *Plugin) handleMute(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleMute(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)
@@ -142,7 +142,7 @@ func (plugin *Plugin) handleMute(sender mcc.CommandSender, command *mcc.Command,
 	}
 }
 
-func (plugin *Plugin) handleNick(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleNick(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	switch len(args) {
 	case 1:
@@ -175,7 +175,7 @@ func (plugin *Plugin) handleNick(sender mcc.CommandSender, command *mcc.Command,
 	}
 }
 
-func (plugin *Plugin) handleR(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleR(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if _, ok := sender.(*mcc.Player); !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -196,7 +196,7 @@ func (plugin *Plugin) handleR(sender mcc.CommandSender, command *mcc.Command, me
 	plugin.PrivateMessage(message, sender, lastSender)
 }
 
-func (plugin *Plugin) handleSay(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleSay(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) == 0 {
 		command.PrintUsage(sender)
 		return
@@ -205,7 +205,7 @@ func (plugin *Plugin) handleSay(sender mcc.CommandSender, command *mcc.Command, 
 	sender.Server().BroadcastMessage(message)
 }
 
-func (plugin *Plugin) handleTell(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleTell(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.SplitN(message, " ", 2)
 	if len(args) < 2 {
 		command.PrintUsage(sender)

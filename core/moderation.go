@@ -10,7 +10,7 @@ import (
 	"github.com/structinf/go-mcc/mcc"
 )
 
-func (plugin *Plugin) handleBan(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleBan(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) == 0 {
 		command.PrintUsage(sender)
 		return
@@ -35,7 +35,7 @@ func (plugin *Plugin) handleBan(sender mcc.CommandSender, command *mcc.Command, 
 	sender.SendMessage("Player " + args[0] + " banned")
 }
 
-func (plugin *Plugin) handleBanIp(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleBanIp(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) == 0 {
 		command.PrintUsage(sender)
 		return
@@ -62,7 +62,7 @@ func (plugin *Plugin) handleBanIp(sender mcc.CommandSender, command *mcc.Command
 	sender.SendMessage("IP " + args[0] + " banned")
 }
 
-func (plugin *Plugin) handleKick(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleKick(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if len(message) == 0 {
 		command.PrintUsage(sender)
 		return
@@ -83,7 +83,7 @@ func (plugin *Plugin) handleKick(sender mcc.CommandSender, command *mcc.Command,
 	player.Kick(reason)
 }
 
-func (plugin *Plugin) handleRank(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleRank(sender mcc.CommandSender, command *mcc.Command, message string) {
 	var rank *mcc.Rank
 	args := strings.Fields(message)
 	switch len(args) {
@@ -114,7 +114,7 @@ func (plugin *Plugin) handleRank(sender mcc.CommandSender, command *mcc.Command,
 	}
 }
 
-func (plugin *Plugin) handleUnban(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleUnban(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)
@@ -128,7 +128,7 @@ func (plugin *Plugin) handleUnban(sender mcc.CommandSender, command *mcc.Command
 	}
 }
 
-func (plugin *Plugin) handleUnbanIp(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleUnbanIp(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)

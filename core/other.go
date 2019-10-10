@@ -9,7 +9,7 @@ import (
 	"github.com/structinf/go-mcc/mcc"
 )
 
-func (plugin *Plugin) handleBack(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleBack(sender mcc.CommandSender, command *mcc.Command, message string) {
 	if _, ok := sender.(*mcc.Player); !ok {
 		sender.SendMessage("You are not a player")
 		return
@@ -30,7 +30,7 @@ func (plugin *Plugin) handleBack(sender mcc.CommandSender, command *mcc.Command,
 	player.Teleport(player.lastLocation)
 }
 
-func (plugin *Plugin) handleSkin(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleSkin(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 2 {
 		command.PrintUsage(sender)
@@ -48,7 +48,7 @@ func (plugin *Plugin) handleSkin(sender mcc.CommandSender, command *mcc.Command,
 	sender.SendMessage("Skin of " + args[0] + " set to " + args[1])
 }
 
-func (plugin *Plugin) handleTp(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleTp(sender mcc.CommandSender, command *mcc.Command, message string) {
 	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -104,7 +104,7 @@ func (plugin *Plugin) handleTp(sender mcc.CommandSender, command *mcc.Command, m
 	cplayer.lastLocation = lastLocation
 }
 
-func (plugin *Plugin) handleSummon(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleSummon(sender mcc.CommandSender, command *mcc.Command, message string) {
 	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")

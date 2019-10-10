@@ -11,7 +11,7 @@ import (
 	"github.com/structinf/go-mcc/mcc"
 )
 
-func (plugin *Plugin) handleCopyLvl(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleCopyLvl(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 2 {
 		command.PrintUsage(sender)
@@ -35,7 +35,7 @@ func (plugin *Plugin) handleCopyLvl(sender mcc.CommandSender, command *mcc.Comma
 	sender.SendMessage("Level " + args[0] + " has been copied to " + args[1])
 }
 
-func (plugin *Plugin) handleEnv(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleEnv(sender mcc.CommandSender, command *mcc.Command, message string) {
 	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -68,7 +68,7 @@ func (plugin *Plugin) handleEnv(sender mcc.CommandSender, command *mcc.Command, 
 	command.PrintUsage(sender)
 }
 
-func (plugin *Plugin) handleGoto(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleGoto(sender mcc.CommandSender, command *mcc.Command, message string) {
 	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -95,7 +95,7 @@ func (plugin *Plugin) handleGoto(sender mcc.CommandSender, command *mcc.Command,
 	player.TeleportLevel(level)
 }
 
-func (plugin *Plugin) handleLoad(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleLoad(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)
@@ -111,7 +111,7 @@ func (plugin *Plugin) handleLoad(sender mcc.CommandSender, command *mcc.Command,
 	sender.SendMessage("Level " + args[0] + " loaded")
 }
 
-func (plugin *Plugin) handleMain(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleMain(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	switch len(args) {
 	case 0:
@@ -132,7 +132,7 @@ func (plugin *Plugin) handleMain(sender mcc.CommandSender, command *mcc.Command,
 	}
 }
 
-func (plugin *Plugin) handleNewLvl(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleNewLvl(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) < 5 {
 		command.PrintUsage(sender)
@@ -181,7 +181,7 @@ func (plugin *Plugin) handleNewLvl(sender mcc.CommandSender, command *mcc.Comman
 	sender.SendMessage("Level " + level.Name + " created")
 }
 
-func (plugin *Plugin) handlePhysics(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handlePhysics(sender mcc.CommandSender, command *mcc.Command, message string) {
 	var level *level
 	args := strings.Fields(message)
 	switch len(args) {
@@ -224,7 +224,7 @@ func (plugin *Plugin) handlePhysics(sender mcc.CommandSender, command *mcc.Comma
 	}
 }
 
-func (plugin *Plugin) handleSave(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleSave(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)
@@ -249,7 +249,7 @@ func (plugin *Plugin) handleSave(sender mcc.CommandSender, command *mcc.Command,
 	sender.SendMessage("Level " + level.Name + " saved")
 }
 
-func (plugin *Plugin) handleSetSpawn(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleSetSpawn(sender mcc.CommandSender, command *mcc.Command, message string) {
 	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -287,7 +287,7 @@ func (plugin *Plugin) handleSetSpawn(sender mcc.CommandSender, command *mcc.Comm
 	}
 }
 
-func (plugin *Plugin) handleSpawn(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleSpawn(sender mcc.CommandSender, command *mcc.Command, message string) {
 	player, ok := sender.(*mcc.Player)
 	if !ok {
 		sender.SendMessage("You are not a player")
@@ -302,7 +302,7 @@ func (plugin *Plugin) handleSpawn(sender mcc.CommandSender, command *mcc.Command
 	player.Teleport(player.Level().Spawn)
 }
 
-func (plugin *Plugin) handleUnload(sender mcc.CommandSender, command *mcc.Command, message string) {
+func (plugin *plugin) handleUnload(sender mcc.CommandSender, command *mcc.Command, message string) {
 	args := strings.Fields(message)
 	if len(args) != 1 {
 		command.PrintUsage(sender)

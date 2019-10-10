@@ -14,7 +14,7 @@ const (
 	maxUpdateQueueLength = math.MaxUint32 / 4
 )
 
-func (plugin *Plugin) enablePhysics(level *level) {
+func (plugin *plugin) enablePhysics(level *level) {
 	sims := []mcc.Simulator{
 		&waterSimulator{level: level.Level},
 		&lavaSimulator{level: level.Level},
@@ -28,7 +28,7 @@ func (plugin *Plugin) enablePhysics(level *level) {
 	level.simulators = append(level.simulators, sims...)
 }
 
-func (plugin *Plugin) disablePhysics(level *level) {
+func (plugin *plugin) disablePhysics(level *level) {
 	for _, sim := range level.simulators {
 		level.RemoveSimulator(sim)
 	}
