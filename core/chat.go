@@ -11,7 +11,7 @@ import (
 	"github.com/structinf/go-mcc/mcc"
 )
 
-func (plugin *plugin) PrivateMessage(message string, src, dst mcc.CommandSender) {
+func (plugin *plugin) privateMessage(message string, src, dst mcc.CommandSender) {
 	srcNick := src.Name()
 	dstNick := dst.Name()
 
@@ -43,7 +43,7 @@ func (plugin *plugin) PrivateMessage(message string, src, dst mcc.CommandSender)
 	dst.SendMessage("from " + srcNick + ": &f" + message)
 }
 
-func (plugin *plugin) BroadcastMessage(src mcc.CommandSender, message string) {
+func (plugin *plugin) broadcastMessage(src mcc.CommandSender, message string) {
 	log.Println(message)
 	src.Server().ForEachPlayer(func(player *mcc.Player) {
 		if !plugin.findPlayer(player.Name()).isIgnored(src.Name()) {
@@ -120,7 +120,7 @@ func (plugin *plugin) handleMe(sender mcc.CommandSender, command *mcc.Command, m
 		name = player.Nickname
 	}
 
-	plugin.BroadcastMessage(sender, "* "+name+" "+message)
+	plugin.broadcastMessage(sender, "* "+name+" "+message)
 }
 
 func (plugin *plugin) handleMute(sender mcc.CommandSender, command *mcc.Command, message string) {
@@ -193,7 +193,7 @@ func (plugin *plugin) handleR(sender mcc.CommandSender, command *mcc.Command, me
 		return
 	}
 
-	plugin.PrivateMessage(message, sender, lastSender)
+	plugin.privateMessage(message, sender, lastSender)
 }
 
 func (plugin *plugin) handleSay(sender mcc.CommandSender, command *mcc.Command, message string) {
@@ -218,5 +218,5 @@ func (plugin *plugin) handleTell(sender mcc.CommandSender, command *mcc.Command,
 		return
 	}
 
-	plugin.PrivateMessage(args[1], sender, player)
+	plugin.privateMessage(args[1], sender, player)
 }
