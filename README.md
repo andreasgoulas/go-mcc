@@ -18,14 +18,15 @@ or denied for each rank.
 
 ## Install
 
-```
-go get github.com/AndreasGoulas/go-mcc/cli
-```
+### Building from source
 
-### Core Plugin
+The following commands will build the server executable `go-mcc` and the Core
+plugin `plugins/core.so`.
 
 ```
-go get -buildmode=plugin github.com/AndreasGoulas/go-mcc/core
+git clone git@github.com:AndreasGoulas/go-mcc.git
+cd go-mcc
+make all
 ```
 
 To use a plugin, you need to place it in the `plugins/` directory of the server.
