@@ -71,6 +71,8 @@ teleport|16   |/tp
 summon  |32   |/summon
 level   |64   |/env, /load, /main, /newlvl, /physics, /save...
 
+The `op` rank, which has access to all commands, is created by default.
+
 ### command_rules
 
 This table stores the explicit command permissions for each rank.

@@ -65,6 +65,12 @@ CREATE TABLE config(
 	cfg_key TEXT PRIMARY KEY,
 	cfg_value TEXT NOT NULL
 );
+
+INSERT INTO ranks(name, permissions)
+VALUES("op", 0xffffffff);
+
+INSERT INTO config(cfg_key, cfg_value)
+VALUES("default_rank", "");
 `
 
 type dbLevel struct {
