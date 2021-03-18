@@ -465,7 +465,7 @@ func (plugin *plugin) addPlayer(p *mcc.Player) *player {
 
 	db, ok := plugin.db.queryPlayer(name)
 	if !ok {
-		db.Rank = sql.NullString{plugin.defaultRank, true}
+		db.Rank = sql.NullString{String: plugin.defaultRank, Valid: true}
 		db.FirstLogin = time.Now()
 		db.Nickname = name
 	}
@@ -505,7 +505,7 @@ func (plugin *plugin) findPlayer(name string) *player {
 func (plugin *plugin) savePlayer(player *player) {
 	var rank sql.NullString
 	if player.Rank != nil {
-		rank = sql.NullString{player.Rank.Name, true}
+		rank = sql.NullString{String: player.Rank.Name, Valid: true}
 	}
 
 	plugin.db.updatePlayer(player.Name(), &dbPlayer{
