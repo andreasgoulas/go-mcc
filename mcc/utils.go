@@ -13,6 +13,13 @@ func min(x, y int) int {
 	return y
 }
 
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
+}
+
 // Location represents the location of an entity in a world.
 // Yaw and Pitch are specified in degrees.
 type Location struct {

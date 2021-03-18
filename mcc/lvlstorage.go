@@ -1,4 +1,4 @@
-package storage
+package mcc
 
 import (
 	"compress/gzip"
@@ -6,8 +6,6 @@ import (
 	"errors"
 	"io"
 	"os"
-
-	"github.com/structinf/go-mcc/mcc"
 )
 
 type lvlHeader struct {
@@ -18,7 +16,7 @@ type lvlHeader struct {
 	PermissionVisit, PermissionBuild byte
 }
 
-// LvlStorage is an implementation of the mcc.LevelStorage interface that can
+// LvlStorage is an implementation of the LevelStorage interface that can
 // handle MCSharp (.lvl) levels.
 type LvlStorage struct {
 	dirPath string
@@ -35,8 +33,8 @@ func (storage *LvlStorage) getPath(name string) string {
 	return storage.dirPath + name + ".lvl"
 }
 
-// Load implements mcc.LevelStorage.
-func (storage *LvlStorage) Load(name string) (level *mcc.Level, err error) {
+// Load implements LevelStorage.
+func (storage *LvlStorage) Load(name string) (level *Level, err error) {
 	file, err := os.Open(storage.getPath(name))
 	if err != nil {
 		return
@@ -58,7 +56,7 @@ func (storage *LvlStorage) Load(name string) (level *mcc.Level, err error) {
 		return nil, errors.New("lvlstorage: invalid format")
 	}
 
-	level = mcc.NewLevel(name, int(header.Width), int(header.Height), int(header.Length))
+	level = NewLevel(name, int(header.Width), int(header.Height), int(header.Length))
 	if level == nil {
 		return nil, errors.New("lvlstorage: level creation failed")
 	}
@@ -75,8 +73,8 @@ func (storage *LvlStorage) Load(name string) (level *mcc.Level, err error) {
 	return
 }
 
-// Save implements mcc.LevelStorage.
-func (storage *LvlStorage) Save(level *mcc.Level) (err error) {
+// Save implements LevelStorage.
+func (storage *LvlStorage) Save(level *Level) (err error) {
 	file, err := os.Create(storage.getPath(level.Name))
 	if err != nil {
 		return

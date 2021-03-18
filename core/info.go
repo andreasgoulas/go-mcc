@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/structinf/go-mcc/mcc"
+	"github.com/AndreasGoulas/go-mcc/mcc"
 )
 
 func (plugin *plugin) handleCommands(sender mcc.CommandSender, command *mcc.Command, message string) {

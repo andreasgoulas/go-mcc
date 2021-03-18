@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/structinf/go-mcc/mcc"
+	"github.com/AndreasGoulas/go-mcc/mcc"
 )
 
 const (
@@ -26,6 +26,28 @@ type level struct {
 	physics bool
 
 	simulators []mcc.Simulator
+}
+
+func (level *level) enablePhysics() {
+	sims := []mcc.Simulator{
+		&mcc.WaterSimulator{Level: level.Level},
+		&mcc.LavaSimulator{Level: level.Level},
+		&mcc.SandSimulator{Level: level.Level},
+	}
+
+	for _, sim := range sims {
+		level.AddSimulator(sim)
+	}
+
+	level.simulators = append(level.simulators, sims...)
+}
+
+func (level *level) disablePhysics() {
+	for _, sim := range level.simulators {
+		level.RemoveSimulator(sim)
+	}
+
+	level.simulators = nil
 }
 
 type player struct {
@@ -508,9 +530,9 @@ func (plugin *plugin) addLevel(l *mcc.Level) *level {
 
 	parseMOTD(db.MOTD, &level.HackConfig)
 
-	plugin.disablePhysics(level)
+	level.disablePhysics()
 	if db.Physics {
-		plugin.enablePhysics(level)
+		level.enablePhysics()
 	}
 
 	plugin.levelsLock.Lock()

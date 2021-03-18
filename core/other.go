@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"github.com/structinf/go-mcc/mcc"
+	"github.com/AndreasGoulas/go-mcc/mcc"
 )
 
 func (plugin *plugin) handleBack(sender mcc.CommandSender, command *mcc.Command, message string) {

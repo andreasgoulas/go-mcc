@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/structinf/go-mcc/mcc"
+	"github.com/AndreasGoulas/go-mcc/mcc"
 )
 
 func (plugin *plugin) handleCopyLvl(sender mcc.CommandSender, command *mcc.Command, message string) {
@@ -211,9 +211,9 @@ func (plugin *plugin) handlePhysics(sender mcc.CommandSender, command *mcc.Comma
 		if value != level.physics {
 			level.physics = value
 			if value {
-				plugin.enablePhysics(level)
+				level.enablePhysics()
 			} else {
-				plugin.disablePhysics(level)
+				level.disablePhysics()
 			}
 		}
 

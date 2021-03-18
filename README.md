@@ -19,13 +19,13 @@ or denied for each rank.
 ## Install
 
 ```
-go get github.com/structinf/go-mcc/cli
+go get github.com/AndreasGoulas/go-mcc/cli
 ```
 
 ### Core Plugin
 
 ```
-go get -buildmode=plugin github.com/structinf/go-mcc/core
+go get -buildmode=plugin github.com/AndreasGoulas/go-mcc/core
 ```
 
 To use a plugin, you need to place it in the `plugins/` directory of the server.

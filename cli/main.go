@@ -7,8 +7,7 @@ import (
 	"plugin"
 	"sync"
 
-	"github.com/structinf/go-mcc/mcc"
-	"github.com/structinf/go-mcc/storage"
+	"github.com/AndreasGoulas/go-mcc/mcc"
 )
 
 var defaultConfig = &mcc.Config{
@@ -83,7 +82,7 @@ func loadPlugins(path string, server *mcc.Server) {
 
 func main() {
 	config := readConfig("server.json")
-	cwstorage := storage.NewCwStorage("levels/")
+	cwstorage := mcc.NewCwStorage("levels/")
 	server := mcc.NewServer(config, cwstorage)
 	if server == nil {
 		return

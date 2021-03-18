@@ -1,4 +1,4 @@
-module github.com/structinf/go-mcc
+module github.com/AndreasGoulas/go-mcc
 
 go 1.12
 

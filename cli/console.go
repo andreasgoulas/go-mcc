@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"sync"
 
-	"github.com/structinf/go-mcc/mcc"
+	"github.com/AndreasGoulas/go-mcc/mcc"
 )
 
 const (
