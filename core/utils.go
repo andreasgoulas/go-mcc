@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AndreasGoulas/go-mcc/mcc"
+	"github.com/andreasgoulas/go-mcc/mcc"
 )
 
 func min(x, y int) int {

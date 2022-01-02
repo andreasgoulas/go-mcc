@@ -10,7 +10,7 @@ import (
 	"plugin"
 	"sync"
 
-	"github.com/AndreasGoulas/go-mcc/mcc"
+	"github.com/andreasgoulas/go-mcc/mcc"
 )
 
 var defaultConfig = &mcc.Config{

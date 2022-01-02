@@ -24,7 +24,7 @@ The following commands will build the server executable `go-mcc` and the Core
 plugin `plugins/core.so`.
 
 ```
-git clone git@github.com:AndreasGoulas/go-mcc.git
+git clone git@github.com:andreasgoulas/go-mcc.git
 cd go-mcc
 make all
 ```

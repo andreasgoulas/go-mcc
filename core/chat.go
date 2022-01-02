@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/AndreasGoulas/go-mcc/mcc"
+	"github.com/andreasgoulas/go-mcc/mcc"
 )
 
 func (plugin *plugin) privateMessage(message string, src, dst mcc.CommandSender) {

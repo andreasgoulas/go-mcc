@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/AndreasGoulas/go-mcc/mcc"
+	"github.com/andreasgoulas/go-mcc/mcc"
 )
 
 func (plugin *plugin) handleCopyLvl(sender mcc.CommandSender, command *mcc.Command, message string) {

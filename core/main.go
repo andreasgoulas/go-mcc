@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AndreasGoulas/go-mcc/mcc"
+	"github.com/andreasgoulas/go-mcc/mcc"
 )
 
 const (

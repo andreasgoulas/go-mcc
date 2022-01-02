@@ -1,4 +1,4 @@
-module github.com/AndreasGoulas/go-mcc
+module github.com/andreasgoulas/go-mcc
 
 go 1.12
 
